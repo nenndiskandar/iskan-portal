@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#09090b">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="googlebot" content="noindex">
+<meta name="googlebot-news" content="nosnippet">
+<title>Iskan System Portal</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: { 
+        base: '#09090b',     // zinc-950
+        surface: '#18181b',  // zinc-900
+        border: '#27272a',   // zinc-800
+        muted: '#a1a1aa',    // zinc-400
+        text: '#f4f4f5',     // zinc-100
+        accent: '#14b8a6',   // teal-500
+        error: '#f43f5e'     // rose-500
+      },
+      fontFamily: { sans: ['ui-sans-serif','system-ui','-apple-system','Segoe UI','Roboto','sans-serif'] }
+    }
+  }
+}
+</script>
+<style>
+  html { -webkit-text-size-adjust: 100%; }
+  body { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  
+  /* Accessibility focus ring */
+  *:focus-visible { outline: 2px solid #14b8a6; outline-offset: 2px; }
+</style>
+</head>
+<body class="min-h-full bg-base text-text font-sans antialiased">
+
+<main class="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
+
+  <!-- Header -->
+  <header class="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between border-b border-border pb-6">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight text-text">System Portal</h1>
+      <p class="mt-1 text-sm text-muted">Infrastructure and application status <span class="opacity-50 mx-1">&bull;</span> <code class="font-mono text-xs opacity-75">/root/iskan-portal</code></p>
+    </div>
+    <button id="refresh" type="button"
+      class="inline-flex h-11 w-full sm:w-auto sm:h-9 items-center justify-center gap-2 rounded bg-surface px-4 text-sm font-medium text-text border border-border transition-colors hover:bg-border active:bg-zinc-700">
+      <svg id="refresh-icon" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/>
+      </svg>
+      Refresh <span id="countdown-badge" class="ml-1 opacity-50 font-mono tabular-nums text-[11px]">(15s)</span>
+    </button>
+  </header>
+
+  <!-- Server Info -->
+  <section class="mb-12">
+    <h2 class="mb-4 text-xs font-semibold uppercase tracking-wider text-muted">Hardware Node</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-8 text-sm">
+      
+      <!-- CPU -->
+      <div class="md:col-span-2">
+        <div class="flex justify-between text-xs mb-1.5">
+          <span class="text-muted flex items-center"><svg class="w-3.5 h-3.5 inline-block -mt-0.5 text-zinc-500 mr-1.5" fill="currentColor" viewBox="0 0 16 16"><path d="M5 0a.5.5 0 0 1 .5.5V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2A2.5 2.5 0 0 1 14 4.5h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14a2.5 2.5 0 0 1-2.5 2.5v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14A2.5 2.5 0 0 1 2 11.5H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2A2.5 2.5 0 0 1 4.5 2V.5A.5.5 0 0 1 5 0zm-.5 3A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13h7a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 11.5 3h-7zM5 6.5A1.5 1.5 0 0 1 6.5 5h3A1.5 1.5 0 0 1 11 6.5v3A1.5 1.5 0 0 1 9.5 11h-3A1.5 1.5 0 0 1 5 9.5v-3zM6.5 6a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3z"/></svg> CPU</span>
+          <span class="text-xs font-mono text-muted" id="srv-cpu-load">Load: 0.00</span>
+        </div>
+        <div class="mb-2"><span id="srv-cpu" class="font-medium text-text leading-tight break-words">-</span></div>
+        <div class="h-1.5 w-full bg-surface rounded overflow-hidden">
+           <div id="bar-cpu" class="h-full bg-accent transition-all duration-1000" style="width: 0%"></div>
+        </div>
+      </div>
+      
+      <!-- RAM -->
+      <div>
+        <div class="flex justify-between text-xs mb-1.5">
+          <span class="text-muted flex items-center"><svg class="w-3.5 h-3.5 inline-block -mt-0.5 text-zinc-500 mr-1.5" fill="currentColor" viewBox="0 0 16 16"><path d="M0 3a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3zm5-1v12h1V2H5zm3 0v12h1V2H8zM4 2H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h2V2zm10 0h-2v12h2a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1z"/></svg> RAM</span>
+          <span class="text-xs font-mono text-text" id="srv-ram-txt">- / -</span>
+        </div>
+        <div class="h-1.5 w-full bg-surface rounded overflow-hidden">
+           <div id="bar-ram" class="h-full bg-accent transition-all duration-1000" style="width: 0%"></div>
+        </div>
+      </div>
+      
+      <!-- Disk -->
+      <div>
+        <div class="flex justify-between text-xs mb-1.5">
+          <span class="text-muted flex items-center"><svg class="w-3.5 h-3.5 inline-block -mt-0.5 text-zinc-500 mr-1.5" fill="currentColor" viewBox="0 0 16 16"><path d="M4.5 9a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1zM2.5 9a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/><path d="M7 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM1 7a6 6 0 1 1 12 0 6 6 0 0 1-12 0z"/><path d="M3 13.5a1.5 1.5 0 0 1-1.5-1.5v-9A1.5 1.5 0 0 1 3 1.5h10A1.5 1.5 0 0 1 14.5 3v9a1.5 1.5 0 0 1-1.5 1.5H3zM3 2.5a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h10a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5H3z"/></svg> Disk (/)</span>
+          <span class="text-xs font-mono text-text" id="srv-disk-txt">-</span>
+        </div>
+        <div class="h-1.5 w-full bg-surface rounded overflow-hidden">
+           <div id="bar-disk" class="h-full bg-accent transition-all duration-1000" style="width: 0%"></div>
+        </div>
+      </div>
+      
+      <!-- Uptime & Total Services -->
+      <div class="md:col-span-2 flex flex-wrap gap-x-8 gap-y-4 pt-2">
+        <div>
+          <div class="text-muted text-xs mb-1 flex items-center"><svg class="w-3.5 h-3.5 inline-block -mt-0.5 text-zinc-500 mr-1.5" fill="currentColor" viewBox="0 0 16 16"><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/></svg> Server Uptime</div>
+          <div id="srv-up" class="font-medium text-text tabular-nums">-</div>
+        </div>
+        <div>
+          <div class="text-muted text-xs mb-1 flex items-center"><svg class="w-3.5 h-3.5 inline-block -mt-0.5 text-zinc-500 mr-1.5" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M6 2a.5.5 0 0 1 .47.33L10 12.036l1.53-4.208A.5.5 0 0 1 12 7.5h3.5a.5.5 0 0 1 0 1h-3.15l-1.88 5.17a.5.5 0 0 1-.94 0L6 3.964 4.47 8.171A.5.5 0 0 1 4 8.5H.5a.5.5 0 0 1 0-1h3.15l1.88-5.17A.5.5 0 0 1 6 2Z"/></svg> Running Services</div>
+          <div class="font-medium text-text"><span id="sum-up" class="text-accent">-</span> up / <span id="sum-total">-</span> total</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Grouped services -->
+  <div id="groups" class="space-y-10 transition-opacity duration-300">
+    <div id="initial-loader" class="py-12 flex flex-col items-center justify-center text-muted animate-pulse">
+      <svg class="h-6 w-6 mb-3 animate-spin text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/>
+      </svg>
+      <span class="text-sm">Syncing infrastructure state...</span>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="mt-16 flex flex-col gap-3 border-t border-border pt-6 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
+    <span id="meta" class="leading-relaxed break-words">-</span>
+    <span id="updated" class="shrink-0">Last updated: -</span>
+  </footer>
+
+</main>
+
+<template id="group-tpl">
+  <section>
+    <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-muted" data-group-head></h2>
+    <ul class="border-t border-border" data-group-list aria-live="polite"></ul>
+  </section>
+</template>
+
+<template id="svc-tpl">
+  <li class="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4 border-b border-border py-4 hover:bg-surface/30 transition-colors">
+    <!-- Status Indicator -->
+    <div class="flex items-start gap-3 sm:w-1/4 shrink-0 pt-0.5">
+      <span class="h-2 w-2 rounded-full shrink-0 mt-1.5" data-dot></span>
+      <h3 class="text-sm font-medium text-text leading-snug break-words" data-name></h3>
+    </div>
+    
+    <!-- Meta/Desc -->
+    <div class="flex-1 min-w-0">
+      <p class="text-sm text-muted leading-snug break-words" data-desc></p>
+      
+      <!-- Sub-stats (Unit, PID, Uptime, Port, RAM) -->
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-muted mt-2">
+        <div class="flex items-center gap-1">
+          <span class="uppercase tracking-wider opacity-60"><svg class="w-3 h-3 inline-block -mt-[2px] opacity-60 mr-[2px]" fill="currentColor" viewBox="0 0 16 16"><path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5 8 5.961 14.154 3.5 8.186 1.113zM15 4.239l-6.5 2.6v7.922l6.5-2.6V4.24zM7.5 14.762V6.838L1 4.239v7.923l6.5 2.6zM7.443.184a1.5 1.5 0 0 1 1.114 0l7.129 2.852A.5.5 0 0 1 16 3.5v8.662a1 1 0 0 1-.629.928l-7.185 2.874a.5.5 0 0 1-.372 0L.63 13.09a1 1 0 0 1-.63-.928V3.5a.5.5 0 0 1 .314-.464L7.443.184z"/></svg>Unit:</span> 
+          <span class="font-mono" data-unit></span>
+        </div>
+        <div class="flex items-center gap-1" data-pid-wrap hidden>
+          <span class="uppercase tracking-wider opacity-60">PID:</span> 
+          <span class="tabular-nums" data-pid></span>
+        </div>
+        <div class="flex items-center gap-1" data-tech-wrap hidden>
+          <span class="uppercase tracking-wider opacity-60"><svg class="w-3 h-3 inline-block -mt-[2px] opacity-60 mr-[2px]" fill="currentColor" viewBox="0 0 16 16"><path d="M10.478 1.647a.5.5 0 1 0-.956-.294l-4 13a.5.5 0 0 0 .956.294l4-13zM4.854 4.146a.5.5 0 0 1 0 .708L1.707 8l3.147 3.146a.5.5 0 0 1-.708.708l-3.5-3.5a.5.5 0 0 1 0-.708l3.5-3.5a.5.5 0 0 1 .708 0zm6.292 0a.5.5 0 0 0 0 .708L14.293 8l-3.147 3.146a.5.5 0 0 0 .708.708l3.5-3.5a.5.5 0 0 0 0-.708l-3.5-3.5a.5.5 0 0 0-.708 0z"/></svg>Stack:</span> 
+          <span class="font-mono text-text opacity-75" data-tech></span>
+        </div>
+        <div class="flex items-center gap-1" data-path-wrap hidden>
+          <span class="uppercase tracking-wider opacity-60"><svg class="w-3 h-3 inline-block -mt-[2px] opacity-60 mr-[2px]" fill="currentColor" viewBox="0 0 16 16"><path d="M.54 3.87.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31zM2.19 4a1 1 0 0 0-.996 1.09l.637 7a1 1 0 0 0 .995.91h10.348a1 1 0 0 0 .995-.91l.637-7A1 1 0 0 0 13.81 4H2.19z"/></svg>Path:</span> 
+          <span class="font-mono text-text opacity-75" data-path></span>
+        </div>
+        <div class="flex items-center gap-1" data-port-wrap hidden>
+          <span class="uppercase tracking-wider opacity-60"><svg class="w-3 h-3 inline-block -mt-[2px] opacity-60 mr-[2px]" fill="currentColor" viewBox="0 0 16 16"><path d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2Z"/></svg>Port:</span> 
+          <span class="tabular-nums" data-port></span>
+        </div>
+        <div class="flex items-center gap-1" data-mem-wrap hidden>
+          <span class="uppercase tracking-wider opacity-60">RAM:</span> 
+          <span class="tabular-nums font-mono" data-mem></span>
+        </div>
+        <div class="flex items-center gap-1" data-up-wrap hidden>
+          <span class="uppercase tracking-wider opacity-60">Uptime:</span> 
+          <span class="tabular-nums" data-up></span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- State Badge Row -->
+    <div class="flex items-center sm:justify-end shrink-0 sm:w-auto mt-2 sm:mt-0 pt-1 sm:pt-0">
+      <span data-state class="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide border"></span>
+    </div>
+  </li>
+</template>
+
+<script>
+(function () {
+  'use strict';
+
+  var refBtn = document.getElementById('refresh');
+  var refIcon = document.getElementById('refresh-icon');
+
+  var GROUPS = [
+    { key: 'app',   label: 'Applications' },
+    { key: 'bot',   label: 'Bots and Gateways' },
+    { key: 'infra', label: 'Infrastructure' }
+  ];
+
+  function fmtUptime(sec) {
+    if (sec == null || sec < 0) return null;
+    var d = Math.floor(sec / 86400);
+    var h = Math.floor((sec % 86400) / 3600);
+    var m = Math.floor((sec % 3600) / 60);
+    var s = Math.floor(sec % 60);
+    if (d > 0) return d + 'd ' + h + 'h ' + m + 'm ' + s + 's';
+    if (h > 0) return h + 'h ' + m + 'm ' + s + 's';
+    if (m > 0) return m + 'm ' + s + 's';
+    return s + 's';
+  }
+
+  function svcNode(svc, tpl) {
+    var node = tpl.content.cloneNode(true);
+    var dot = node.querySelector('[data-dot]');
+    var state = node.querySelector('[data-state]');
+
+    if (svc.healthy) {
+      dot.className = 'h-2 w-2 rounded-full shrink-0 bg-accent';
+      state.className = 'px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide border border-accent/20 bg-accent/10 text-accent';
+      state.textContent = svc.sub === 'running' ? 'Running' : (svc.sub || 'active');
+    } else {
+      dot.className = 'h-2 w-2 rounded-full shrink-0 bg-error';
+      state.className = 'px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide border border-error/20 bg-error/10 text-error';
+      state.textContent = svc.sub === 'dead' ? 'Dead' : (svc.active || 'down');
+    }
+
+    node.querySelector('[data-name]').textContent = svc.name;
+    node.querySelector('[data-desc]').textContent = svc.desc;
+    node.querySelector('[data-unit]').textContent = svc.unit;
+
+    if (svc.port) {
+      node.querySelector('[data-port-wrap]').hidden = false;
+      node.querySelector('[data-port]').textContent = ':' + svc.port + (svc.portOpen === false ? ' (closed)' : '');
+    }
+    if (svc.tech) {
+      node.querySelector('[data-tech-wrap]').hidden = false;
+      node.querySelector('[data-tech]').textContent = svc.tech;
+    }
+    if (svc.path) {
+      node.querySelector('[data-path-wrap]').hidden = false;
+      node.querySelector('[data-path]').textContent = svc.path;
+    }
+    if (svc.pid) {
+      node.querySelector('[data-pid-wrap]').hidden = false;
+      node.querySelector('[data-pid]').textContent = svc.pid;
+    }
+    if (svc.memory) {
+      node.querySelector('[data-mem-wrap]').hidden = false;
+      node.querySelector('[data-mem]').textContent = svc.memory;
+    }
+    var up = fmtUptime(svc.uptimeSec);
+    if (up) {
+      node.querySelector('[data-up-wrap]').hidden = false;
+      var upEl = node.querySelector('[data-up]');
+      upEl.textContent = up;
+      upEl.setAttribute('data-real-up', svc.uptimeSec);
+    }
+    return node;
+  }
+
+function render(data) {
+    document.getElementById('sum-up').textContent = data.summary.up;
+    document.getElementById('sum-total').textContent = data.summary.total;
+    
+    document.getElementById('meta').textContent = 'Host: ' + data.host + ' | Node ' + data.node + ' | Portal RSS ' + (data.gatewayRss || 'n/a');
+    
+    var timeOpts = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+    document.getElementById('updated').textContent = 'Last updated: ' + new Date(data.generatedAt).toLocaleTimeString('id-ID', timeOpts);
+
+    if (data.server) {
+      document.getElementById('srv-cpu').textContent = data.server.cpu;
+      
+      if (data.server.load) {
+        document.getElementById('srv-cpu-load').textContent = 'Load (15m): ' + data.server.load[2];
+        var cpuPct = Math.min(100, Math.floor((parseFloat(data.server.load[0]) / 4) * 100)); // rough approx assuming 4 cores
+        document.getElementById('bar-cpu').style.width = cpuPct + '%';
+      }
+      
+      if (data.server.ramTotal && data.server.ramUsed) {
+        document.getElementById('srv-ram-txt').textContent = data.server.ramUsed + ' / ' + data.server.ramTotal;
+        var rT = parseFloat(data.server.ramTotal);
+        var rU = parseFloat(data.server.ramUsed);
+        if(!isNaN(rT) && !isNaN(rU)) {
+          var pct = Math.floor((rU / rT) * 100);
+          document.getElementById('bar-ram').style.width = pct + '%';
+        }
+      }
+      
+      if (data.server.disk) {
+        document.getElementById('srv-disk-txt').textContent = data.server.disk.used + ' / ' + data.server.disk.total + ' (' + data.server.disk.percent + ')';
+        document.getElementById('bar-disk').style.width = data.server.disk.percent;
+      }
+      
+      document.getElementById('srv-up').textContent = fmtUptime(data.server.uptime);
+    }
+    
+    window.latestData = data;
+    window.latestRenderTime = Date.now();
+
+    var wrap = document.getElementById('groups');
+    wrap.textContent = '';
+    
+    var gtpl = document.getElementById('group-tpl');
+    var stpl = document.getElementById('svc-tpl');
+
+    GROUPS.forEach(function (g) {
+      var items = data.services.filter(function (s) { return s.kind === g.key; });
+      if (!items.length) return;
+
+      var gnode = gtpl.content.cloneNode(true);
+      var up = items.filter(function (s) { return s.healthy; }).length;
+      
+      var iconStr = '';
+      if (g.key === 'app') iconStr = '<svg class="w-4 h-4 inline-block -mt-1 mr-2 text-zinc-500" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 4A2.5 2.5 0 0 1 3 1.5h10A2.5 2.5 0 0 1 15.5 4v8a2.5 2.5 0 0 1-2.5 2.5H3A2.5 2.5 0 0 1 .5 12V4ZM3 2.5A1.5 1.5 0 0 0 1.5 4v8A1.5 1.5 0 0 0 3 13.5h10a1.5 1.5 0 0 0 1.5-1.5V4A1.5 1.5 0 0 0 13 2.5H3Z"/><path d="M2.5 4.5A.5.5 0 0 1 3 4h10a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5H3a.5.5 0 0 1-.5-.5v-1Z"/></svg>';
+      if (g.key === 'bot') iconStr = '<svg class="w-4 h-4 inline-block -mt-1 mr-2 text-zinc-500" fill="currentColor" viewBox="0 0 16 16"><path d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5ZM3 8.062C3 6.76 4.235 5.765 5.53 5.889a28.02 28.02 0 0 1 4.94 0C11.765 5.765 13 6.76 13 8.062v1.157a53.078 53.078 0 0 1-10 0V8.062Zm9.336-1.597c-1.89-1.246-4.526-1.246-6.425 0-1.83 1.206-2.58 3.42-1.851 5.378C4.542 13.155 5.642 14.5 8 14.5c2.358 0 3.458-1.345 3.94-2.657.728-1.957-.02-4.172-1.852-5.378H12.336ZM8 15.5c-2.923 0-4.323-1.636-4.87-3.1-.734-1.97-.044-4.292 2-5.632C6.91 5.618 9.09 5.618 10.87 6.768c2.044 1.34 2.734 3.662 2 5.632C12.323 13.864 10.922 15.5 8 15.5Zm-2-2.348a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5Z"/></svg>';
+      if (g.key === 'infra') iconStr = '<svg class="w-4 h-4 inline-block -mt-1 mr-2 text-zinc-500" fill="currentColor" viewBox="0 0 16 16"><path d="M0 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6zm2-1a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H2zm2.5 1.5a.5.5 0 0 0 0 1h4a.5.5 0 0 0 0-1h-4zm-2 0a.5.5 0 1 0 0 1 .5.5 0 0 0 0-1zm-1 0a.5.5 0 1 0 0 1 .5.5 0 0 0 0-1z"/></svg>';
+      gnode.querySelector('[data-group-head]').innerHTML = '<div class="flex items-center text-zinc-200">' + iconStr + g.label + ' <span class="opacity-40 text-[10px] ml-2">(' + up + '/' + items.length + ' active)</span></div>';
+
+      
+      var list = gnode.querySelector('[data-group-list]');
+      items.forEach(function (svc) { list.appendChild(svcNode(svc, stpl)); });
+      wrap.appendChild(gnode);
+    });
+  }
+
+var nextLoadTime = Date.now() + 15000;
+  var countdownSpan = document.getElementById('countdown-badge');
+
+  setInterval(function () {
+    if (!window.latestData) return;
+    
+    // Server & Service uptimes ticking
+    var diff = (Date.now() - window.latestRenderTime) / 1000;
+    if (window.latestData.server) {
+      document.getElementById('srv-up').textContent = fmtUptime(window.latestData.server.uptime + diff);
+    }
+    var upNodes = document.querySelectorAll('[data-real-up]');
+    for (var i = 0; i < upNodes.length; i++) {
+      var base = parseFloat(upNodes[i].getAttribute('data-real-up'));
+      if (base) {
+        upNodes[i].textContent = fmtUptime(base + diff);
+      }
+    }
+    
+    // Countdown logic
+    var until = (nextLoadTime - Date.now()) / 1000;
+    if (until <= 0) {
+      countdownSpan.textContent = '(0s)';
+      nextLoadTime = Date.now() + 15000; // Reset eagerly so it doesn't duplicate loop
+      load();
+    } else {
+      countdownSpan.textContent = '(' + Math.ceil(until) + 's)';
+    }
+
+  }, 1000);
+
+  function fail(err) {
+    var wrap = document.getElementById('groups');
+    wrap.textContent = '';
+    var div = document.createElement('div');
+    div.className = 'border border-error bg-error/10 p-4 text-sm text-error rounded break-words';
+    div.textContent = 'Failed to load status: ' + (err && err.message ? err.message : 'Unknown error');
+    wrap.appendChild(div);
+  }
+
+  function loadSysinfo() {
+    fetch('/api/sysinfo', { cache: 'no-store' })
+      .then(r => r.json())
+      .then(data => {
+        if (!data.server) return;
+        window.latestData.server = data.server;
+        
+        if (data.server.load) {
+          document.getElementById('srv-cpu-load').textContent = 'Load (15m): ' + data.server.load[2];
+          var cpuPct = Math.min(100, Math.floor((parseFloat(data.server.load[0]) / 4) * 100)); 
+          document.getElementById('bar-cpu').style.width = cpuPct + '%';
+        }
+        
+        if (data.server.ramTotal && data.server.ramUsed) {
+          document.getElementById('srv-ram-txt').textContent = data.server.ramUsed + ' / ' + data.server.ramTotal;
+          var rT = data.server.ramTotalRaw || 1;
+          var rU = data.server.ramUsedRaw || 0;
+          var pct = Math.floor((rU / rT) * 100);
+          document.getElementById('bar-ram').style.width = pct + '%';
+        }
+        
+        if (data.server.disk) {
+          document.getElementById('srv-disk-txt').textContent = data.server.disk.used + ' / ' + data.server.disk.total + ' (' + data.server.disk.percent + ')';
+          document.getElementById('bar-disk').style.width = data.server.disk.percent;
+        }
+      })
+      .catch(function(){}); // Silent fail for sysinfo background poll
+  }
+
+  setInterval(loadSysinfo, 2000); // 2s realtime hardware poll
+
+  function load() {
+    var wrap = document.getElementById('groups');
+    refBtn.disabled = true;
+    refIcon.classList.add('animate-spin');
+    nextLoadTime = Date.now() + 15000;
+    
+    if (wrap.innerHTML.trim() !== '' && !document.getElementById('initial-loader')) {
+      wrap.classList.add('opacity-40');
+    }
+    
+    var start = Date.now();
+    
+    fetch('/api/status', { cache: 'no-store' })
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function(data) {
+        var elapsed = Date.now() - start;
+        if (elapsed < 500) {
+          setTimeout(function() { finishLoad(data); }, 500 - elapsed);
+        } else {
+          finishLoad(data);
+        }
+      })
+      .catch(function(err) {
+        fail(err);
+        wrap.classList.remove('opacity-40');
+        refBtn.disabled = false;
+        refIcon.classList.remove('animate-spin');
+      });
+  }
+
+  function finishLoad(data) {
+    render(data);
+    var wrap = document.getElementById('groups');
+    wrap.classList.remove('opacity-40');
+    refBtn.disabled = false;
+    refIcon.classList.remove('animate-spin');
+  }
+
+  refBtn.addEventListener('click', load);
+  load(); // First load
+  // Manual load interval handled in main loop // 15s refresh
+})();
+</script>
+</body>
+</html>
