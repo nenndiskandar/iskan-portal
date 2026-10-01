@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#09090b">
+<meta name="robots" content="noindex, nofollow">
+<title>Offline · Iskan System Portal</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.json">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{colors:{base:'#09090b',surface:'#18181b',border:'#27272a',muted:'#a1a1aa',text:'#f4f4f5',accent:'#14b8a6'}}}}</script>
+<style>html{-webkit-text-size-adjust:100%}</style>
+</head>
+<body class="min-h-screen bg-base text-text font-sans antialiased flex items-center justify-center px-4 py-8">
+  <div class="w-full max-w-sm text-center">
+    <div class="inline-flex h-12 w-12 items-center justify-center rounded bg-surface border border-border mb-4">⚡</div>
+    <h1 class="text-lg font-semibold">Kamu offline</h1>
+    <p class="text-sm text-muted mt-2 leading-relaxed">Portal butuh koneksi untuk data live. Cek Wi-Fi/datamu lalu coba lagi. Halaman akan muat ulang otomatis saat online.</p>
+    <div class="mt-6 flex gap-2 justify-center">
+      <button onclick="location.reload()" class="h-10 px-5 rounded bg-text text-base text-sm font-medium">Muat Ulang</button>
+      <a href="/" class="h-10 px-5 rounded bg-surface border border-border text-sm inline-flex items-center">Buka Portal</a>
+    </div>
+    <p class="text-[11px] text-muted mt-6">Iskan System Portal · iskan-server</p>
+  </div>
+<script>
+(function(){
+  window.addEventListener('online', function(){ location.href='/'; });
+  // also poll
+  setInterval(function(){ if(navigator.onLine) fetch('/api/auth/check',{cache:'no-store'}).then(function(){ location.href='/'; }).catch(function(){}); }, 3500);
+})();
+</script>
+</body>
+</html>

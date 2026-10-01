@@ -4,24 +4,31 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#09090b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Iskan Portal">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="application-name" content="Iskan Portal">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
-<meta name="googlebot" content="noindex">
-<meta name="googlebot-news" content="nosnippet">
-<title>Iskan System Portal</title>
+<title>Iskan System Portal · Task Manager</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script>
 tailwind.config = {
   theme: {
     extend: {
       colors: { 
-        base: '#09090b',     // zinc-950
-        surface: '#18181b',  // zinc-900
-        border: '#27272a',   // zinc-800
-        muted: '#a1a1aa',    // zinc-400
-        text: '#f4f4f5',     // zinc-100
-        accent: '#14b8a6',   // teal-500
-        error: '#f43f5e'     // rose-500
+        base: '#09090b',
+        surface: '#18181b',
+        border: '#27272a',
+        muted: '#a1a1aa',
+        text: '#f4f4f5',
+        accent: '#14b8a6',
+        error: '#f43f5e',
+        warn: '#f59e0b'
       },
       fontFamily: { sans: ['ui-sans-serif','system-ui','-apple-system','Segoe UI','Roboto','sans-serif'] }
     }
@@ -32,174 +39,396 @@ tailwind.config = {
   html { -webkit-text-size-adjust: 100%; }
   body { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
-  
-  /* Accessibility focus ring */
   *:focus-visible { outline: 2px solid #14b8a6; outline-offset: 2px; }
+  /* tiny scrollbar for charts row */
+  .no-scrollbar::-webkit-scrollbar{ display:none; }
+  .no-scrollbar{ -ms-overflow-style:none; scrollbar-width:none; }
+
+  /* view modes: Simple hides detail grids/charts, Detail hides simple */
+  #tm-detail-grid.hidden, #tm-simple-grid.hidden { display: none !important; }
+  [data-view="simple"] .svc-detail { display: none !important; }
+  /* compact service card in simple: tighten gap */
+  [data-view="simple"] [id="groups"] li { gap: 0.5rem; }
+
 </style>
 </head>
-<body class="min-h-full bg-base text-text font-sans antialiased">
-
-<main class="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
+<body class="min-h-full bg-base text-text font-sans antialiased overflow-x-hidden">
+<main class="mx-auto max-w-6xl w-full min-w-0 px-4 py-4 sm:px-6 sm:py-6">
 
   <!-- Header -->
-  <header class="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between border-b border-border pb-6">
+  <header class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-4">
     <div>
       <h1 class="text-2xl font-semibold tracking-tight text-text">System Portal</h1>
-      <p class="mt-1 text-sm text-muted">Infrastructure and application status <span class="opacity-50 mx-1">&bull;</span> <code class="font-mono text-xs opacity-75">/root/iskan-portal</code></p>
+      <p class="mt-1 text-sm text-muted">Infrastructure · Task Manager <span class="opacity-50 mx-1">&bull;</span> <code class="font-mono text-xs opacity-75 break-all">portal.nendi.web.id</code> <span class="opacity-50 mx-1">&bull;</span> <span id="hdr-live" class="inline-flex items-center gap-1.5 text-xs"><span class="h-2 w-2 rounded-full bg-accent animate-pulse"></span> LIVE</span></p>
     </div>
-    <button id="refresh" type="button"
-      class="inline-flex h-11 w-full sm:w-auto sm:h-9 items-center justify-center gap-2 rounded bg-surface px-4 text-sm font-medium text-text border border-border transition-colors hover:bg-border active:bg-zinc-700">
-      <svg id="refresh-icon" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/>
-      </svg>
-      Refresh <span id="countdown-badge" class="ml-1 opacity-50 font-mono tabular-nums text-[11px]">(15s)</span>
-    </button>
+    <div class="flex items-center gap-2">
+      <span id="hdr-uptime" class="hidden sm:inline text-xs font-mono text-muted"></span>
+      <div class="flex flex-wrap items-center gap-2 justify-end">
+      <button id="btn-change-pwd" type="button" class="inline-flex h-10 sm:h-9 items-center justify-center gap-1.5 rounded bg-surface px-3 text-xs font-medium text-muted border border-border hover:text-text hover:bg-border">Ganti Password</button>
+      <button id="btn-logout" type="button" class="inline-flex h-10 sm:h-9 items-center justify-center gap-1.5 rounded bg-surface px-3 text-xs font-medium text-muted border border-border hover:text-text hover:bg-border">Keluar</button>
+      <button id="btn-install" type="button" class="hidden h-10 sm:h-9 items-center justify-center gap-1.5 rounded bg-accent text-base text-xs font-semibold hover:bg-teal-500 active:bg-teal-600">
+        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v13"/><path d="M7 12l5 5 5-5"/><path d="M3 21h18"/></svg>
+        Install
+      </button>
+      <button id="refresh" type="button"
+        class="inline-flex h-10 sm:h-9 items-center justify-center gap-2 rounded bg-surface px-3 text-sm font-medium text-text border border-border hover:bg-border active:bg-zinc-700">
+        <svg id="refresh-icon" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
+        Refresh <span id="countdown-badge" class="ml-1 opacity-50 font-mono tabular-nums text-[11px]">(15s)</span>
+      </button>
+      </div>
+    </div>
   </header>
+  <!-- change password modal · mobile: bottom sheet feel, eye toggle, 44px tap -->
+  <div id="pwd-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div id="pwd-backdrop" class="absolute inset-0 bg-base/80 backdrop-blur-sm"></div>
+    <div class="relative w-full max-w-sm max-h-[90vh] overflow-auto overscroll-contain rounded border border-border bg-surface p-4 sm:p-5 space-y-4 shadow-xl">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-semibold">Ganti Password</h3>
+        <button id="pwd-close-x" type="button" aria-label="Tutup" class="h-9 w-9 inline-flex items-center justify-center rounded text-muted hover:text-text hover:bg-base">✕</button>
+      </div>
+      <div>
+        <label for="pwd-old" class="block text-xs text-muted mb-1">Password lama</label>
+        <div class="relative">
+          <input id="pwd-old" type="password" autocomplete="current-password" class="w-full h-11 rounded bg-base border border-border pl-3 pr-11 text-sm focus:border-accent focus:ring-1 focus:ring-accent outline-none" />
+          <button type="button" data-eye="pwd-old" aria-label="Tampilkan password" class="absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9 inline-flex items-center justify-center rounded text-muted hover:text-text">
+            <svg class="h-4 w-4 eye-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3.5"/></svg>
+            <svg class="hidden h-4 w-4 eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3 21 21"/><path d="M10.6 10.6A3.5 3.5 0 0 0 13.4 13.4"/><path d="M9.5 7.1A10.9 10.9 0 0 1 12 5C19 5 23 12 23 12a17.4 17.4 0 0 1-3.6 4.8"/><path d="M12 19C5 19 1 12 1 12a17.4 17.4 0 0 1 5.2-5.9"/></svg>
+          </button>
+        </div>
+      </div>
+      <div>
+        <label for="pwd-new" class="block text-xs text-muted mb-1">Password baru (min 6)</label>
+        <div class="relative">
+          <input id="pwd-new" type="password" autocomplete="new-password" class="w-full h-11 rounded bg-base border border-border pl-3 pr-11 text-sm focus:border-accent focus:ring-1 focus:ring-accent outline-none" />
+          <button type="button" data-eye="pwd-new" aria-label="Tampilkan password" class="absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9 inline-flex items-center justify-center rounded text-muted hover:text-text">
+            <svg class="h-4 w-4 eye-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3.5"/></svg>
+            <svg class="hidden h-4 w-4 eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3 21 21"/><path d="M10.6 10.6A3.5 3.5 0 0 0 13.4 13.4"/><path d="M9.5 7.1A10.9 10.9 0 0 1 12 5C19 5 23 12 23 12a17.4 17.4 0 0 1-3.6 4.8"/><path d="M12 19C5 19 1 12 1 12a17.4 17.4 0 0 1 5.2-5.9"/></svg>
+          </button>
+        </div>
+      </div>
+      <div id="pwd-err" class="hidden rounded bg-error/10 border border-error/20 text-error text-xs px-3 py-2 break-words" role="alert"></div>
+      <div id="pwd-ok" class="hidden rounded bg-accent/10 border border-accent/20 text-accent text-xs px-3 py-2 break-words"></div>
+      <div class="flex gap-2 justify-end pt-1">
+        <button id="pwd-cancel" type="button" class="h-11 sm:h-10 px-5 rounded bg-base border border-border text-sm flex-1 sm:flex-none">Batal</button>
+        <button id="pwd-save" type="button" class="h-11 sm:h-10 px-5 rounded bg-text text-base text-sm font-medium flex-1 sm:flex-none">Simpan</button>
+      </div>
+    </div>
+  </div>
 
-  <!-- Server Info -->
-  <section class="mb-12">
-    <h2 class="mb-4 text-xs font-semibold uppercase tracking-wider text-muted">Hardware Node</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-8 text-sm">
-      
+  <!-- ===== TASK MANAGER ===== -->
+  <section id="tm-section" data-view="simple" class="mb-5">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2.5">
+      <h2 class="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-2">
+        <svg class="w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg>
+        Task Manager · Live
+      </h2>
+      <div class="flex items-center gap-2 self-start sm:self-auto">
+        <span class="text-[11px] font-mono text-muted" id="tm-interval">poll 1.5s · 60 pts · 4 cores</span>
+        <div class="flex items-center rounded bg-base border border-border p-0.5" role="group" aria-label="View mode">
+          <button id="btn-view-simple" type="button" class="h-8 sm:h-7 px-3 rounded text-xs font-medium bg-surface text-text border border-border shadow-sm">Simple</button>
+          <button id="btn-view-detail" type="button" class="h-8 sm:h-7 px-3 rounded text-xs font-medium text-muted hover:text-text">Detail</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grid 2x3 on desktop, 1 col mobile -->
+    <div id="tm-detail-grid" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
+
       <!-- CPU -->
-      <div class="md:col-span-2">
-        <div class="flex justify-between text-xs mb-1.5">
-          <span class="text-muted flex items-center"><svg class="w-3.5 h-3.5 inline-block -mt-0.5 text-zinc-500 mr-1.5" fill="currentColor" viewBox="0 0 16 16"><path d="M5 0a.5.5 0 0 1 .5.5V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2A2.5 2.5 0 0 1 14 4.5h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14a2.5 2.5 0 0 1-2.5 2.5v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14A2.5 2.5 0 0 1 2 11.5H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2A2.5 2.5 0 0 1 4.5 2V.5A.5.5 0 0 1 5 0zm-.5 3A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13h7a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 11.5 3h-7zM5 6.5A1.5 1.5 0 0 1 6.5 5h3A1.5 1.5 0 0 1 11 6.5v3A1.5 1.5 0 0 1 9.5 11h-3A1.5 1.5 0 0 1 5 9.5v-3zM6.5 6a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3z"/></svg> CPU</span>
-          <span class="text-xs font-mono text-muted" id="srv-cpu-load">Load: 0.00</span>
+      <div class="rounded border border-border bg-surface/40 overflow-hidden min-w-0">
+        <div class="px-3 py-2 flex items-center justify-between border-b border-border/60">
+          <div class="flex items-center gap-2">
+            <span class="h-2 w-2 rounded-full bg-accent"></span>
+            <span class="text-sm font-medium">CPU</span>
+            <span class="text-xs text-muted font-mono" id="tm-cpu-model">Intel i5-3470</span>
+          </div>
+          <span class="text-lg font-semibold tabular-nums" id="tm-cpu-pct">-%</span>
         </div>
-        <div class="mb-2"><span id="srv-cpu" class="font-medium text-text leading-tight break-words">-</span></div>
-        <div class="h-1.5 w-full bg-surface rounded overflow-hidden">
-           <div id="bar-cpu" class="h-full bg-accent transition-all duration-1000" style="width: 0%"></div>
-        </div>
-      </div>
-      
-      <!-- RAM -->
-      <div>
-        <div class="flex justify-between text-xs mb-1.5">
-          <span class="text-muted flex items-center"><svg class="w-3.5 h-3.5 inline-block -mt-0.5 text-zinc-500 mr-1.5" fill="currentColor" viewBox="0 0 16 16"><path d="M0 3a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3zm5-1v12h1V2H5zm3 0v12h1V2H8zM4 2H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h2V2zm10 0h-2v12h2a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1z"/></svg> RAM</span>
-          <span class="text-xs font-mono text-text" id="srv-ram-txt">- / -</span>
-        </div>
-        <div class="h-1.5 w-full bg-surface rounded overflow-hidden">
-           <div id="bar-ram" class="h-full bg-accent transition-all duration-1000" style="width: 0%"></div>
-        </div>
-      </div>
-      
-      <!-- Disk -->
-      <div>
-        <div class="flex justify-between text-xs mb-1.5">
-          <span class="text-muted flex items-center"><svg class="w-3.5 h-3.5 inline-block -mt-0.5 text-zinc-500 mr-1.5" fill="currentColor" viewBox="0 0 16 16"><path d="M4.5 9a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1zM2.5 9a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/><path d="M7 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM1 7a6 6 0 1 1 12 0 6 6 0 0 1-12 0z"/><path d="M3 13.5a1.5 1.5 0 0 1-1.5-1.5v-9A1.5 1.5 0 0 1 3 1.5h10A1.5 1.5 0 0 1 14.5 3v9a1.5 1.5 0 0 1-1.5 1.5H3zM3 2.5a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h10a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5H3z"/></svg> Disk (/)</span>
-          <span class="text-xs font-mono text-text" id="srv-disk-txt">-</span>
-        </div>
-        <div class="h-1.5 w-full bg-surface rounded overflow-hidden">
-           <div id="bar-disk" class="h-full bg-accent transition-all duration-1000" style="width: 0%"></div>
-        </div>
-      </div>
-      
-      <!-- Uptime & Total Services -->
-      <div class="md:col-span-2 flex flex-wrap gap-x-8 gap-y-4 pt-2">
-        <div>
-          <div class="text-muted text-xs mb-1 flex items-center"><svg class="w-3.5 h-3.5 inline-block -mt-0.5 text-zinc-500 mr-1.5" fill="currentColor" viewBox="0 0 16 16"><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/></svg> Server Uptime</div>
-          <div id="srv-up" class="font-medium text-text tabular-nums">-</div>
-        </div>
-        <div>
-          <div class="text-muted text-xs mb-1 flex items-center"><svg class="w-3.5 h-3.5 inline-block -mt-0.5 text-zinc-500 mr-1.5" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M6 2a.5.5 0 0 1 .47.33L10 12.036l1.53-4.208A.5.5 0 0 1 12 7.5h3.5a.5.5 0 0 1 0 1h-3.15l-1.88 5.17a.5.5 0 0 1-.94 0L6 3.964 4.47 8.171A.5.5 0 0 1 4 8.5H.5a.5.5 0 0 1 0-1h3.15l1.88-5.17A.5.5 0 0 1 6 2Z"/></svg> Running Services</div>
-          <div class="font-medium text-text"><span id="sum-up" class="text-accent">-</span> up / <span id="sum-total">-</span> total</div>
+        <div class="p-2.5">
+          <div class="h-[110px] sm:h-[120px]"><canvas id="chart-cpu"></canvas></div>
+          <div class="mt-2 grid grid-cols-4 gap-1" id="tm-cpu-cores"></div>
+          <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-mono text-muted">
+            <span>Load <span id="tm-cpu-load">- - -</span></span>
+            <span id="tm-cpu-up">up -</span>
+          </div>
         </div>
       </div>
 
+      <!-- RAM -->
+      <div class="rounded border border-border bg-surface/40 overflow-hidden min-w-0">
+        <div class="px-3 py-2 flex items-center justify-between border-b border-border/60">
+          <div class="flex items-center gap-2">
+            <span class="h-2 w-2 rounded-full bg-sky-400"></span>
+            <span class="text-sm font-medium">Memory</span>
+            <span class="text-xs text-muted font-mono" id="tm-ram-sub">11.5 GB</span>
+          </div>
+          <span class="text-lg font-semibold tabular-nums" id="tm-ram-pct">-%</span>
+        </div>
+        <div class="p-2.5">
+          <div class="h-[110px] sm:h-[120px]"><canvas id="chart-ram"></canvas></div>
+          <div class="mt-2">
+            <div class="flex justify-between text-xs mb-1.5">
+              <span class="text-muted" id="tm-ram-used">- / -</span>
+              <span class="font-mono text-muted" id="tm-ram-free">free -</span>
+            </div>
+            <div class="h-1.5 w-full bg-base rounded overflow-hidden border border-border/40">
+              <div id="bar-ram-tm" class="h-full bg-sky-400 transition-all duration-700" style="width:0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DISK -->
+      <div class="rounded border border-border bg-surface/40 overflow-hidden min-w-0">
+        <div class="px-3 py-2 flex items-center justify-between border-b border-border/60">
+          <div class="flex items-center gap-2">
+            <span class="h-2 w-2 rounded-full bg-amber-400"></span>
+            <span class="text-sm font-medium">Disk</span>
+            <span class="text-xs text-muted font-mono">/</span>
+            <span class="text-xs text-muted" id="tm-disk-model">WDC 500GB</span>
+          </div>
+          <span class="text-xs font-mono text-muted" id="tm-disk-pct">-</span>
+        </div>
+        <div class="p-2.5">
+          <div class="h-[110px] sm:h-[120px]"><canvas id="chart-disk"></canvas></div>
+          <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-mono">
+            <span class="text-muted">Read <span id="tm-disk-read" class="text-text">- </span></span>
+            <span class="text-muted">Write <span id="tm-disk-write" class="text-text">- </span></span>
+          </div>
+          <div class="mt-2 flex justify-between text-xs">
+            <span class="text-muted font-mono" id="tm-disk-used">- / -</span>
+            <span class="text-muted font-mono" id="tm-disk-bar-pct">0%</span>
+          </div>
+          <div class="h-1.5 w-full bg-base rounded overflow-hidden border border-border/40 mt-1">
+            <div id="bar-disk-tm" class="h-full bg-amber-400 transition-all duration-700" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- NETWORK -->
+      <div class="rounded border border-border bg-surface/40 overflow-hidden min-w-0">
+        <div class="px-3 py-2 flex items-center justify-between border-b border-border/60">
+          <div class="flex items-center gap-2">
+            <span class="h-2 w-2 rounded-full bg-violet-400"></span>
+            <span class="text-sm font-medium">Network</span>
+            <span class="text-xs text-muted font-mono" id="tm-net-iface">enp2s0</span>
+          </div>
+          <span class="text-xs font-mono text-muted" id="tm-net-total">-</span>
+        </div>
+        <div class="p-2.5">
+          <div class="h-[110px] sm:h-[120px]"><canvas id="chart-net"></canvas></div>
+          <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-mono">
+            <span class="text-muted">↓ RX <span id="tm-net-rx" class="text-text">- </span></span>
+            <span class="text-muted">↑ TX <span id="tm-net-tx" class="text-text">- </span></span>
+          </div>
+          <div class="mt-1 text-[11px] text-muted font-mono">Throughput (60s) · Send / Receive</div>
+        </div>
+      </div>
+
+      <!-- POWER -->
+      <div class="rounded border border-border bg-surface/40 overflow-hidden min-w-0">
+        <div class="px-3 py-2 flex items-center justify-between border-b border-border/60">
+          <div class="flex items-center gap-2">
+            <span class="h-2 w-2 rounded-full bg-amber-400"></span>
+            <span class="text-sm font-medium">Power</span>
+            <span class="text-xs text-muted font-mono" id="tm-power-sub">RAPL · 77W TDP</span>
+          </div>
+          <span class="text-lg font-semibold tabular-nums" id="tm-power-pkg">- W</span>
+        </div>
+        <div class="p-2.5">
+          <div class="h-[110px] sm:h-[120px]"><canvas id="chart-power"></canvas></div>
+          <div class="mt-3 grid grid-cols-3 gap-2 text-center text-[11px]">
+            <div class="rounded bg-base border border-border/40 py-1.5"><div class="text-muted">Package</div><div class="font-mono font-medium text-amber-300 tabular-nums" id="tm-power-pkg-detail">- W</div></div>
+            <div class="rounded bg-base border border-border/40 py-1.5"><div class="text-muted">Cores</div><div class="font-mono font-medium tabular-nums" id="tm-power-core">- W</div></div>
+            <div class="rounded bg-base border border-border/40 py-1.5"><div class="text-muted">Uncore</div><div class="font-mono font-medium tabular-nums" id="tm-power-uncore">- W</div></div>
+          </div>
+          <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-mono text-muted">
+            <span>Est total <span id="tm-power-total" class="text-text font-medium">- W</span></span>
+            <span>·</span>
+            <span id="tm-power-kwh">- kWh/day</span>
+            <span>·</span>
+            <span id="tm-power-cost">Rp -/day</span>
+          </div>
+          <div class="mt-1 text-[11px] text-muted">* RAPL package-0 (CPU+iGPU) + ~8W board overhead · TDP 77W (Ivy 3470)</div>
+        </div>
+      </div>
+
+      <!-- GPU · full width on desktop -->
+      <div class="rounded border border-border bg-surface/40 overflow-hidden lg:col-span-2">
+        <div class="px-3 py-2 flex items-center justify-between border-b border-border/60">
+          <div class="flex items-center gap-2">
+            <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+            <span class="text-sm font-medium">GPU</span>
+            <span class="text-xs text-muted font-mono" id="tm-gpu-name">Intel HD Graphics 2500</span>
+          </div>
+          <span class="text-sm font-semibold tabular-nums" id="tm-gpu-pct">-</span>
+        </div>
+        <div class="p-3 flex flex-col sm:flex-row gap-3 items-start">
+          <div class="flex-1 w-full">
+            <div class="h-[80px] flex items-center justify-center rounded bg-base border border-border/40 p-3" id="tm-gpu-chart-wrap">
+              <canvas id="chart-gpu" class="w-full h-full"></canvas>
+              <div id="tm-gpu-nochart" class="hidden text-center text-xs text-muted leading-relaxed">
+                <div class="font-medium text-text mb-1">Intel HD 2500 (Ivy Bridge) · i915 legacy</div>
+                <div>Kernel 6.1 tidak expose <code class="bg-base px-1 rounded">gpu_busy_percent</code> untuk Ivy Bridge.<br>Freq &amp; RC6 residency tersedia · Utilisation butuh <code class="bg-base px-1 rounded">intel_gpu_top</code> (api: <code class="bg-base px-1 rounded">intel-gpu-tools</code>).</div>
+              </div>
+            </div>
+          </div>
+          <div class="sm:w-56 shrink-0 space-y-2 text-xs">
+            <div class="flex justify-between"><span class="text-muted">Driver</span><span class="font-mono">i915</span></div>
+            <div class="flex justify-between"><span class="text-muted">PCI</span><span class="font-mono">00:02.0</span></div>
+            <div class="flex justify-between"><span class="text-muted">Freq</span><span class="font-mono" id="tm-gpu-freq">- MHz</span></div>
+            <div class="flex justify-between"><span class="text-muted">RC6</span><span class="font-mono" id="tm-gpu-rc6">- %</span></div>
+            <div class="flex justify-between"><span class="text-muted">Pkg Power</span><span class="font-mono" id="tm-gpu-pkg">- W</span></div>
+            <div class="flex justify-between"><span class="text-muted">Render</span><span class="font-mono" id="tm-gpu-render">- %</span></div>
+            <div class="flex justify-between"><span class="text-muted">Blitter / Video</span><span class="font-mono" id="tm-gpu-bv">- / -</span></div>
+            <div class="flex justify-between"><span class="text-muted">Mem</span><span class="font-mono">Shared (system RAM)</span></div>
+            <div class="pt-1 text-[11px] text-muted" id="tm-gpu-note">* via intel_gpu_top · live engines</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <!-- Simple view: only percentages / key numbers -->
+    <div id="tm-simple-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+      <div class="rounded border border-border bg-surface/40 p-3">
+        <div class="flex items-center gap-1.5 text-xs text-muted"><span class="h-2 w-2 rounded-full bg-accent"></span>CPU</div>
+        <div class="mt-1 text-xl font-semibold tabular-nums" id="s-cpu">-%</div>
+        <div class="text-[11px] font-mono text-muted truncate" id="s-cpu-sub">-</div>
+      </div>
+      <div class="rounded border border-border bg-surface/40 p-3">
+        <div class="flex items-center gap-1.5 text-xs text-muted"><span class="h-2 w-2 rounded-full bg-sky-400"></span>Memory</div>
+        <div class="mt-1 text-xl font-semibold tabular-nums" id="s-ram">-%</div>
+        <div class="text-[11px] font-mono text-muted truncate" id="s-ram-sub">- / -</div>
+      </div>
+      <div class="rounded border border-border bg-surface/40 p-3">
+        <div class="flex items-center gap-1.5 text-xs text-muted"><span class="h-2 w-2 rounded-full bg-amber-400"></span>Disk</div>
+        <div class="mt-1 text-xl font-semibold tabular-nums" id="s-disk">-</div>
+        <div class="text-[11px] font-mono text-muted truncate" id="s-disk-sub">- / -</div>
+      </div>
+      <div class="rounded border border-border bg-surface/40 p-3">
+        <div class="flex items-center gap-1.5 text-xs text-muted"><span class="h-2 w-2 rounded-full bg-violet-400"></span>Network</div>
+        <div class="mt-1 text-sm font-semibold tabular-nums leading-tight break-all" id="s-net">-</div>
+        <div class="text-[11px] font-mono text-muted truncate" id="s-net-sub">enp2s0</div>
+      </div>
+      <div class="rounded border border-border bg-surface/40 p-3">
+        <div class="flex items-center gap-1.5 text-xs text-muted"><span class="h-2 w-2 rounded-full bg-amber-400"></span>Power</div>
+        <div class="mt-1 text-xl font-semibold tabular-nums" id="s-power">- W</div>
+        <div class="text-[11px] font-mono text-muted truncate" id="s-power-sub">- kWh/d</div>
+      </div>
+      <div class="rounded border border-border bg-surface/40 p-3">
+        <div class="flex items-center gap-1.5 text-xs text-muted"><span class="h-2 w-2 rounded-full bg-emerald-400"></span>GPU</div>
+        <div class="mt-1 text-xl font-semibold tabular-nums" id="s-gpu">-</div>
+        <div class="text-[11px] font-mono text-muted truncate" id="s-gpu-sub">HD 2500</div>
+      </div>
     </div>
   </section>
 
-  <!-- Grouped services -->
-  <div id="groups" class="space-y-10 transition-opacity duration-300">
+  <!-- Legacy Hardware summary (kept compact) -->
+  <section class="mb-10 hidden" id="legacy-hw">
+    <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">Hardware Node (legacy)</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8 text-sm rounded border border-border bg-surface/20 p-4">
+      <div class="md:col-span-2">
+        <div class="flex justify-between text-xs mb-1.5">
+          <span class="text-muted">CPU</span><span class="text-xs font-mono text-muted" id="srv-cpu-load">Load: -</span>
+        </div>
+        <div class="mb-1"><span id="srv-cpu" class="font-medium">-</span></div>
+        <div class="h-1.5 w-full bg-base rounded overflow-hidden"><div id="bar-cpu" class="h-full bg-accent" style="width:0%"></div></div>
+      </div>
+      <div>
+        <div class="flex justify-between text-xs mb-1.5"><span class="text-muted">RAM</span><span class="text-xs font-mono" id="srv-ram-txt">- / -</span></div>
+        <div class="h-1.5 w-full bg-base rounded overflow-hidden"><div id="bar-ram" class="h-full bg-accent" style="width:0%"></div></div>
+      </div>
+      <div>
+        <div class="flex justify-between text-xs mb-1.5"><span class="text-muted">Disk (/)</span><span class="text-xs font-mono" id="srv-disk-txt">- </span></div>
+        <div class="h-1.5 w-full bg-base rounded overflow-hidden"><div id="bar-disk" class="h-full bg-accent" style="width:0%"></div></div>
+      </div>
+      <div class="md:col-span-2 flex gap-8 pt-2">
+        <div><div class="text-muted text-xs mb-1">Server Uptime</div><div id="srv-up" class="font-medium tabular-nums">-</div></div>
+        <div><div class="text-muted text-xs mb-1">Running Services</div><div class="font-medium"><span id="sum-up" class="text-accent">-</span> up / <span id="sum-total">-</span> total</div></div>
+      </div>
+    </div>
+  </section>
+  <!-- visible compact running count kept for legacy ids -->
+  <div class="hidden"><span id="sum-up2"></span><span id="sum-total2"></span></div>
+
+  <!-- Services -->
+  <div id="groups" class="space-y-4">
     <div id="initial-loader" class="py-12 flex flex-col items-center justify-center text-muted animate-pulse">
-      <svg class="h-6 w-6 mb-3 animate-spin text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/>
-      </svg>
+      <svg class="h-6 w-6 mb-3 animate-spin text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
       <span class="text-sm">Syncing infrastructure state...</span>
     </div>
   </div>
 
-  <!-- Footer -->
-  <footer class="mt-16 flex flex-col gap-3 border-t border-border pt-6 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
-    <span id="meta" class="leading-relaxed break-words">-</span>
-    <span id="updated" class="shrink-0">Last updated: -</span>
+  <footer class="mt-6 flex flex-col gap-2 sm:gap-3 border-t border-border pt-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] text-xs text-muted sm:flex-row sm:items-center sm:justify-between w-full min-w-0">
+    <span id="meta" class="leading-relaxed break-words min-w-0 flex-1">-</span>
+    <span id="updated" class="shrink-0 whitespace-nowrap font-mono text-[11px] sm:text-xs">Last updated: -</span>
   </footer>
-
 </main>
 
 <template id="group-tpl">
   <section>
-    <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-muted" data-group-head></h2>
-    <ul class="border-t border-border" data-group-list aria-live="polite"></ul>
+    <h2 class="mb-2 text-xs font-semibold uppercase tracking-wider text-muted" data-group-head></h2>
+    <ul class="grid grid-cols-1 md:grid-cols-2 gap-3" data-group-list></ul>
   </section>
 </template>
 
 <template id="svc-tpl">
-  <li class="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4 border-b border-border py-4 hover:bg-surface/30 transition-colors">
-    <!-- Status Indicator -->
-    <div class="flex items-start gap-3 sm:w-1/4 shrink-0 pt-0.5">
-      <span class="h-2 w-2 rounded-full shrink-0 mt-1.5" data-dot></span>
-      <h3 class="text-sm font-medium text-text leading-snug break-words" data-name></h3>
+  <li class="rounded border border-border bg-surface/40 p-3 flex flex-col gap-1.5 min-w-0 overflow-hidden hover:bg-surface/60 transition-colors group/card">
+    <!-- top: dot + name + badge -->
+    <div class="flex items-start justify-between gap-2">
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="h-2.5 w-2.5 rounded-full shrink-0 mt-0.5" data-dot></span>
+        <h3 class="text-sm font-semibold leading-tight truncate" data-name></h3>
+      </div>
+      <span data-state class="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide border leading-none"></span>
     </div>
-    
-    <!-- Meta/Desc -->
-    <div class="flex-1 min-w-0">
-      <p class="text-sm text-muted leading-snug break-words" data-desc></p>
-      
-      <!-- Sub-stats (Unit, PID, Uptime, Port, RAM) -->
-      <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-muted mt-2">
-        <div class="flex items-center gap-1">
-          <span class="uppercase tracking-wider opacity-60"><svg class="w-3 h-3 inline-block -mt-[2px] opacity-60 mr-[2px]" fill="currentColor" viewBox="0 0 16 16"><path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5 8 5.961 14.154 3.5 8.186 1.113zM15 4.239l-6.5 2.6v7.922l6.5-2.6V4.24zM7.5 14.762V6.838L1 4.239v7.923l6.5 2.6zM7.443.184a1.5 1.5 0 0 1 1.114 0l7.129 2.852A.5.5 0 0 1 16 3.5v8.662a1 1 0 0 1-.629.928l-7.185 2.874a.5.5 0 0 1-.372 0L.63 13.09a1 1 0 0 1-.63-.928V3.5a.5.5 0 0 1 .314-.464L7.443.184z"/></svg>Unit:</span> 
-          <span class="font-mono" data-unit></span>
-        </div>
-        <div class="flex items-center gap-1" data-pid-wrap hidden>
-          <span class="uppercase tracking-wider opacity-60">PID:</span> 
-          <span class="tabular-nums" data-pid></span>
-        </div>
-        <div class="flex items-center gap-1" data-tech-wrap hidden>
-          <span class="uppercase tracking-wider opacity-60"><svg class="w-3 h-3 inline-block -mt-[2px] opacity-60 mr-[2px]" fill="currentColor" viewBox="0 0 16 16"><path d="M10.478 1.647a.5.5 0 1 0-.956-.294l-4 13a.5.5 0 0 0 .956.294l4-13zM4.854 4.146a.5.5 0 0 1 0 .708L1.707 8l3.147 3.146a.5.5 0 0 1-.708.708l-3.5-3.5a.5.5 0 0 1 0-.708l3.5-3.5a.5.5 0 0 1 .708 0zm6.292 0a.5.5 0 0 0 0 .708L14.293 8l-3.147 3.146a.5.5 0 0 0 .708.708l3.5-3.5a.5.5 0 0 0 0-.708l-3.5-3.5a.5.5 0 0 0-.708 0z"/></svg>Stack:</span> 
-          <span class="font-mono text-text opacity-75" data-tech></span>
-        </div>
-        <div class="flex items-center gap-1" data-path-wrap hidden>
-          <span class="uppercase tracking-wider opacity-60"><svg class="w-3 h-3 inline-block -mt-[2px] opacity-60 mr-[2px]" fill="currentColor" viewBox="0 0 16 16"><path d="M.54 3.87.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31zM2.19 4a1 1 0 0 0-.996 1.09l.637 7a1 1 0 0 0 .995.91h10.348a1 1 0 0 0 .995-.91l.637-7A1 1 0 0 0 13.81 4H2.19z"/></svg>Path:</span> 
-          <span class="font-mono text-text opacity-75" data-path></span>
-        </div>
-        <div class="flex items-center gap-1" data-port-wrap hidden>
-          <span class="uppercase tracking-wider opacity-60"><svg class="w-3 h-3 inline-block -mt-[2px] opacity-60 mr-[2px]" fill="currentColor" viewBox="0 0 16 16"><path d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2Z"/></svg>Port:</span> 
-          <span class="tabular-nums" data-port></span>
-        </div>
-        <div class="flex items-center gap-1" data-mem-wrap hidden>
-          <span class="uppercase tracking-wider opacity-60">RAM:</span> 
-          <span class="tabular-nums font-mono" data-mem></span>
-        </div>
-        <div class="flex items-center gap-1" data-up-wrap hidden>
-          <span class="uppercase tracking-wider opacity-60">Uptime:</span> 
-          <span class="tabular-nums" data-up></span>
-        </div>
+    <!-- dashboard / external links · tepat di bawah badge Running/Dead -->
+    <div data-links class="hidden flex flex-wrap gap-1.5" data-links-wrap>
+      <a data-dashboard-link href="#" target="_blank" rel="noopener" class="hidden inline-flex items-center gap-1 h-6 px-2 rounded bg-accent/10 border border-accent/20 text-[11px] font-medium text-accent hover:bg-accent/20">Dashboard ↗</a>
+      <a data-external-link href="#" target="_blank" rel="noopener" class="hidden inline-flex items-center gap-1 h-6 px-2 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text hover:bg-border">Public ↗</a>
+      <span data-local-badge class="hidden inline-flex items-center gap-1 h-6 px-2 rounded bg-zinc-800 border border-zinc-700 text-[11px] font-mono text-muted">LAN only</span>
+    </div>
+    <p class="text-xs text-muted leading-snug line-clamp-2 min-h-[2.2em] svc-detail" data-desc></p>
+    <!-- stats grid 2x2 -->
+    <div class="grid grid-cols-2 gap-1.5 mt-1 svc-detail">
+      <div data-tech-wrap hidden class="rounded bg-base border border-border/40 px-2 py-1.5">
+        <div class="text-[10px] uppercase tracking-wider text-muted opacity-70">Stack</div>
+        <div class="text-xs font-mono text-text truncate leading-none mt-0.5" data-tech></div>
+      </div>
+      <div data-port-wrap hidden class="rounded bg-base border border-border/40 px-2 py-1.5">
+        <div class="text-[10px] uppercase tracking-wider text-muted opacity-70">Port</div>
+        <div class="text-xs font-mono text-text leading-none mt-0.5" data-port></div>
+      </div>
+      <div data-pid-wrap hidden class="rounded bg-base border border-border/40 px-2 py-1.5">
+        <div class="text-[10px] uppercase tracking-wider text-muted opacity-70">PID</div>
+        <div class="text-xs font-mono text-text leading-none mt-0.5" data-pid></div>
+      </div>
+      <div data-mem-wrap hidden class="rounded bg-base border border-border/40 px-2 py-1.5">
+        <div class="text-[10px] uppercase tracking-wider text-muted opacity-70">RAM</div>
+        <div class="text-xs font-mono text-text leading-none mt-0.5" data-mem></div>
       </div>
     </div>
-    
-    <!-- State Badge Row -->
-    <div class="flex items-center sm:justify-end shrink-0 sm:w-auto mt-2 sm:mt-0 pt-1 sm:pt-0">
-      <span data-state class="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide border"></span>
+    <!-- unit + uptime row -->
+    <div class="flex items-center gap-2 text-[10px] font-mono text-muted mt-1 border-t border-border/30 pt-2 svc-detail">
+      <span class="truncate opacity-80" data-unit></span>
+      <span data-up-wrap hidden class="ml-auto flex items-center gap-1 shrink-0">
+        <span class="opacity-60">up</span><span class="text-text tabular-nums" data-up></span>
+      </span>
     </div>
+    <div data-path-wrap hidden class="text-[10px] font-mono text-muted break-all opacity-60 -mt-1 svc-detail" data-path></div>
   </li>
 </template>
 
 <script>
 (function () {
   'use strict';
-
   var refBtn = document.getElementById('refresh');
   var refIcon = document.getElementById('refresh-icon');
-
   var GROUPS = [
     { key: 'app',   label: 'Applications' },
     { key: 'bot',   label: 'Bots and Gateways' },
     { key: 'infra', label: 'Infrastructure' }
   ];
-
   function fmtUptime(sec) {
     if (sec == null || sec < 0) return null;
     var d = Math.floor(sec / 86400);
@@ -211,150 +440,371 @@ tailwind.config = {
     if (m > 0) return m + 'm ' + s + 's';
     return s + 's';
   }
-
   function svcNode(svc, tpl) {
     var node = tpl.content.cloneNode(true);
     var dot = node.querySelector('[data-dot]');
     var state = node.querySelector('[data-state]');
-
     if (svc.healthy) {
-      dot.className = 'h-2 w-2 rounded-full shrink-0 bg-accent';
+      dot.className = 'h-2.5 w-2.5 rounded-full shrink-0 bg-accent';
       state.className = 'px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide border border-accent/20 bg-accent/10 text-accent';
       state.textContent = svc.sub === 'running' ? 'Running' : (svc.sub || 'active');
     } else {
-      dot.className = 'h-2 w-2 rounded-full shrink-0 bg-error';
+      dot.className = 'h-2.5 w-2.5 rounded-full shrink-0 bg-error';
       state.className = 'px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide border border-error/20 bg-error/10 text-error';
       state.textContent = svc.sub === 'dead' ? 'Dead' : (svc.active || 'down');
     }
-
     node.querySelector('[data-name]').textContent = svc.name;
     node.querySelector('[data-desc]').textContent = svc.desc;
     node.querySelector('[data-unit]').textContent = svc.unit;
-
-    if (svc.port) {
-      node.querySelector('[data-port-wrap]').hidden = false;
-      node.querySelector('[data-port]').textContent = ':' + svc.port + (svc.portOpen === false ? ' (closed)' : '');
-    }
-    if (svc.tech) {
-      node.querySelector('[data-tech-wrap]').hidden = false;
-      node.querySelector('[data-tech]').textContent = svc.tech;
-    }
-    if (svc.path) {
-      node.querySelector('[data-path-wrap]').hidden = false;
-      node.querySelector('[data-path]').textContent = svc.path;
-    }
-    if (svc.pid) {
-      node.querySelector('[data-pid-wrap]').hidden = false;
-      node.querySelector('[data-pid]').textContent = svc.pid;
-    }
-    if (svc.memory) {
-      node.querySelector('[data-mem-wrap]').hidden = false;
-      node.querySelector('[data-mem]').textContent = svc.memory;
-    }
+    // external / dashboard links
+    (function(){
+      var wrap = node.querySelector('[data-links-wrap]');
+      var dashA = node.querySelector('[data-dashboard-link]');
+      var extA  = node.querySelector('[data-external-link]');
+      var badge = node.querySelector('[data-local-badge]');
+      // prefer dashboardPath + externalUrl for Dashboard button
+      if (svc.externalUrl && svc.dashboardPath != null) {
+        var href = svc.externalUrl.replace(/\/$/,'') + svc.dashboardPath;
+        dashA.href = href;
+        // label per service
+        var label = (svc.unit === 'omniroute.service') ? 'AI Dashboard ↗' : (svc.unit === 'cf-manager' ? 'CF Manager ↗' : (svc.unit === 'owrt.nendi.web.id' ? 'LuCI ↗' : 'Dashboard ↗'));
+        dashA.textContent = label;
+        dashA.classList.remove('hidden');
+        if (wrap) wrap.classList.remove('hidden');
+      } else if (svc.externalUrl) {
+        extA.href = svc.externalUrl;
+        extA.classList.remove('hidden');
+        if (wrap) wrap.classList.remove('hidden');
+      }
+      // if has externalUrl show as public badge too when not dashboard case
+      if (svc.externalUrl && svc.dashboardPath == null && svc.port) {
+        // already ext shown
+      } else if (svc.externalUrl && svc.dashboardPath) {
+        // also show subtle hostname under
+        // keep dash as primary; could optionally show hostname chip
+      }
+      // LAN-only for portfolio
+      if (svc.localUrl && !svc.externalUrl) {
+        badge.textContent = svc.localUrl.replace('http://','');
+        badge.classList.remove('hidden');
+        if (wrap) wrap.classList.remove('hidden');
+      }
+    })();
+    if (svc.port) { node.querySelector('[data-port-wrap]').hidden = false; node.querySelector('[data-port]').textContent = ':' + svc.port + (svc.portOpen === false ? ' (closed)' : ''); }
+    if (svc.tech) { node.querySelector('[data-tech-wrap]').hidden = false; node.querySelector('[data-tech]').textContent = svc.tech; }
+    if (svc.path) { node.querySelector('[data-path-wrap]').hidden = false; node.querySelector('[data-path]').textContent = svc.path; }
+    if (svc.pid) { node.querySelector('[data-pid-wrap]').hidden = false; node.querySelector('[data-pid]').textContent = svc.pid; }
+    if (svc.memory) { node.querySelector('[data-mem-wrap]').hidden = false; node.querySelector('[data-mem]').textContent = svc.memory; }
     var up = fmtUptime(svc.uptimeSec);
-    if (up) {
-      node.querySelector('[data-up-wrap]').hidden = false;
-      var upEl = node.querySelector('[data-up]');
-      upEl.textContent = up;
-      upEl.setAttribute('data-real-up', svc.uptimeSec);
-    }
+    if (up) { node.querySelector('[data-up-wrap]').hidden = false; var upEl = node.querySelector('[data-up]'); upEl.textContent = up; upEl.setAttribute('data-real-up', svc.uptimeSec); }
     return node;
   }
-
-function render(data) {
+  function render(data) {
     document.getElementById('sum-up').textContent = data.summary.up;
     document.getElementById('sum-total').textContent = data.summary.total;
-    
+    // legacy ids compat
+    var su = document.getElementById('sum-up'); if (su) su.textContent = data.summary.up;
+    var st = document.getElementById('sum-total'); if (st) st.textContent = data.summary.total;
     document.getElementById('meta').textContent = 'Host: ' + data.host + ' | Node ' + data.node + ' | Portal RSS ' + (data.gatewayRss || 'n/a');
-    
     var timeOpts = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
     document.getElementById('updated').textContent = 'Last updated: ' + new Date(data.generatedAt).toLocaleTimeString('id-ID', timeOpts);
-
     if (data.server) {
       document.getElementById('srv-cpu').textContent = data.server.cpu;
-      
       if (data.server.load) {
         document.getElementById('srv-cpu-load').textContent = 'Load (15m): ' + data.server.load[2];
-        var cpuPct = Math.min(100, Math.floor((parseFloat(data.server.load[0]) / 4) * 100)); // rough approx assuming 4 cores
+        var cpuPct = Math.min(100, Math.floor((parseFloat(data.server.load[0]) / 4) * 100));
         document.getElementById('bar-cpu').style.width = cpuPct + '%';
       }
-      
       if (data.server.ramTotal && data.server.ramUsed) {
         document.getElementById('srv-ram-txt').textContent = data.server.ramUsed + ' / ' + data.server.ramTotal;
-        var rT = parseFloat(data.server.ramTotal);
-        var rU = parseFloat(data.server.ramUsed);
-        if(!isNaN(rT) && !isNaN(rU)) {
-          var pct = Math.floor((rU / rT) * 100);
-          document.getElementById('bar-ram').style.width = pct + '%';
-        }
       }
-      
       if (data.server.disk) {
         document.getElementById('srv-disk-txt').textContent = data.server.disk.used + ' / ' + data.server.disk.total + ' (' + data.server.disk.percent + ')';
         document.getElementById('bar-disk').style.width = data.server.disk.percent;
       }
-      
       document.getElementById('srv-up').textContent = fmtUptime(data.server.uptime);
+      var hdrUp = document.getElementById('hdr-uptime');
+      if (hdrUp) hdrUp.textContent = 'up ' + fmtUptime(data.server.uptime);
     }
-    
     window.latestData = data;
     window.latestRenderTime = Date.now();
-
     var wrap = document.getElementById('groups');
     wrap.textContent = '';
-    
     var gtpl = document.getElementById('group-tpl');
     var stpl = document.getElementById('svc-tpl');
-
     GROUPS.forEach(function (g) {
       var items = data.services.filter(function (s) { return s.kind === g.key; });
       if (!items.length) return;
-
       var gnode = gtpl.content.cloneNode(true);
       var up = items.filter(function (s) { return s.healthy; }).length;
-      
       var iconStr = '';
       if (g.key === 'app') iconStr = '<svg class="w-4 h-4 inline-block -mt-1 mr-2 text-zinc-500" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 4A2.5 2.5 0 0 1 3 1.5h10A2.5 2.5 0 0 1 15.5 4v8a2.5 2.5 0 0 1-2.5 2.5H3A2.5 2.5 0 0 1 .5 12V4ZM3 2.5A1.5 1.5 0 0 0 1.5 4v8A1.5 1.5 0 0 0 3 13.5h10a1.5 1.5 0 0 0 1.5-1.5V4A1.5 1.5 0 0 0 13 2.5H3Z"/><path d="M2.5 4.5A.5.5 0 0 1 3 4h10a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5H3a.5.5 0 0 1-.5-.5v-1Z"/></svg>';
-      if (g.key === 'bot') iconStr = '<svg class="w-4 h-4 inline-block -mt-1 mr-2 text-zinc-500" fill="currentColor" viewBox="0 0 16 16"><path d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5ZM3 8.062C3 6.76 4.235 5.765 5.53 5.889a28.02 28.02 0 0 1 4.94 0C11.765 5.765 13 6.76 13 8.062v1.157a53.078 53.078 0 0 1-10 0V8.062Zm9.336-1.597c-1.89-1.246-4.526-1.246-6.425 0-1.83 1.206-2.58 3.42-1.851 5.378C4.542 13.155 5.642 14.5 8 14.5c2.358 0 3.458-1.345 3.94-2.657.728-1.957-.02-4.172-1.852-5.378H12.336ZM8 15.5c-2.923 0-4.323-1.636-4.87-3.1-.734-1.97-.044-4.292 2-5.632C6.91 5.618 9.09 5.618 10.87 6.768c2.044 1.34 2.734 3.662 2 5.632C12.323 13.864 10.922 15.5 8 15.5Zm-2-2.348a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5Z"/></svg>';
-      if (g.key === 'infra') iconStr = '<svg class="w-4 h-4 inline-block -mt-1 mr-2 text-zinc-500" fill="currentColor" viewBox="0 0 16 16"><path d="M0 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6zm2-1a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H2zm2.5 1.5a.5.5 0 0 0 0 1h4a.5.5 0 0 0 0-1h-4zm-2 0a.5.5 0 1 0 0 1 .5.5 0 0 0 0-1zm-1 0a.5.5 0 1 0 0 1 .5.5 0 0 0 0-1z"/></svg>';
+      if (g.key === 'bot') iconStr = '<svg class="w-4 h-4 inline-block -mt-1 mr-2 text-zinc-500" fill="currentColor" viewBox="0 0 16 16"><path d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5ZM3 8.062C3 6.76 4.235 5.765 5.53 5.889a28.02 28.02 0 0 1 4.94 0C11.765 5.765 13 6.76 13 8.062v1.157a53.078 53.078 0 0 1-10 0V8.062Zm9.336-1.597c-1.89-1.246-4.526-1.246-6.425 0-1.83 1.206-2.58 3.42-1.851 5.378C4.542 13.155 5.642 14.5 8 14.5c2.358 0 3.458-1.345 3.94-2.657.728-1.957-.02-4.172-1.852-5.378H12.336ZM8 15.5c-2.923 0-4.323-1.636-4.87-3.1-.734-1.97-.044-4.292 2-5.632C6.91 5.618 9.09 5.618 10.87 6.768c2.044 1.34 2.734 3.662 2 5.632C12.323 13.864 10.922 15.5 8 15.5Z"/></svg>';
+      if (g.key === 'infra') iconStr = '<svg class="w-4 h-4 inline-block -mt-1 mr-2 text-zinc-500" fill="currentColor" viewBox="0 0 16 16"><path d="M0 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6zm2-1a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H2z"/></svg>';
       gnode.querySelector('[data-group-head]').innerHTML = '<div class="flex items-center text-zinc-200">' + iconStr + g.label + ' <span class="opacity-40 text-[10px] ml-2">(' + up + '/' + items.length + ' active)</span></div>';
-
-      
       var list = gnode.querySelector('[data-group-list]');
       items.forEach(function (svc) { list.appendChild(svcNode(svc, stpl)); });
       wrap.appendChild(gnode);
     });
   }
 
-var nextLoadTime = Date.now() + 15000;
-  var countdownSpan = document.getElementById('countdown-badge');
+  // ===== CHARTS =====
+  var MAX = 60;
+  var hist = {
+    cpu: Array(MAX).fill(null),
+    ram: Array(MAX).fill(null),
+    dRead: Array(MAX).fill(null),
+    dWrite: Array(MAX).fill(null),
+    nRx: Array(MAX).fill(null),
+    nTx: Array(MAX).fill(null),
+    gpu: Array(MAX).fill(null),
+    power: Array(MAX).fill(null),
+  };
+  var labels = Array(MAX).fill('');
+  var chartOpts = function(yMax, yLabel) {
+    return {
+      type: 'line',
+      data: { labels: labels, datasets: [] },
+      options: {
+        animation: false,
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { intersect: false, mode: 'index' },
+        plugins: { legend: { display: false }, tooltip: { enabled: true, backgroundColor: '#18181b', titleColor: '#f4f4f5', bodyColor: '#a1a1aa', borderColor: '#27272a', borderWidth: 1, displayColors: true, callbacks: { label: function(c){ return ' ' + c.dataset.label + ': ' + (c.parsed.y==null?'-':(yLabel?c.parsed.y.toFixed(1)+yLabel:c.parsed.y)); } } } },
+        scales: {
+          x: { display: false, grid: { display: false } },
+          y: { min: 0, max: yMax, ticks: { color: '#52525b', font: { size: 10 }, callback: function(v){ return yLabel? v+yLabel : v; } }, grid: { color: 'rgba(39,39,42,0.6)' }, border: { display:false } }
+        },
+        elements: { point: { radius: 0, hitRadius: 8 }, line: { tension: 0.32, borderWidth: 1.5 } }
+      }
+    };
+  };
 
+  var cpuChart, ramChart, diskChart, netChart, gpuChart, powerChart;
+  function initCharts() {
+    var co = chartOpts(100, '%');
+    co.data.datasets = [{ label: 'CPU', data: hist.cpu, borderColor: '#14b8a6', backgroundColor: 'rgba(20,184,166,0.14)', fill: true }];
+    cpuChart = new Chart(document.getElementById('chart-cpu'), co);
+
+    var ro = chartOpts(100, '%');
+    ro.data.datasets = [{ label: 'RAM', data: hist.ram, borderColor: '#38bdf8', backgroundColor: 'rgba(56,189,248,0.14)', fill: true }];
+    ramChart = new Chart(document.getElementById('chart-ram'), ro);
+
+    var do_ = chartOpts(null, null);
+    do_.options.scales.y.ticks.callback = function(v){ if(v>=1e9) return (v/1e9).toFixed(1)+'G'; if(v>=1e6) return (v/1e6).toFixed(1)+'M'; if(v>=1e3) return (v/1e3).toFixed(0)+'K'; return v; };
+    do_.options.scales.y.grid.color = 'rgba(39,39,42,0.35)';
+    do_.data.datasets = [
+      { label: 'Read', data: hist.dRead, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.10)', fill: true },
+      { label: 'Write', data: hist.dWrite, borderColor: '#f43f5e', backgroundColor: 'rgba(244,63,94,0.08)', fill: true }
+    ];
+    diskChart = new Chart(document.getElementById('chart-disk'), do_);
+
+    var no = chartOpts(null, null);
+    no.options.scales.y.ticks.callback = function(v){ if(v>=1e9) return (v/1e9).toFixed(1)+'G'; if(v>=1e6) return (v/1e6).toFixed(1)+'M'; if(v>=1e3) return (v/1e3).toFixed(0)+'K'; return v; };
+    no.data.datasets = [
+      { label: 'RX', data: hist.nRx, borderColor: '#a78bfa', backgroundColor: 'rgba(167,139,250,0.14)', fill: true },
+      { label: 'TX', data: hist.nTx, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.08)', fill: true }
+    ];
+    netChart = new Chart(document.getElementById('chart-net'), no);
+
+    var go = chartOpts(100, '%');
+    go.data.datasets = [{ label: 'GPU', data: hist.gpu, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.14)', fill: true }];
+    gpuChart = new Chart(document.getElementById('chart-gpu'), go);
+    setTimeout(checkGpuChart, 600);
+    var po = chartOpts(77, 'W');
+    po.data.datasets = [{ label: 'Power', data: hist.power, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.18)', fill: true }];
+    po.options.scales.y.min = 0;
+    powerChart = new Chart(document.getElementById('chart-power'), po);
+  }
+  function checkGpuChart() {
+    var hasGpu = window._gpuAvailable;
+    var c = document.getElementById('chart-gpu');
+    var nc = document.getElementById('tm-gpu-nochart');
+    if (hasGpu === false) { if(c) c.style.display='none'; if(nc) nc.classList.remove('hidden'); if(gpuChart) gpuChart.resize(); }
+    else { if(c) c.style.display=''; if(nc) nc.classList.add('hidden'); }
+  }
+
+  function pushHist(arr, val) { arr.push(val); if (arr.length > MAX) arr.shift(); return arr.slice(); }
+
+  function updateCharts(m) {
+    // CPU
+    document.getElementById('tm-cpu-pct').textContent = (m.cpu.percent!=null? m.cpu.percent.toFixed(1) : '-') + '%';
+    document.getElementById('tm-cpu-model').textContent = (m.cpu.model||'').split(' @')[0].slice(0,28);
+    document.getElementById('tm-cpu-load').textContent = (m.cpu.load||[]).join(' ');
+    document.getElementById('tm-cpu-up').textContent = 'up ' + fmtUptime(m.uptime);
+    // per-core bars
+    var coresWrap = document.getElementById('tm-cpu-cores');
+    if (coresWrap && m.cpu.perCore) {
+      coresWrap.innerHTML = m.cpu.perCore.map(function(v,i){
+        var col = v>85? 'bg-error' : v>60? 'bg-warn' : 'bg-accent';
+        return '<div class="rounded bg-base border border-border/30 p-1.5"><div class="text-[10px] font-mono text-muted text-center">CPU'+i+'</div><div class="h-1.5 bg-base rounded overflow-hidden mt-1 border border-border/20"><div class="h-full '+col+' transition-all duration-500" style="width:'+Math.round(v)+'%"></div></div><div class="text-[10px] font-mono text-center mt-1 tabular-nums">'+v.toFixed(0)+'%</div></div>';
+      }).join('');
+    }
+    // RAM
+    document.getElementById('tm-ram-pct').textContent = m.ram.percent.toFixed(1) + '%';
+    document.getElementById('tm-ram-used').textContent = m.ram.usedFmt + ' / ' + m.ram.totalFmt;
+    document.getElementById('tm-ram-free').textContent = 'free ' + m.ram.freeFmt;
+    document.getElementById('bar-ram-tm').style.width = m.ram.percent + '%';
+    document.getElementById('tm-ram-sub').textContent = m.ram.totalFmt;
+    // Disk
+    document.getElementById('tm-disk-used').textContent = m.disk.usedFmt + ' / ' + m.disk.totalFmt;
+    document.getElementById('tm-disk-pct').textContent = (m.disk.percent? m.disk.percent.toFixed(0) : '0') + '%';
+    document.getElementById('bar-disk-tm').style.width = (m.disk.percent||0) + '%';
+    document.getElementById('tm-disk-read').textContent = m.disk.readFmt;
+    document.getElementById('tm-disk-write').textContent = m.disk.writeFmt;
+    // Net
+    document.getElementById('tm-net-iface').textContent = m.net.iface;
+    document.getElementById('tm-net-rx').textContent = m.net.rxFmt;
+    document.getElementById('tm-net-tx').textContent = m.net.txFmt;
+    document.getElementById('tm-net-total').textContent = (m.net.rxFmt||'-') + ' / ' + (m.net.txFmt||'-');
+    // GPU
+    document.getElementById('tm-gpu-name').textContent = (m.gpu.name||'').slice(0,42);
+    window._gpuAvailable = !!m.gpu.available;
+    if (m.gpu.available && m.gpu.percent!=null) {
+      document.getElementById('tm-gpu-pct').textContent = m.gpu.percent.toFixed(1)+'%';
+    } else {
+      document.getElementById('tm-gpu-pct').textContent = '-';
+    }
+    document.getElementById('tm-gpu-freq').textContent = m.gpu.freq? m.gpu.freq+' MHz' : '-';
+    var rc6El=document.getElementById('tm-gpu-rc6'); if(rc6El) rc6El.textContent = m.gpu.rc6!=null? m.gpu.rc6.toFixed(1)+'%' : '-';
+    var pkgEl=document.getElementById('tm-gpu-pkg'); if(pkgEl) pkgEl.textContent = m.gpu.pkgPower!=null? m.gpu.pkgPower.toFixed(1)+' W' : '-';
+    var reEl=document.getElementById('tm-gpu-render'); if(reEl) reEl.textContent = m.gpu.engines? m.gpu.engines.render.toFixed(1)+'%' : '-';
+    var bvEl=document.getElementById('tm-gpu-bv'); if(bvEl) bvEl.textContent = m.gpu.engines? m.gpu.engines.blitter.toFixed(1)+'% / '+m.gpu.engines.video.toFixed(1)+'%' : '-';
+    var noteEl=document.getElementById('tm-gpu-note'); if(noteEl) noteEl.textContent = m.gpu.samplerAge!=null? '* via intel_gpu_top · live ('+m.gpu.samplerAge+'s ago) · RC6 '+ (m.gpu.rc6!=null?m.gpu.rc6.toFixed(0)+'%':'-') : '* via intel_gpu_top · live engines';
+    checkGpuChart();
+
+    // power
+    if (m.power) {
+      document.getElementById('tm-power-pkg').textContent = m.power.pkgW.toFixed(1)+' W';
+      document.getElementById('tm-power-pkg-detail').textContent = m.power.pkgW.toFixed(1)+' W';
+      document.getElementById('tm-power-core').textContent = m.power.coreW.toFixed(1)+' W';
+      document.getElementById('tm-power-uncore').textContent = m.power.uncoreW.toFixed(1)+' W';
+      document.getElementById('tm-power-total').textContent = m.power.estTotalW.toFixed(1)+' W';
+      document.getElementById('tm-power-kwh').textContent = m.power.kwhDay.toFixed(2)+' kWh/day';
+      document.getElementById('tm-power-cost').textContent = 'Rp ' + Number(m.power.costDay).toLocaleString('id-ID') + '/day';
+      document.getElementById('tm-power-sub').textContent = 'RAPL · ' + m.power.tdpW + 'W TDP · ' + m.power.pkgW.toFixed(1) + 'W';
+    }
+    // push histories
+    hist.cpu = pushHist(hist.cpu, m.cpu.percent);
+    hist.ram = pushHist(hist.ram, m.ram.percent);
+    // disk/net in B/s -> convert to KB/s for chart scaling
+    hist.dRead = pushHist(hist.dRead, m.disk.readBps);
+    hist.dWrite = pushHist(hist.dWrite, m.disk.writeBps);
+    hist.nRx = pushHist(hist.nRx, m.net.rxBps);
+    hist.nTx = pushHist(hist.nTx, m.net.txBps);
+    hist.gpu = pushHist(hist.gpu, m.gpu.available && m.gpu.percent!=null ? m.gpu.percent : null);
+    hist.power = pushHist(hist.power, m.power? m.power.pkgW : null);
+    // Simple view sync (percents / key numbers only)
+    var sCpuEl = document.getElementById('s-cpu');
+    if(sCpuEl) sCpuEl.textContent = (m.cpu.percent!=null? m.cpu.percent.toFixed(0) : '-') + '%';
+    var sCpuSub = document.getElementById('s-cpu-sub');
+    if(sCpuSub) sCpuSub.textContent = ((m.cpu.model||'').split(' @')[0].slice(0,22) + ' · ' + (m.cpu.perCore? m.cpu.perCore.length+' cores' : 'up ' + fmtUptime(m.uptime))).slice(0,32);
+    var sRamEl = document.getElementById('s-ram');
+    if(sRamEl) sRamEl.textContent = (m.ram.percent!=null? m.ram.percent.toFixed(0) : '-') + '%';
+    var sRamSub = document.getElementById('s-ram-sub');
+    if(sRamSub) sRamSub.textContent = m.ram.usedFmt + ' / ' + m.ram.totalFmt;
+    var sDiskEl = document.getElementById('s-disk');
+    if(sDiskEl) sDiskEl.textContent = (m.disk.percent!=null? m.disk.percent.toFixed(0) : '0') + '%';
+    var sDiskSub = document.getElementById('s-disk-sub');
+    if(sDiskSub) sDiskSub.textContent = m.disk.usedFmt + ' / ' + m.disk.totalFmt;
+    var sNetEl = document.getElementById('s-net');
+    if(sNetEl) sNetEl.textContent = (m.net.rxFmt||'-') + ' / ' + (m.net.txFmt||'-');
+    var sNetSub = document.getElementById('s-net-sub');
+    if(sNetSub) sNetSub.textContent = m.net.iface || 'net';
+    var sPowerEl = document.getElementById('s-power');
+    if(sPowerEl) sPowerEl.textContent = (m.power && m.power.pkgW!=null ? m.power.pkgW.toFixed(1)+' W' : '- W');
+    var sPowerSub = document.getElementById('s-power-sub');
+    if(sPowerSub) sPowerSub.textContent = (m.power? m.power.kwhDay.toFixed(2)+' kWh/d' : '-');
+    var sGpuEl = document.getElementById('s-gpu');
+    if(sGpuEl) sGpuEl.textContent = (m.gpu.available && m.gpu.percent!=null ? m.gpu.percent.toFixed(0)+'%' : (m.gpu.freq? m.gpu.freq+' MHz' : '-'));
+    var sGpuSub = document.getElementById('s-gpu-sub');
+    if(sGpuSub) sGpuSub.textContent = (m.gpu.name||'HD 2500').slice(0,18);
+
+    if (cpuChart) { cpuChart.data.datasets[0].data = hist.cpu.slice(); cpuChart.update('none'); }
+    if (ramChart) { ramChart.data.datasets[0].data = hist.ram.slice(); ramChart.update('none'); }
+    if (diskChart) { diskChart.data.datasets[0].data = hist.dRead.slice(); diskChart.data.datasets[1].data = hist.dWrite.slice(); diskChart.update('none'); }
+    if (netChart) { netChart.data.datasets[0].data = hist.nRx.slice(); netChart.data.datasets[1].data = hist.nTx.slice(); netChart.update('none'); }
+    if (gpuChart) { gpuChart.data.datasets[0].data = hist.gpu.slice(); gpuChart.update('none'); }
+    if (powerChart) { powerChart.data.datasets[0].data = hist.power.slice(); powerChart.update('none'); }
+  }
+
+  // --- View toggle: Simple vs Detail ---
+  (function(){
+    var STORAGE_KEY = 'iskan_portal_view';
+    var btnSimple = document.getElementById('btn-view-simple');
+    var btnDetail = document.getElementById('btn-view-detail');
+    var tmSection = document.getElementById('tm-section');
+    function applyView(mode){
+      var m = (mode === 'simple') ? 'simple' : 'detail';
+      if(tmSection) tmSection.setAttribute('data-view', m);
+      document.body.setAttribute('data-view', m);
+      var detailGrid = document.getElementById('tm-detail-grid');
+      var simpleGrid = document.getElementById('tm-simple-grid');
+      if(detailGrid) detailGrid.classList.toggle('hidden', m === 'simple');
+      if(simpleGrid) simpleGrid.classList.toggle('hidden', m !== 'simple');
+      if(btnSimple && btnDetail){
+        if(m === 'simple'){
+          btnSimple.className = 'h-7 px-3 rounded text-xs font-medium bg-surface text-text border border-border shadow-sm';
+          btnDetail.className = 'h-7 px-3 rounded text-xs font-medium text-muted hover:text-text';
+        } else {
+          btnSimple.className = 'h-7 px-3 rounded text-xs font-medium text-muted hover:text-text';
+          btnDetail.className = 'h-7 px-3 rounded text-xs font-medium bg-surface text-text border border-border shadow-sm';
+        }
+      }
+      try{ localStorage.setItem(STORAGE_KEY, m); }catch(e){}
+      if(m === 'detail'){
+        setTimeout(function(){
+          if(typeof cpuChart !== 'undefined' && cpuChart) try{ cpuChart.resize(); }catch(e){}
+          if(typeof ramChart !== 'undefined' && ramChart) try{ ramChart.resize(); }catch(e){}
+          if(typeof diskChart !== 'undefined' && diskChart) try{ diskChart.resize(); }catch(e){}
+          if(typeof netChart !== 'undefined' && netChart) try{ netChart.resize(); }catch(e){}
+          if(typeof gpuChart !== 'undefined' && gpuChart) try{ gpuChart.resize(); }catch(e){}
+          if(typeof powerChart !== 'undefined' && powerChart) try{ powerChart.resize(); }catch(e){}
+        }, 80);
+      }
+    }
+    var initial = 'simple';
+    try{
+      var saved = localStorage.getItem(STORAGE_KEY);
+      if(saved === 'simple' || saved === 'detail') initial = saved;
+      else if(new URLSearchParams(location.search).get('view') === 'simple') initial = 'simple';
+    }catch(e){}
+    window.setPortalView = applyView;
+    window.getPortalView = function(){ return (tmSection && tmSection.getAttribute('data-view')) || 'detail'; };
+    if(btnSimple) btnSimple.addEventListener('click', function(){ applyView('simple'); });
+    if(btnDetail) btnDetail.addEventListener('click', function(){ applyView('detail'); });
+    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ applyView(initial); });
+    else applyView(initial);
+  })();
+
+  var metricsTimer = null;
+  function pollMetrics() {
+    fetch('/api/metrics', { cache: 'no-store' })
+      .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+      .then(function(m){ updateCharts(m); })
+      .catch(function(){});
+  }
+
+  // ===== main loops =====
+  var nextLoadTime = Date.now() + 15000;
+  var countdownSpan = document.getElementById('countdown-badge');
   setInterval(function () {
     if (!window.latestData) return;
-    
-    // Server & Service uptimes ticking
     var diff = (Date.now() - window.latestRenderTime) / 1000;
     if (window.latestData.server) {
-      document.getElementById('srv-up').textContent = fmtUptime(window.latestData.server.uptime + diff);
+      var el = document.getElementById('srv-up');
+      if (el) el.textContent = fmtUptime(window.latestData.server.uptime + diff);
+      var hdr = document.getElementById('hdr-uptime');
+      if (hdr) hdr.textContent = 'up ' + fmtUptime(window.latestData.server.uptime + diff);
     }
     var upNodes = document.querySelectorAll('[data-real-up]');
     for (var i = 0; i < upNodes.length; i++) {
       var base = parseFloat(upNodes[i].getAttribute('data-real-up'));
-      if (base) {
-        upNodes[i].textContent = fmtUptime(base + diff);
-      }
+      if (base) upNodes[i].textContent = fmtUptime(base + diff);
     }
-    
-    // Countdown logic
     var until = (nextLoadTime - Date.now()) / 1000;
-    if (until <= 0) {
-      countdownSpan.textContent = '(0s)';
-      nextLoadTime = Date.now() + 15000; // Reset eagerly so it doesn't duplicate loop
-      load();
-    } else {
-      countdownSpan.textContent = '(' + Math.ceil(until) + 's)';
-    }
-
+    if (until <= 0) { countdownSpan.textContent = '(0s)'; nextLoadTime = Date.now() + 15000; load(); }
+    else { countdownSpan.textContent = '(' + Math.ceil(until) + 's)'; }
   }, 1000);
 
   function fail(err) {
@@ -365,71 +815,22 @@ var nextLoadTime = Date.now() + 15000;
     div.textContent = 'Failed to load status: ' + (err && err.message ? err.message : 'Unknown error');
     wrap.appendChild(div);
   }
-
-  function loadSysinfo() {
-    fetch('/api/sysinfo', { cache: 'no-store' })
-      .then(r => r.json())
-      .then(data => {
-        if (!data.server) return;
-        window.latestData.server = data.server;
-        
-        if (data.server.load) {
-          document.getElementById('srv-cpu-load').textContent = 'Load (15m): ' + data.server.load[2];
-          var cpuPct = Math.min(100, Math.floor((parseFloat(data.server.load[0]) / 4) * 100)); 
-          document.getElementById('bar-cpu').style.width = cpuPct + '%';
-        }
-        
-        if (data.server.ramTotal && data.server.ramUsed) {
-          document.getElementById('srv-ram-txt').textContent = data.server.ramUsed + ' / ' + data.server.ramTotal;
-          var rT = data.server.ramTotalRaw || 1;
-          var rU = data.server.ramUsedRaw || 0;
-          var pct = Math.floor((rU / rT) * 100);
-          document.getElementById('bar-ram').style.width = pct + '%';
-        }
-        
-        if (data.server.disk) {
-          document.getElementById('srv-disk-txt').textContent = data.server.disk.used + ' / ' + data.server.disk.total + ' (' + data.server.disk.percent + ')';
-          document.getElementById('bar-disk').style.width = data.server.disk.percent;
-        }
-      })
-      .catch(function(){}); // Silent fail for sysinfo background poll
-  }
-
-  setInterval(loadSysinfo, 2000); // 2s realtime hardware poll
-
   function load() {
     var wrap = document.getElementById('groups');
     refBtn.disabled = true;
     refIcon.classList.add('animate-spin');
     nextLoadTime = Date.now() + 15000;
-    
-    if (wrap.innerHTML.trim() !== '' && !document.getElementById('initial-loader')) {
-      wrap.classList.add('opacity-40');
-    }
-    
+    if (wrap.innerHTML.trim() !== '' && !document.getElementById('initial-loader')) wrap.classList.add('opacity-40');
     var start = Date.now();
-    
     fetch('/api/status', { cache: 'no-store' })
-      .then(function (r) {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.json();
-      })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(function(data) {
         var elapsed = Date.now() - start;
-        if (elapsed < 500) {
-          setTimeout(function() { finishLoad(data); }, 500 - elapsed);
-        } else {
-          finishLoad(data);
-        }
+        if (elapsed < 500) setTimeout(function() { finishLoad(data); }, 500 - elapsed);
+        else finishLoad(data);
       })
-      .catch(function(err) {
-        fail(err);
-        wrap.classList.remove('opacity-40');
-        refBtn.disabled = false;
-        refIcon.classList.remove('animate-spin');
-      });
+      .catch(function(err) { fail(err); wrap.classList.remove('opacity-40'); refBtn.disabled = false; refIcon.classList.remove('animate-spin'); });
   }
-
   function finishLoad(data) {
     render(data);
     var wrap = document.getElementById('groups');
@@ -437,11 +838,126 @@ var nextLoadTime = Date.now() + 15000;
     refBtn.disabled = false;
     refIcon.classList.remove('animate-spin');
   }
-
   refBtn.addEventListener('click', load);
-  load(); // First load
-  // Manual load interval handled in main loop // 15s refresh
+  // auth: logout / change password
+  var btnLogout=document.getElementById('btn-logout');
+  if(btnLogout) btnLogout.addEventListener('click', function(){
+    fetch('/api/auth/logout',{method:'POST'}).then(function(){ location.href='/login.html'; });
+  });
+  var modal=document.getElementById('pwd-modal');
+  var backdrop=document.getElementById('pwd-backdrop');
+  var btnChange=document.getElementById('btn-change-pwd');
+  var btnCancel=document.getElementById('pwd-cancel');
+  var btnSave=document.getElementById('pwd-save');
+  function openPwd(){ if(modal){ modal.classList.remove('hidden'); document.getElementById('pwd-old').value=''; document.getElementById('pwd-new').value=''; document.getElementById('pwd-err').classList.add('hidden'); document.getElementById('pwd-ok').classList.add('hidden'); document.getElementById('pwd-old').focus(); } }
+  function closePwd(){ if(modal) modal.classList.add('hidden'); }
+  if(btnChange) btnChange.addEventListener('click', openPwd);
+  if(btnCancel) btnCancel.addEventListener('click', closePwd);
+  if(backdrop) backdrop.addEventListener('click', closePwd);
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape' && modal && !modal.classList.contains('hidden')) closePwd(); });
+  // eye toggles inside modal
+  document.querySelectorAll('[data-eye]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var id=btn.getAttribute('data-eye');
+      var inp=document.getElementById(id);
+      if(!inp) return;
+      var show = inp.type==='password';
+      inp.type = show ? 'text' : 'password';
+      var on=btn.querySelector('.eye-on'), off=btn.querySelector('.eye-off');
+      if(on && off){ on.classList.toggle('hidden', show); off.classList.toggle('hidden', !show); }
+    });
+  });
+  var closeX=document.getElementById('pwd-close-x');
+  if(closeX) closeX.addEventListener('click', function(){ if(modal) modal.classList.add('hidden'); });
+  if(btnSave) btnSave.addEventListener('click', function(){
+    var oldV=document.getElementById('pwd-old').value;
+    var newV=document.getElementById('pwd-new').value;
+    var errEl=document.getElementById('pwd-err');
+    var okEl=document.getElementById('pwd-ok');
+    errEl.classList.add('hidden'); okEl.classList.add('hidden');
+    if(!oldV || !newV) { errEl.textContent='Isi kedua field'; errEl.classList.remove('hidden'); return; }
+    if(newV.length<6) { errEl.textContent='Minimal 6 karakter'; errEl.classList.remove('hidden'); return; }
+    btnSave.disabled=true; btnSave.textContent='Menyimpan...';
+    fetch('/api/auth/change-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({oldPassword:oldV,newPassword:newV})})
+      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,body:j}; }); })
+      .then(function(res){
+        btnSave.disabled=false; btnSave.textContent='Simpan';
+        if(res.ok) { okEl.textContent=res.body.message||'Berhasil'; okEl.classList.remove('hidden'); setTimeout(closePwd, 900); }
+        else { errEl.textContent=res.body.error||'Gagal'; errEl.classList.remove('hidden'); }
+      }).catch(function(e){ btnSave.disabled=false; btnSave.textContent='Simpan'; errEl.textContent='Network error'; errEl.classList.remove('hidden'); });
+  });
+  // also handle 401 globally for fetch wrappers
+  var _origFetch = window.fetch;
+  window.fetch = function(url, opts){
+    return _origFetch(url, opts).then(function(res){
+      if(res.status===401 && String(url).startsWith('/api/') && !String(url).includes('/api/auth/')) {
+        location.href='/login.html';
+      }
+      return res;
+    });
+  };
+
+  // boot
+  document.addEventListener('DOMContentLoaded', function(){ try{ initCharts(); }catch(e){ console.error(e); } });
+  // if already loaded (script at bottom), init now
+  try { initCharts(); } catch(e) {}
+  load();
+  pollMetrics();
+  metricsTimer = setInterval(pollMetrics, 1500);
 })();
+</script>
+<script>
+  // --- PWA: service worker + install prompt ---
+  (function(){
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function(){
+        navigator.serviceWorker.register('/sw.js').then(function(reg){
+          // console.log('SW registered', reg.scope);
+        }).catch(function(err){ console.warn('SW failed', err); });
+      });
+    }
+    var deferredPrompt = null;
+    var installBtn = document.getElementById('btn-install');
+    // also inject install button on login page if present (login has no btn-install, we handle via same id pattern)
+    function showInstall(){ if(installBtn) { installBtn.classList.remove('hidden'); installBtn.classList.add('inline-flex'); } }
+    function hideInstall(){ if(installBtn) { installBtn.classList.add('hidden'); installBtn.classList.remove('inline-flex'); } }
+    window.addEventListener('beforeinstallprompt', function(e){
+      e.preventDefault();
+      deferredPrompt = e;
+      showInstall();
+    });
+    if (installBtn) {
+      installBtn.addEventListener('click', function(){
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(function(choice){
+          // console.log('install choice', choice.outcome);
+          deferredPrompt = null;
+          hideInstall();
+        });
+      });
+    }
+    window.addEventListener('appinstalled', function(){ hideInstall(); });
+    // if already installed (standalone), hide
+    if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) hideInstall();
+    // ?action=changepw auto-open modal (if coming from PWA shortcut)
+    try {
+      var params = new URLSearchParams(location.search);
+      if (params.get('action') === 'changepw') {
+        var t = setInterval(function(){
+          var m = document.getElementById('pwd-modal');
+          var b = document.getElementById('btn-change-pwd');
+          if (m && b) { clearInterval(t); b.click(); }
+        }, 600);
+        setTimeout(function(){ clearInterval(t); }, 5000);
+      }
+      if (params.get('source') === 'pwa') {
+        // optional: track PWA launch
+        // console.log('launched from PWA');
+      }
+    } catch(e){}
+  })();
+
 </script>
 </body>
 </html>

@@ -1,0 +1,6 @@
+node_modules/
+.portal_auth
+*.bak
+*.prelogin.bak
+.env
+.DS_Store
