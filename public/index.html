@@ -249,41 +249,7 @@ tailwind.config = {
             <span>·</span>
             <span id="tm-power-cost">Rp -/day</span>
           </div>
-          <div class="mt-1 text-[11px] text-muted">* RAPL package-0 (CPU+iGPU) + ~8W board overhead · TDP 77W (Ivy 3470)</div>
-        </div>
-      </div>
-
-      <!-- GPU · full width on desktop -->
-      <div class="rounded border border-border bg-surface/40 overflow-hidden lg:col-span-2">
-        <div class="px-3 py-2 flex items-center justify-between border-b border-border/60">
-          <div class="flex items-center gap-2">
-            <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
-            <span class="text-sm font-medium">GPU</span>
-            <span class="text-xs text-muted font-mono" id="tm-gpu-name">Intel HD Graphics 2500</span>
-          </div>
-          <span class="text-sm font-semibold tabular-nums" id="tm-gpu-pct">-</span>
-        </div>
-        <div class="p-3 flex flex-col sm:flex-row gap-3 items-start">
-          <div class="flex-1 w-full">
-            <div class="h-[80px] flex items-center justify-center rounded bg-base border border-border/40 p-3" id="tm-gpu-chart-wrap">
-              <canvas id="chart-gpu" class="w-full h-full"></canvas>
-              <div id="tm-gpu-nochart" class="hidden text-center text-xs text-muted leading-relaxed">
-                <div class="font-medium text-text mb-1">Intel HD 2500 (Ivy Bridge) · i915 legacy</div>
-                <div>Kernel 6.1 tidak expose <code class="bg-base px-1 rounded">gpu_busy_percent</code> untuk Ivy Bridge.<br>Freq &amp; RC6 residency tersedia · Utilisation butuh <code class="bg-base px-1 rounded">intel_gpu_top</code> (api: <code class="bg-base px-1 rounded">intel-gpu-tools</code>).</div>
-              </div>
-            </div>
-          </div>
-          <div class="sm:w-56 shrink-0 space-y-2 text-xs">
-            <div class="flex justify-between"><span class="text-muted">Driver</span><span class="font-mono">i915</span></div>
-            <div class="flex justify-between"><span class="text-muted">PCI</span><span class="font-mono">00:02.0</span></div>
-            <div class="flex justify-between"><span class="text-muted">Freq</span><span class="font-mono" id="tm-gpu-freq">- MHz</span></div>
-            <div class="flex justify-between"><span class="text-muted">RC6</span><span class="font-mono" id="tm-gpu-rc6">- %</span></div>
-            <div class="flex justify-between"><span class="text-muted">Pkg Power</span><span class="font-mono" id="tm-gpu-pkg">- W</span></div>
-            <div class="flex justify-between"><span class="text-muted">Render</span><span class="font-mono" id="tm-gpu-render">- %</span></div>
-            <div class="flex justify-between"><span class="text-muted">Blitter / Video</span><span class="font-mono" id="tm-gpu-bv">- / -</span></div>
-            <div class="flex justify-between"><span class="text-muted">Mem</span><span class="font-mono">Shared (system RAM)</span></div>
-            <div class="pt-1 text-[11px] text-muted" id="tm-gpu-note">* via intel_gpu_top · live engines</div>
-          </div>
+          <div class="mt-1 text-[11px] text-muted">* RAPL package-0 + ~8W board overhead · TDP 77W</div>
         </div>
       </div>
 
@@ -314,11 +280,6 @@ tailwind.config = {
         <div class="flex items-center gap-1.5 text-xs text-muted"><span class="h-2 w-2 rounded-full bg-amber-400"></span>Power</div>
         <div class="mt-1 text-xl font-semibold tabular-nums" id="s-power">- W</div>
         <div class="text-[11px] font-mono text-muted truncate" id="s-power-sub">- kWh/d</div>
-      </div>
-      <div class="rounded border border-border bg-surface/40 p-3">
-        <div class="flex items-center gap-1.5 text-xs text-muted"><span class="h-2 w-2 rounded-full bg-emerald-400"></span>GPU</div>
-        <div class="mt-1 text-xl font-semibold tabular-nums" id="s-gpu">-</div>
-        <div class="text-[11px] font-mono text-muted truncate" id="s-gpu-sub">HD 2500</div>
       </div>
     </div>
   </section>
@@ -374,13 +335,16 @@ tailwind.config = {
 
 <template id="svc-tpl">
   <li class="rounded border border-border bg-surface/40 p-3 flex flex-col gap-1.5 min-w-0 overflow-hidden hover:bg-surface/60 transition-colors group/card">
-    <!-- top: dot + name + badge -->
+    <!-- top: dot + name + badges -->
     <div class="flex items-start justify-between gap-2">
       <div class="flex items-center gap-2 min-w-0">
         <span class="h-2.5 w-2.5 rounded-full shrink-0 mt-0.5" data-dot></span>
         <h3 class="text-sm font-semibold leading-tight truncate" data-name></h3>
       </div>
-      <span data-state class="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide border leading-none"></span>
+      <div class="flex flex-col items-end gap-1 shrink-0">
+        <span data-state class="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide border leading-none"></span>
+        <span data-autoboot hidden class="px-1.5 py-0.5 rounded text-[10px] font-medium border leading-none"></span>
+      </div>
     </div>
     <!-- dashboard / external links · tepat di bawah badge Running/Dead -->
     <div data-links class="hidden flex flex-wrap gap-1.5" data-links-wrap>
@@ -456,6 +420,24 @@ tailwind.config = {
     node.querySelector('[data-name]').textContent = svc.name;
     node.querySelector('[data-desc]').textContent = svc.desc;
     node.querySelector('[data-unit]').textContent = svc.unit;
+    (function(){
+      var ab = node.querySelector('[data-autoboot]');
+      if (!ab) return;
+      if (svc.autoBoot === true) {
+        ab.hidden = false;
+        ab.textContent = 'Auto-boot ON';
+        ab.className = 'px-1.5 py-0.5 rounded text-[10px] font-medium border leading-none border-accent/20 bg-accent/10 text-accent';
+        if (svc.enabled && svc.enabled !== 'enabled' && svc.enabled !== 'enabled-runtime') ab.title = String(svc.enabled);
+      } else if (svc.autoBoot === false) {
+        ab.hidden = false;
+        var isDisabled = svc.enabled === 'disabled' || svc.enabled === 'masked' || svc.enabled === 'no';
+        ab.textContent = 'Auto-boot OFF';
+        ab.className = 'px-1.5 py-0.5 rounded text-[10px] font-medium border leading-none ' + (isDisabled ? 'border-error/20 bg-error/10 text-error' : 'border-zinc-700 bg-zinc-800 text-muted');
+        if (svc.enabled) ab.title = String(svc.enabled);
+      } else {
+        ab.hidden = true;
+      }
+    })();
     // external / dashboard links
     (function(){
       var wrap = node.querySelector('[data-links-wrap]');
@@ -557,7 +539,6 @@ tailwind.config = {
     dWrite: Array(MAX).fill(null),
     nRx: Array(MAX).fill(null),
     nTx: Array(MAX).fill(null),
-    gpu: Array(MAX).fill(null),
     power: Array(MAX).fill(null),
   };
   var labels = Array(MAX).fill('');
@@ -580,7 +561,7 @@ tailwind.config = {
     };
   };
 
-  var cpuChart, ramChart, diskChart, netChart, gpuChart, powerChart;
+  var cpuChart, ramChart, diskChart, netChart, powerChart;
   function initCharts() {
     var co = chartOpts(100, '%');
     co.data.datasets = [{ label: 'CPU', data: hist.cpu, borderColor: '#14b8a6', backgroundColor: 'rgba(20,184,166,0.14)', fill: true }];
@@ -607,21 +588,10 @@ tailwind.config = {
     ];
     netChart = new Chart(document.getElementById('chart-net'), no);
 
-    var go = chartOpts(100, '%');
-    go.data.datasets = [{ label: 'GPU', data: hist.gpu, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.14)', fill: true }];
-    gpuChart = new Chart(document.getElementById('chart-gpu'), go);
-    setTimeout(checkGpuChart, 600);
     var po = chartOpts(77, 'W');
     po.data.datasets = [{ label: 'Power', data: hist.power, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.18)', fill: true }];
     po.options.scales.y.min = 0;
     powerChart = new Chart(document.getElementById('chart-power'), po);
-  }
-  function checkGpuChart() {
-    var hasGpu = window._gpuAvailable;
-    var c = document.getElementById('chart-gpu');
-    var nc = document.getElementById('tm-gpu-nochart');
-    if (hasGpu === false) { if(c) c.style.display='none'; if(nc) nc.classList.remove('hidden'); if(gpuChart) gpuChart.resize(); }
-    else { if(c) c.style.display=''; if(nc) nc.classList.add('hidden'); }
   }
 
   function pushHist(arr, val) { arr.push(val); if (arr.length > MAX) arr.shift(); return arr.slice(); }
@@ -657,21 +627,7 @@ tailwind.config = {
     document.getElementById('tm-net-rx').textContent = m.net.rxFmt;
     document.getElementById('tm-net-tx').textContent = m.net.txFmt;
     document.getElementById('tm-net-total').textContent = (m.net.rxFmt||'-') + ' / ' + (m.net.txFmt||'-');
-    // GPU
-    document.getElementById('tm-gpu-name').textContent = (m.gpu.name||'').slice(0,42);
-    window._gpuAvailable = !!m.gpu.available;
-    if (m.gpu.available && m.gpu.percent!=null) {
-      document.getElementById('tm-gpu-pct').textContent = m.gpu.percent.toFixed(1)+'%';
-    } else {
-      document.getElementById('tm-gpu-pct').textContent = '-';
-    }
-    document.getElementById('tm-gpu-freq').textContent = m.gpu.freq? m.gpu.freq+' MHz' : '-';
-    var rc6El=document.getElementById('tm-gpu-rc6'); if(rc6El) rc6El.textContent = m.gpu.rc6!=null? m.gpu.rc6.toFixed(1)+'%' : '-';
-    var pkgEl=document.getElementById('tm-gpu-pkg'); if(pkgEl) pkgEl.textContent = m.gpu.pkgPower!=null? m.gpu.pkgPower.toFixed(1)+' W' : '-';
-    var reEl=document.getElementById('tm-gpu-render'); if(reEl) reEl.textContent = m.gpu.engines? m.gpu.engines.render.toFixed(1)+'%' : '-';
-    var bvEl=document.getElementById('tm-gpu-bv'); if(bvEl) bvEl.textContent = m.gpu.engines? m.gpu.engines.blitter.toFixed(1)+'% / '+m.gpu.engines.video.toFixed(1)+'%' : '-';
-    var noteEl=document.getElementById('tm-gpu-note'); if(noteEl) noteEl.textContent = m.gpu.samplerAge!=null? '* via intel_gpu_top · live ('+m.gpu.samplerAge+'s ago) · RC6 '+ (m.gpu.rc6!=null?m.gpu.rc6.toFixed(0)+'%':'-') : '* via intel_gpu_top · live engines';
-    checkGpuChart();
+
 
     // power
     if (m.power) {
@@ -692,7 +648,6 @@ tailwind.config = {
     hist.dWrite = pushHist(hist.dWrite, m.disk.writeBps);
     hist.nRx = pushHist(hist.nRx, m.net.rxBps);
     hist.nTx = pushHist(hist.nTx, m.net.txBps);
-    hist.gpu = pushHist(hist.gpu, m.gpu.available && m.gpu.percent!=null ? m.gpu.percent : null);
     hist.power = pushHist(hist.power, m.power? m.power.pkgW : null);
     // Simple view sync (percents / key numbers only)
     var sCpuEl = document.getElementById('s-cpu');
@@ -715,16 +670,11 @@ tailwind.config = {
     if(sPowerEl) sPowerEl.textContent = (m.power && m.power.pkgW!=null ? m.power.pkgW.toFixed(1)+' W' : '- W');
     var sPowerSub = document.getElementById('s-power-sub');
     if(sPowerSub) sPowerSub.textContent = (m.power? m.power.kwhDay.toFixed(2)+' kWh/d' : '-');
-    var sGpuEl = document.getElementById('s-gpu');
-    if(sGpuEl) sGpuEl.textContent = (m.gpu.available && m.gpu.percent!=null ? m.gpu.percent.toFixed(0)+'%' : (m.gpu.freq? m.gpu.freq+' MHz' : '-'));
-    var sGpuSub = document.getElementById('s-gpu-sub');
-    if(sGpuSub) sGpuSub.textContent = (m.gpu.name||'HD 2500').slice(0,18);
 
     if (cpuChart) { cpuChart.data.datasets[0].data = hist.cpu.slice(); cpuChart.update('none'); }
     if (ramChart) { ramChart.data.datasets[0].data = hist.ram.slice(); ramChart.update('none'); }
     if (diskChart) { diskChart.data.datasets[0].data = hist.dRead.slice(); diskChart.data.datasets[1].data = hist.dWrite.slice(); diskChart.update('none'); }
     if (netChart) { netChart.data.datasets[0].data = hist.nRx.slice(); netChart.data.datasets[1].data = hist.nTx.slice(); netChart.update('none'); }
-    if (gpuChart) { gpuChart.data.datasets[0].data = hist.gpu.slice(); gpuChart.update('none'); }
     if (powerChart) { powerChart.data.datasets[0].data = hist.power.slice(); powerChart.update('none'); }
   }
 
@@ -758,7 +708,6 @@ tailwind.config = {
           if(typeof ramChart !== 'undefined' && ramChart) try{ ramChart.resize(); }catch(e){}
           if(typeof diskChart !== 'undefined' && diskChart) try{ diskChart.resize(); }catch(e){}
           if(typeof netChart !== 'undefined' && netChart) try{ netChart.resize(); }catch(e){}
-          if(typeof gpuChart !== 'undefined' && gpuChart) try{ gpuChart.resize(); }catch(e){}
           if(typeof powerChart !== 'undefined' && powerChart) try{ powerChart.resize(); }catch(e){}
         }, 80);
       }

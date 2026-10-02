@@ -239,6 +239,27 @@ async function dockerSince(name) {
   const ts = Date.parse(m[1] + 'T' + m[2]);
   return isNaN(ts) ? null : ts;
 }
+async function systemctlIsEnabled(unit, user) {
+  return new Promise((resolve) => {
+    const args = user ? ['--user', 'is-enabled', unit] : ['is-enabled', unit];
+    const { execFile } = require('child_process');
+    execFile('systemctl', args, { timeout: 3000, env: user ? USER_ENV : process.env }, (err, stdout, stderr) => {
+      const raw = (stdout || stderr || '').toString().trim().split(/\s+/)[0] || '';
+      if (raw) return resolve(raw);
+      if (err) {
+        const c = err.code;
+        if (c === 1) return resolve('disabled');
+        return resolve(null);
+      }
+      resolve(raw || null);
+    });
+  });
+}
+async function dockerRestartPolicy(name) {
+  const out = await run('docker', ['inspect', '--format', '{{.HostConfig.RestartPolicy.Name}}', name], 3000);
+  if (!out) return null;
+  return String(out).trim() || null;
+}
 async function getDiskUsage() {
   try {
     const stdout = await run('df', ['-B1', '/']);
@@ -326,7 +347,6 @@ function readDiskIoSnapshot() {
   } catch(e) {}
   return null;
 }
-let gpuSampler = { busy: 0, rc6: 100, pkgPower: 0, eng: { render: 0, blitter: 0, video: 0 }, lastUpdate: 0, running: false, freq: null };
 let raplState = { pkgW: 0, coreW: 0, uncoreW: 0, pkgEnergy: null, coreEnergy: null, uncoreEnergy: null, lastTs: 0, tdpW: 77, maxRange: 65532610987 };
 function readRaplFile(p) { try { return parseInt(require('fs').readFileSync(p,'utf8').trim(),10); } catch(e){ return null; } }
 function startRaplSampler() {
@@ -357,107 +377,8 @@ function startRaplSampler() {
   tick();
   setInterval(tick, 1000);
 }
-function startGpuSampler() {
-  if (gpuSampler.running) return;
-  gpuSampler.running = true;
-  const { spawn } = require('child_process');
-  try {
-    const proc = spawn('intel_gpu_top', ['-J', '-s', '1000'], { stdio: ['ignore', 'pipe', 'pipe'] });
-    let raw = '';
-    proc.stdout.on('data', chunk => {
-      raw += chunk.toString();
-      let depth = 0, objStart = -1;
-      for (let i = 0; i < raw.length; i++) {
-        if (raw[i] === '{') { if (depth === 0) objStart = i; depth++; }
-        else if (raw[i] === '}') {
-          depth--;
-          if (depth === 0 && objStart >= 0) {
-            const objStr = raw.slice(objStart, i + 1);
-            try {
-              const j = JSON.parse(objStr);
-              if (j.engines) {
-                const r = j.engines['Render/3D/0']?.busy ?? 0;
-                const b = j.engines['Blitter/0']?.busy ?? 0;
-                const v = j.engines['Video/0']?.busy ?? 0;
-                gpuSampler.busy = Math.max(r, b, v);
-                gpuSampler.eng = { render: r, blitter: b, video: v };
-                gpuSampler.rc6 = j.rc6?.value ?? 100;
-                gpuSampler.pkgPower = j.power?.Package ?? 0;
-                gpuSampler.lastUpdate = Date.now();
-              }
-            } catch(e) {}
-            raw = raw.slice(i + 1);
-            i = -1; objStart = -1;
-          }
-        }
-      }
-      if (raw.length > 8192) raw = raw.slice(-4096);
-    });
-    proc.on('error', () => { gpuSampler.running = false; });
-    proc.on('exit', () => { gpuSampler.running = false; setTimeout(startGpuSampler, 5000); });
-  } catch(e) { gpuSampler.running = false; }
-}
-function readGpuInfo() {
-  let name = 'Intel HD Graphics 2500 (Ivy Bridge GT1)';
-  try {
-    let pciId = '';
-    try { pciId = require('fs').readFileSync('/sys/class/drm/card0/device/device','utf8').trim().toLowerCase(); } catch(e) {}
-    if (!pciId) {
-      try { const ue = require('fs').readFileSync('/sys/class/drm/card0/device/uevent','utf8'); const m=ue.match(/PCI_ID=(.+)/); if(m) pciId=m[1].split(':')[1].toLowerCase(); } catch(e){}
-    }
-    const MAP = {
-      '0152': 'Intel HD Graphics 2500 (Ivy Bridge GT1) · i5-3470 / Xeon E3-1200 v2',
-      '0156': 'Intel HD Graphics 2500 (Ivy Bridge)',
-      '0162': 'Intel HD Graphics 4000 (Ivy Bridge GT2)',
-      '0166': 'Intel HD Graphics 4000 (Ivy Bridge GT2)',
-      '016a': 'Intel HD Graphics P4000 (Ivy Bridge)',
-    };
-    if (pciId && MAP[pciId.replace('0x','')]) name = MAP[pciId.replace('0x','')];
-    else {
-      const lspci = require('child_process').execFileSync('lspci', ['-nn'], {timeout: 2000}).toString();
-      const m = lspci.match(/VGA.*?:\s*(.+)/);
-      if (m) {
-        let raw = m[1].trim();
-        raw = raw.replace(/\s*\(rev.*?\)\s*$/,'').replace(/^Intel Corporation\s+/,'Intel ');
-        if (raw.includes('Xeon E3-1200')) raw = 'Intel HD Graphics 2500 (Ivy Bridge GT1) · i5-3470';
-        name = raw.slice(0,70);
-      }
-    }
-  } catch(e) {}
-  let freq = gpuSampler.freq;
-  const freqCandidates = [
-    '/sys/class/drm/card0/gt_cur_freq_mhz',
-    '/sys/class/drm/card0/gt_act_freq_mhz',
-    '/sys/class/drm/card0/gt/gt0/rps_cur_freq_mhz',
-    '/sys/class/drm/card0/gt/gt0/rps_act_freq_mhz',
-  ];
-  if (!freq) { for (const p of freqCandidates) { try { const v=fs.readFileSync(p,'utf8').trim(); if(v){ freq=v; break; } } catch(e){} } }
-  let percent = null;
-  let available = false;
-  if (Date.now() - gpuSampler.lastUpdate < 3000) {
-    percent = Number(gpuSampler.busy.toFixed(1));
-    available = true;
-  } else {
-    const candidates = [
-      '/sys/class/drm/card0/device/gpu_busy_percent',
-      '/sys/class/drm/card0/gt_busy_percent',
-      '/sys/devices/pci0000:00/0000:00:02.0/gpu_busy_percent',
-    ];
-    for (const p of candidates) {
-      try { const v = Number(fs.readFileSync(p,'utf8').trim()); if (!isNaN(v)) { percent = v; available = true; break; } } catch(e){}
-    }
-  }
-  return {
-    name, percent, freq: freq ? Number(freq) : null,
-    available,
-    engines: gpuSampler.eng,
-    rc6: gpuSampler.rc6,
-    pkgPower: gpuSampler.pkgPower,
-    samplerAge: gpuSampler.lastUpdate ? Math.round((Date.now()-gpuSampler.lastUpdate)/1000) : null,
-  };
-}
 
-startGpuSampler(); startRaplSampler();
+startRaplSampler();
 
 app.get('/api/sysinfo', async (req, res) => {
   const diskInfo = await getDiskUsage();
@@ -482,7 +403,6 @@ app.get('/api/metrics', async (req, res) => {
   const netSnap = readNetSnapshot();
   const diskIoSnap = readDiskIoSnapshot();
   const diskInfo = await getDiskUsage();
-  const gpu = readGpuInfo();
   const memTotal = os.totalmem();
   const memUsed = memTotal - os.freemem();
   const memPct = memTotal ? (memUsed / memTotal * 100) : 0;
@@ -559,7 +479,6 @@ app.get('/api/metrics', async (req, res) => {
       rxBps, txBps,
       rxFmt: fmtBps(rxBps), txFmt: fmtBps(txBps),
     },
-    gpu,
     power: {
       pkgW: raplState.pkgW,
       coreW: raplState.coreW,
@@ -593,10 +512,10 @@ app.get('/api/status', async (req, res) => {
             }
           }
           const { noCheck, target, ...meta } = svc;
-          return { ...meta, active: healthy ? 'active' : 'inactive', state, sub, subState: sub, pid: null, memory: null, since: null, uptimeSec: null, healthy, portOpen: null, noCheck: true, target };
+          return { ...meta, active: healthy ? 'active' : 'inactive', state, sub, subState: sub, pid: null, memory: null, since: null, uptimeSec: null, healthy, portOpen: null, noCheck: true, target, enabled: null, autoBoot: null };
         }
         if (svc.docker) {
-          const dc = await dockerStatus(svc.unit);
+          const [dc, restartPolicy] = await Promise.all([ dockerStatus(svc.unit), dockerRestartPolicy(svc.unit) ]);
           const since = dc ? await dockerSince(svc.unit) : null;
           const running = !!(dc && dc.running);
           const status = dc ? dc.status : 'not found';
@@ -605,12 +524,16 @@ app.get('/api/status', async (req, res) => {
             const stats = await run('docker', ['stats', '--no-stream', '--format', '{{.MemUsage}}', svc.unit], 5000);
             if (stats) { const m = stats.trim().split(/\s*\/\s*/)[0]; mem = m || null; }
           }
-          return { ...svc, active: running ? 'active' : 'inactive', state: status, sub: running ? 'running' : status, subState: running ? 'running' : status, pid: running ? 1 : 0, memory: mem, since, uptimeSec: since ? Math.floor((Date.now() - since)/1000) : null, healthy: running, portOpen: null, docker: true };
+          const enabled = restartPolicy;
+          const autoBoot = restartPolicy === 'always' || restartPolicy === 'unless-stopped';
+          return { ...svc, active: running ? 'active' : 'inactive', state: status, sub: running ? 'running' : status, subState: running ? 'running' : status, pid: running ? 1 : 0, memory: mem, since, uptimeSec: since ? Math.floor((Date.now() - since)/1000) : null, healthy: running, portOpen: null, docker: true, enabled, autoBoot };
         }
-        const [info, sinceTs] = await Promise.all([ systemctlShow(svc.unit, svc.user), systemctlSince(svc.unit, svc.user), ]);
+        const [info, sinceTs, enabledRaw] = await Promise.all([ systemctlShow(svc.unit, svc.user), systemctlSince(svc.unit, svc.user), systemctlIsEnabled(svc.unit, svc.user) ]);
         const active = info ? info.ActiveState : 'unknown';
         const { user, ...meta } = svc;
-        return { ...meta, active, sub: info ? info.SubState : 'unknown', pid: info && info.MainPID && info.MainPID !== '0' ? Number(info.MainPID) : null, memory: info ? fmtBytes(info.MemoryCurrent) : null, since: sinceTs, uptimeSec: sinceTs ? Math.floor((Date.now() - sinceTs) / 1000) : null, healthy: active === 'active', };
+        const enabled = enabledRaw;
+        const autoBoot = enabledRaw === 'enabled' || enabledRaw === 'enabled-runtime';
+        return { ...meta, active, sub: info ? info.SubState : 'unknown', pid: info && info.MainPID && info.MainPID !== '0' ? Number(info.MainPID) : null, memory: info ? fmtBytes(info.MemoryCurrent) : null, since: sinceTs, uptimeSec: sinceTs ? Math.floor((Date.now() - sinceTs) / 1000) : null, healthy: active === 'active', enabled, autoBoot };
       })
     ),
     run('ss', ['-tulpn']),
