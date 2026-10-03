@@ -9,6 +9,8 @@ const app = express();
 const PORT = process.env.PORT || 3005;
 const AUTH_FILE = path.join(__dirname, '.portal_auth');
 const DEFAULT_PASS = 'iskan2026';
+const TELBOT_ENV = '/root/telbot-data/.env';
+const TELBOT_DIR = '/root/telbot-data';
 
 // ---- body + cookie parse ----
 app.use(express.json({ limit: '64kb' }));
@@ -183,6 +185,7 @@ const SERVICES = [
   { unit: 'docker.service',                  name: 'Docker',         kind: 'infra', port: null,  desc: 'Container runtime', tech: 'Docker', externalUrl: null },
   { unit: 'cf-manager',                          name: 'CF Manager',     kind: 'infra', port: 3010,  desc: 'Cloudflare multi-account manager', path: '/root/cf-manager', tech: 'Vue3 + Express / Docker', docker: true, externalUrl: 'https://cf.nendi.web.id', dashboardPath: '/' },
   { unit: 'owrt.nendi.web.id',                 name: 'OpenWrt - iskanWRT', kind: 'infra', port: null,  desc: 'Router LuCI via tunnel → 192.168.1.1:80', path: null, tech: 'OpenWrt / LuCI', externalUrl: 'https://owrt.nendi.web.id', dashboardPath: '/', target: 'http://192.168.1.1:80', noCheck: true },
+  { unit: 'telbot.service',                     name: 'Telbot',           kind: 'bot',   port: null, desc: 'Telkomsel bot (0xtbug/telbot v1.1.3) · Telegram Bot/CLI/MCP', path: '/root/telbot-data', tech: 'Go 1.26 · gotgbot', externalUrl: null },
   { unit: 'ttyd.service',                       name: 'Web Terminal',     kind: 'infra', port: 7681, desc: 'Web terminal (ttyd 1.7.7) → https://ssh.nendi.web.id', path: null, tech: 'ttyd / login', externalUrl: 'https://ssh.nendi.web.id', dashboardPath: '/' },
   { unit: 'cloudflared.service',                 name: 'Cloudflared Tunnel', kind: 'infra', port: null, desc: 'Named tunnel 204640e4 → 9 hostnames (nendi.web.id + 9r/drama/portal/clipper/cf/omni/llm/owrt/ssh)', tech: 'Cloudflare Tunnel', externalUrl: null },
 ];
@@ -550,6 +553,134 @@ app.get('/api/status', async (req, res) => {
     services: results,
     summary: { total: results.length, up: results.filter((r) => r.healthy).length, down: results.filter((r) => !r.healthy).length, },
   });
+});
+
+
+// ---- telbot (0xtbug/telbot) control API ----
+function parseTelbotEnv() {
+  try {
+    if (!fs.existsSync(TELBOT_ENV)) return {};
+    const txt = fs.readFileSync(TELBOT_ENV, 'utf8');
+    const out = {};
+    txt.split('\n').forEach(line => {
+      const t = line.trim();
+      if (!t || t.startsWith('#')) return;
+      const i = t.indexOf('=');
+      if (i < 1) return;
+      let k = t.slice(0,i).trim();
+      let v = t.slice(i+1).trim();
+      if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) v = v.slice(1,-1);
+      out[k] = v;
+    });
+    return out;
+  } catch(e){ return {}; }
+}
+function maskToken(tok) {
+  if (!tok || tok.length < 8) return tok ? '••••' : '';
+  return tok.slice(0,4) + '••••' + tok.slice(-4);
+}
+app.get('/api/telbot/status', async (req, res) => {
+  if (!isAuthenticated(req)) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    const env = parseTelbotEnv();
+    const hasToken = !!(env.TELKOMSEL_BOT_TOKEN && env.TELKOMSEL_BOT_TOKEN !== 'your_bot_token_here' && env.TELKOMSEL_BOT_TOKEN.length > 10);
+    const hasAdmin = !!(env.TELEGRAM_ADMIN_ID && env.TELEGRAM_ADMIN_ID !== 'your_telegram_id' && /^\d+$/.test(String(env.TELEGRAM_ADMIN_ID).trim()));
+    const configured = hasToken && hasAdmin;
+    const [info, enabledRaw, logs] = await Promise.all([
+      systemctlShow('telbot.service', false),
+      systemctlIsEnabled('telbot.service', false),
+      run('journalctl', ['-u', 'telbot.service', '-n', '60', '--no-pager'], 4000)
+    ]);
+    const active = info ? info.ActiveState : 'unknown';
+    const sub = info ? info.SubState : 'unknown';
+    const enabled = enabledRaw;
+    const autoBoot = enabled === 'enabled' || enabled === 'enabled-runtime';
+    // check binary exists
+    let binaryOk = false;
+    try { binaryOk = fs.existsSync('/usr/local/bin/telbot'); } catch(e){}
+    // data dir
+    let dataFiles = [];
+    try { dataFiles = fs.readdirSync(TELBOT_DIR).filter(f => !f.startsWith('.')).slice(0,20); } catch(e){}
+    res.json({
+      ok: true,
+      binaryOk,
+      binaryVersion: 'v1.1.3',
+      envExists: fs.existsSync(TELBOT_ENV),
+      configured,
+      hasToken,
+      hasAdmin,
+      tokenMasked: hasToken ? maskToken(env.TELKOMSEL_BOT_TOKEN) : '',
+      adminId: env.TELEGRAM_ADMIN_ID || '',
+      webhookPort: env.OTP_WEBHOOK_PORT || '',
+      webhookSecret: env.OTP_WEBHOOK_SECRET ? '••••' + String(env.OTP_WEBHOOK_SECRET).slice(-4) : '',
+      webhookSecretSet: !!env.OTP_WEBHOOK_SECRET,
+      dataDir: TELBOT_DIR,
+      dataFiles,
+      service: { active, sub, enabled, autoBoot, pid: info && info.MainPID && info.MainPID !== '0' ? Number(info.MainPID) : null, memory: info ? fmtBytes(info.MemoryCurrent) : null },
+      logs: logs ? String(logs).trim().split('\n').slice(-60).join('\n') : ''
+    });
+  } catch(e){
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+app.post('/api/telbot/config', async (req, res) => {
+  if (!isAuthenticated(req)) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    const { token, adminId, webhookPort, webhookSecret } = req.body || {};
+    const cur = parseTelbotEnv();
+    let newToken = (token || '').toString().trim();
+    let newAdmin = (adminId || '').toString().trim();
+    let newPort = (webhookPort || '').toString().trim();
+    let newSecret = (webhookSecret || '').toString().trim();
+    // keep existing if empty token/admin and already configured (allow partial update)
+    if (!newToken && cur.TELKOMSEL_BOT_TOKEN && cur.TELKOMSEL_BOT_TOKEN !== 'your_bot_token_here') newToken = cur.TELKOMSEL_BOT_TOKEN;
+    if (!newAdmin && cur.TELEGRAM_ADMIN_ID) newAdmin = String(cur.TELEGRAM_ADMIN_ID);
+    if (!newToken) return res.status(400).json({ error: 'TELKOMSEL_BOT_TOKEN wajib diisi (dari @BotFather)' });
+    if (!newAdmin) return res.status(400).json({ error: 'TELEGRAM_ADMIN_ID wajib diisi (angka, dari @userinfobot)' });
+    if (!/^\d+$/.test(newAdmin)) return res.status(400).json({ error: 'TELEGRAM_ADMIN_ID harus angka (contoh 123456789)' });
+    if (newPort && !/^\d+$/.test(newPort)) return res.status(400).json({ error: 'OTP_WEBHOOK_PORT harus angka port' });
+    // ensure dir
+    try { fs.mkdirSync(TELBOT_DIR, { recursive: true }); } catch(e){}
+    const lines = [];
+    lines.push('# Telbot env - managed via Iskan Portal Kuota tab');
+    lines.push('# Generated ' + new Date().toISOString());
+    lines.push('TELKOMSEL_BOT_TOKEN=' + newToken);
+    lines.push('TELEGRAM_ADMIN_ID=' + newAdmin);
+    if (newPort) lines.push('OTP_WEBHOOK_PORT=' + newPort);
+    if (newSecret) lines.push('OTP_WEBHOOK_SECRET=' + newSecret);
+    else if (cur.OTP_WEBHOOK_SECRET && !newSecret) {
+      // keep existing secret if not provided and port kept? only keep if user didn't clear port
+      if (newPort && cur.OTP_WEBHOOK_SECRET) lines.push('OTP_WEBHOOK_SECRET=' + cur.OTP_WEBHOOK_SECRET);
+    }
+    fs.writeFileSync(TELBOT_ENV, lines.join('\n') + '\n', { mode: 0o600 });
+    try { fs.chmodSync(TELBOT_ENV, 0o600); } catch(e){}
+    res.json({ ok: true, message: 'Config tersimpan ke ' + TELBOT_ENV, maskedToken: maskToken(newToken) });
+  } catch(e){
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+app.post('/api/telbot/action', async (req, res) => {
+  if (!isAuthenticated(req)) return res.status(401).json({ error: 'Unauthorized' });
+  const act = (req.body && req.body.action || '').toString().trim();
+  if (!['start','stop','restart','enable','disable'].includes(act)) return res.status(400).json({ error: 'action harus start|stop|restart|enable|disable' });
+  try {
+    let cmd = act;
+    // systemctl enable/disable vs start/stop/restart
+    const out = await run('systemctl', [cmd, 'telbot.service'], 8000);
+    // run returns null on err, but we want journal
+    await new Promise(r => setTimeout(r, 800));
+    const info = await systemctlShow('telbot.service', false);
+    const logs = await run('journalctl', ['-u', 'telbot.service', '-n', '30', '--no-pager'], 4000);
+    res.json({ ok: true, action: act, active: info ? info.ActiveState : 'unknown', sub: info ? info.SubState : 'unknown', logs: logs ? String(logs).trim().split('\n').slice(-30).join('\n') : '' });
+  } catch(e){
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+app.get('/api/telbot/logs', async (req, res) => {
+  if (!isAuthenticated(req)) return res.status(401).json({ error: 'Unauthorized' });
+  const n = Math.min(500, Math.max(10, parseInt(req.query.n || '120', 10) || 120));
+  const logs = await run('journalctl', ['-u', 'telbot.service', '-n', String(n), '--no-pager'], 5000);
+  res.json({ ok: true, logs: logs ? String(logs).trim() : '(no logs yet)' });
 });
 
 app.use(express.static(path.join(__dirname, 'public'), {

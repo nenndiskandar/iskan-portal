@@ -392,6 +392,54 @@ tailwind.config = {
         </div>
       </div>
 
+      <!-- Telbot Control (0xtbug/telbot v1.1.3) -->
+      <div id="telbot-panel" class="p-3 border-b border-border/40 bg-base/20 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2 min-w-0 flex-wrap">
+            <span class="text-xs font-semibold text-text flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-accent" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 2l2.4 4.2 4.8.7-3.5 3.4.8 4.7L12 12.5l-4.5 2.5.8-4.7L4.8 6.9l4.8-.7z"/></svg> Telbot Control <span class="hidden sm:inline-flex px-1.5 py-0.5 rounded bg-accent/15 border border-accent/30 text-[10px] font-mono text-accent">v1.1.3 bot</span></span>
+            <span id="telbot-dot" class="h-2 w-2 rounded-full bg-zinc-600"></span>
+            <span id="telbot-state" class="text-[11px] font-mono text-muted">memuat...</span>
+            <span id="telbot-config-badge" class="hidden px-1.5 py-0.5 rounded border text-[10px] font-medium leading-none"></span>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0 flex-wrap">
+            <button id="telbot-btn-start" type="button" class="h-7 px-2.5 rounded bg-accent text-base text-xs font-semibold hover:bg-teal-500">Start</button>
+            <button id="telbot-btn-stop" type="button" class="h-7 px-2.5 rounded bg-surface border border-border text-xs font-medium text-muted hover:text-text">Stop</button>
+            <button id="telbot-btn-restart" type="button" class="h-7 px-2.5 rounded bg-surface border border-border text-xs font-medium text-muted hover:text-text">Restart</button>
+            <button id="telbot-btn-logs" type="button" class="h-7 px-2.5 rounded bg-surface border border-border text-xs font-mono text-muted hover:text-text">Logs</button>
+          </div>
+        </div>
+
+        <div id="telbot-info-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div class="rounded bg-surface border border-border/40 px-2 py-1.5"><div class="text-[10px] uppercase tracking-wider text-muted opacity-70">Service</div><div id="telbot-info-service" class="text-xs font-mono text-text mt-0.5">-</div></div>
+          <div class="rounded bg-surface border border-border/40 px-2 py-1.5"><div class="text-[10px] uppercase tracking-wider text-muted opacity-70">Auto-boot</div><div id="telbot-info-autoboot" class="text-xs font-mono text-text mt-0.5">-</div></div>
+          <div class="rounded bg-surface border border-border/40 px-2 py-1.5"><div class="text-[10px] uppercase tracking-wider text-muted opacity-70">Token</div><div id="telbot-info-token" class="text-xs font-mono text-text mt-0.5 truncate">-</div></div>
+          <div class="rounded bg-surface border border-border/40 px-2 py-1.5"><div class="text-[10px] uppercase tracking-wider text-muted opacity-70">Admin ID</div><div id="telbot-info-admin" class="text-xs font-mono text-text mt-0.5 truncate">-</div></div>
+        </div>
+        <div class="text-[11px] leading-relaxed text-muted">Butuh <a href="https://t.me/BotFather" target="_blank" rel="noopener" class="text-accent hover:underline">@BotFather</a> buat token + <a href="https://t.me/userinfobot" target="_blank" rel="noopener" class="text-accent hover:underline">@userinfobot</a> buat Admin ID. Simpan di sini, lalu Start. Env tersimpan di <code class="px-1 py-0.5 rounded bg-surface border border-border text-[11px] font-mono">/root/telbot-data/.env</code> mode 600.</div>
+
+        <form id="telbot-config-form" class="space-y-2 rounded border border-border/40 bg-surface/40 p-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <label class="flex flex-col gap-1 min-w-0"><span class="text-[11px] font-medium text-muted">TELKOMSEL_BOT_TOKEN *</span><input id="telbot-token" type="password" autocomplete="off" placeholder="1234567890:AAH..." class="h-8 px-2.5 rounded bg-base border border-border text-xs font-mono text-text placeholder:text-muted focus:outline-none focus:border-accent"><span class="text-[10px] text-muted">Kosongkan jika tidak mau ubah token tersimpan.</span></label>
+            <label class="flex flex-col gap-1 min-w-0"><span class="text-[11px] font-medium text-muted">TELEGRAM_ADMIN_ID *</span><input id="telbot-admin" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="123456789" class="h-8 px-2.5 rounded bg-base border border-border text-xs font-mono text-text placeholder:text-muted focus:outline-none focus:border-accent"></label>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <label class="flex flex-col gap-1 min-w-0"><span class="text-[11px] font-medium text-muted">OTP_WEBHOOK_PORT <span class="font-normal opacity-60">(opsional)</span></span><input id="telbot-port" type="text" inputmode="numeric" placeholder="8081" class="h-8 px-2.5 rounded bg-base border border-border text-xs font-mono text-text placeholder:text-muted focus:outline-none focus:border-accent"></label>
+            <label class="flex flex-col gap-1 min-w-0"><span class="text-[11px] font-medium text-muted">OTP_WEBHOOK_SECRET <span class="font-normal opacity-60">(opsional)</span></span><input id="telbot-secret" type="password" autocomplete="off" placeholder="•••• (kosongkan jika tidak ubah)" class="h-8 px-2.5 rounded bg-base border border-border text-xs font-mono text-text placeholder:text-muted focus:outline-none focus:border-accent"></label>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button id="telbot-save" type="submit" class="h-8 px-4 rounded bg-text text-base text-xs font-semibold hover:bg-zinc-200">Simpan Config</button>
+            <button id="telbot-enable" type="button" class="h-8 px-3 rounded bg-surface border border-border text-xs font-medium text-muted hover:text-text">Enable auto-boot</button>
+            <button id="telbot-disable" type="button" class="h-8 px-3 rounded bg-surface border border-border text-xs font-medium text-muted hover:text-text">Disable</button>
+            <span id="telbot-save-msg" class="text-xs font-mono"></span>
+          </div>
+        </form>
+
+        <div id="telbot-log-wrap" class="hidden space-y-1.5">
+          <div class="flex items-center justify-between"><span class="text-[11px] font-mono text-muted">journalctl -u telbot -n 120</span><button id="telbot-log-refresh" type="button" class="h-6 px-2 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text">Refresh</button></div>
+          <pre id="telbot-log" class="max-h-[320px] overflow-auto rounded bg-black border border-border p-2 text-[11px] font-mono text-zinc-300 whitespace-pre-wrap break-words leading-relaxed"></pre>
+        </div>
+      </div>
+
       <!-- WebUI support -->
       <div class="p-3 border-b border-border/40 bg-base/30">
         <div class="flex flex-col sm:flex-row sm:items-center gap-2 justify-between">
@@ -1062,6 +1110,94 @@ tailwind.config = {
         if (saved && inp) inp.value = saved;
       } catch(e){}
     }
+    function setTelbotDot(ok){
+      var d=document.getElementById('telbot-dot');
+      if(!d) return;
+      d.className = ok ? 'h-2 w-2 rounded-full bg-accent animate-pulse' : 'h-2 w-2 rounded-full bg-error';
+      if(!ok && document.getElementById('telbot-state')){
+        // keep dot color via JS, tailwind bg-error/x exists
+      }
+    }
+    function telbotBadge(el, text, kind){
+      if(!el) return;
+      el.textContent=text;
+      el.classList.remove('hidden');
+      if(kind==='ok'){ el.className='px-1.5 py-0.5 rounded border border-accent/20 bg-accent/10 text-accent text-[10px] font-medium leading-none'; }
+      else if(kind==='warn'){ el.className='px-1.5 py-0.5 rounded border border-amber-500/20 bg-amber-500/10 text-amber-400 text-[10px] font-medium leading-none'; }
+      else { el.className='px-1.5 py-0.5 rounded border border-error/20 bg-error/10 text-error text-[10px] font-medium leading-none'; }
+    }
+    async function fetchTelbotStatus(){
+      var dot=document.getElementById('telbot-dot'), st=document.getElementById('telbot-state'), badge=document.getElementById('telbot-config-badge');
+      var svcEl=document.getElementById('telbot-info-service'), abEl=document.getElementById('telbot-info-autoboot'), tokEl=document.getElementById('telbot-info-token'), admEl=document.getElementById('telbot-info-admin');
+      var logEl=document.getElementById('telbot-log');
+      try{
+        var r=await fetch('/api/telbot/status',{credentials:'same-origin',cache:'no-store'});
+        if(r.status===401){ if(st) st.textContent='login dulu'; return; }
+        var j=await r.json();
+        if(!j.ok) throw new Error(j.error||'gagal');
+        var svc=j.service||{};
+        var isRunning = svc.active==='active';
+        if(dot) dot.className = isRunning ? 'h-2 w-2 rounded-full bg-accent' : 'h-2 w-2 rounded-full bg-zinc-600';
+        if(st) st.textContent = (svc.active||'?') + (svc.sub ? ' ('+svc.sub+')' : '') + (j.binaryOk ? ' · bin ok' : ' · bin missing');
+        if(badge){
+          if(!j.configured){ telbotBadge(badge,'belum dikonfigurasi','err'); }
+          else if(!isRunning){ telbotBadge(badge,'siap · belum running','warn'); }
+          else { telbotBadge(badge,'running','ok'); }
+        }
+        if(svcEl) svcEl.textContent = (svc.active||'?') + (svc.pid? ' · pid '+svc.pid : '') + (j.binaryVersion? ' · '+j.binaryVersion : '');
+        if(abEl) abEl.textContent = (svc.autoBoot ? 'ON ('+(svc.enabled||'enabled')+')' : 'OFF ('+(svc.enabled||'disabled')+')');
+        if(tokEl) tokEl.textContent = j.hasToken ? (j.tokenMasked||'••••') : '(kosong)';
+        if(admEl) admEl.textContent = j.adminId || '(kosong)';
+        // prefill admin/port if empty inputs
+        var admInp=document.getElementById('telbot-admin'); if(admInp && !admInp.value && j.adminId) admInp.value=j.adminId;
+        var portInp=document.getElementById('telbot-port'); if(portInp && !portInp.value && j.webhookPort) portInp.value=j.webhookPort;
+        // show logs preview if have
+        if(j.logs && logEl && document.getElementById('telbot-log-wrap') && !document.getElementById('telbot-log-wrap').classList.contains('hidden')){
+          // only update if wrap visible; else keep stale
+        }
+        // stash for enable/disable hint
+        window._telbotStatus=j;
+      }catch(e){
+        if(st) st.textContent='error: '+(e.message||e);
+        if(dot) dot.className='h-2 w-2 rounded-full bg-error';
+      }
+    }
+    async function telbotAction(act, btn){
+      var st=document.getElementById('telbot-state');
+      var orig = btn?btn.textContent:'';
+      try{
+        if(btn){ btn.disabled=true; btn.textContent='...'; }
+        if(st) st.textContent=act+'...';
+        var r=await fetch('/api/telbot/action',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({action:act})});
+        var j=await r.json();
+        if(!r.ok) throw new Error(j.error||('HTTP '+r.status));
+        if(st) st.textContent = act+' ok · '+(j.active||'?')+' ('+(j.sub||'')+')';
+        await fetchTelbotStatus();
+        // also refresh logs if open
+        var wrap=document.getElementById('telbot-log-wrap');
+        if(wrap && !wrap.classList.contains('hidden')) refreshTelbotLogs();
+        else if(j.logs){
+          var l=document.getElementById('telbot-log'); if(l) l.textContent=j.logs; if(wrap) wrap.classList.remove('hidden');
+        }
+      }catch(e){
+        if(st) st.textContent='error '+act+': '+(e.message||e);
+        alert('Gagal '+act+': '+(e.message||e));
+      }finally{
+        if(btn){ btn.disabled=false; btn.textContent=orig; }
+      }
+    }
+    async function refreshTelbotLogs(){
+      var l=document.getElementById('telbot-log'); var w=document.getElementById('telbot-log-wrap');
+      if(!l) return;
+      if(w) w.classList.remove('hidden');
+      l.textContent='memuat logs...';
+      try{
+        var r=await fetch('/api/telbot/logs?n=150',{credentials:'same-origin',cache:'no-store'});
+        var j=await r.json();
+        l.textContent=j.logs||'(kosong)';
+        l.scrollTop=l.scrollHeight;
+      }catch(e){ l.textContent='gagal load logs: '+(e.message||e); }
+    }
     function applyView(tab){
       window._portalView = tab;
       try{ localStorage.setItem(KEY, tab); }catch(e){}
@@ -1126,6 +1262,36 @@ tailwind.config = {
       kuotaFrame.setAttribute('src', u);
     });
     if (kuotaInput) kuotaInput.addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); if(kuotaLoad) kuotaLoad.click(); }});
+    // --- Telbot wiring ---
+    var telbotForm=document.getElementById('telbot-config-form');
+    if(telbotForm) telbotForm.addEventListener('submit', async function(e){
+      e.preventDefault();
+      var tokEl=document.getElementById('telbot-token'), admEl=document.getElementById('telbot-admin'), portEl=document.getElementById('telbot-port'), secEl=document.getElementById('telbot-secret'), msgEl=document.getElementById('telbot-save-msg');
+      var token=(tokEl?tokEl.value:'').trim(), adminId=(admEl?admEl.value:'').trim(), webhookPort=(portEl?portEl.value:'').trim(), webhookSecret=(secEl?secEl.value:'').trim();
+      if(msgEl) { msgEl.textContent='menyimpan...'; msgEl.className='text-xs font-mono text-muted'; }
+      try{
+        var r=await fetch('/api/telbot/config',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({token:token,adminId:adminId,webhookPort:webhookPort,webhookSecret:webhookSecret})});
+        var j=await r.json();
+        if(!r.ok) throw new Error(j.error||('HTTP '+r.status));
+        if(msgEl){ msgEl.textContent='✓ '+ (j.message||'tersimpan') + (j.maskedToken ? ' ('+j.maskedToken+')' : ''); msgEl.className='text-xs font-mono text-accent'; }
+        if(tokEl) tokEl.value=''; if(secEl) secEl.value='';
+        await fetchTelbotStatus();
+        setTimeout(function(){ if(msgEl) msgEl.textContent=''; }, 4000);
+      }catch(err){
+        if(msgEl){ msgEl.textContent='✗ '+(err.message||err); msgEl.className='text-xs font-mono text-error'; }
+      }
+    });
+    var tbStart=document.getElementById('telbot-btn-start'), tbStop=document.getElementById('telbot-btn-stop'), tbRestart=document.getElementById('telbot-btn-restart'), tbLogs=document.getElementById('telbot-btn-logs');
+    if(tbStart) tbStart.addEventListener('click', function(){ telbotAction('start', tbStart); });
+    if(tbStop) tbStop.addEventListener('click', function(){ telbotAction('stop', tbStop); });
+    if(tbRestart) tbRestart.addEventListener('click', function(){ telbotAction('restart', tbRestart); });
+    if(tbLogs) tbLogs.addEventListener('click', function(){ refreshTelbotLogs(); });
+    var tLogRefresh=document.getElementById('telbot-log-refresh'); if(tLogRefresh) tLogRefresh.addEventListener('click', refreshTelbotLogs);
+    var tEnable=document.getElementById('telbot-enable'); if(tEnable) tEnable.addEventListener('click', function(){ telbotAction('enable', tEnable); });
+    var tDisable=document.getElementById('telbot-disable'); if(tDisable) tDisable.addEventListener('click', function(){ telbotAction('disable', tDisable); });
+    // initial fetch if kuota already active on load (deferred via applyView, but also warm)
+    setTimeout(function(){ try{ if(window._portalView==='kuota') fetchTelbotStatus(); }catch(e){} }, 700);
+
     if (kuotaFs && kuotaWrap) kuotaFs.addEventListener('click', function(){
       if (!document.fullscreenElement) { if(kuotaWrap.requestFullscreen) kuotaWrap.requestFullscreen(); else if(kuotaWrap.webkitRequestFullscreen) kuotaWrap.webkitRequestFullscreen(); }
       else { if(document.exitFullscreen) document.exitFullscreen(); }
