@@ -179,12 +179,12 @@ const SERVICES = [
   { unit: 'auto-clipper-v2-bot.service', name: 'Auto-Clipper Bot', kind: 'bot', port: null, desc: 'Telegram bot pipeline', tech: 'Python', externalUrl: null },
   { unit: 'hermes-gateway.service',      name: 'Hermes Gateway',   kind: 'bot', port: null, desc: 'Hermes Agent messaging gateway', user: true, tech: 'Node.js', externalUrl: null },
   { unit: '9router-mibp.service',            name: '9Router',         kind: 'infra', port: 20127, desc: 'AI router dashboard (Next.js 16) · /dashboard', path: '/root/9router-mibp-version', tech: 'Next.js 16 / React 19', externalUrl: 'https://9r.nendi.web.id', dashboardPath: '/' },
-  { unit: 'omniroute.service',               name: 'OmniRoute',      kind: 'infra', port: 20128, desc: 'AI gateway proxy (~2900 models) · dashboard /dashboard', tech: 'Go (Golang)', externalUrl: 'https://ai.nendi.web.id', dashboardPath: '/dashboard' },
+  { unit: 'omniroute.service',               name: 'OmniRoute',      kind: 'infra', port: 20128, desc: 'AI gateway proxy (~2900 models) · dashboard /dashboard', tech: 'Go (Golang)', externalUrl: 'https://omni.nendi.web.id', dashboardPath: '/dashboard' },
   { unit: 'docker.service',                  name: 'Docker',         kind: 'infra', port: null,  desc: 'Container runtime', tech: 'Docker', externalUrl: null },
   { unit: 'cf-manager',                          name: 'CF Manager',     kind: 'infra', port: 3010,  desc: 'Cloudflare multi-account manager', path: '/root/cf-manager', tech: 'Vue3 + Express / Docker', docker: true, externalUrl: 'https://cf.nendi.web.id', dashboardPath: '/' },
   { unit: 'owrt.nendi.web.id',                 name: 'OpenWrt - iskanWRT', kind: 'infra', port: null,  desc: 'Router LuCI via tunnel → 192.168.1.1:80', path: null, tech: 'OpenWrt / LuCI', externalUrl: 'https://owrt.nendi.web.id', dashboardPath: '/', target: 'http://192.168.1.1:80', noCheck: true },
   { unit: 'ttyd.service',                       name: 'Web Terminal',     kind: 'infra', port: 7681, desc: 'Web terminal (ttyd 1.7.7) → https://ssh.nendi.web.id', path: null, tech: 'ttyd / login', externalUrl: 'https://ssh.nendi.web.id', dashboardPath: '/' },
-  { unit: 'cloudflared.service',                 name: 'Cloudflared Tunnel', kind: 'infra', port: null, desc: 'Named tunnel 204640e4 → 9 hostnames (nendi.web.id + 9r/drama/portal/clipper/cf/ai/owrt/ssh)', tech: 'Cloudflare Tunnel', externalUrl: null },
+  { unit: 'cloudflared.service',                 name: 'Cloudflared Tunnel', kind: 'infra', port: null, desc: 'Named tunnel 204640e4 → 9 hostnames (nendi.web.id + 9r/drama/portal/clipper/cf/omni/llm/owrt/ssh)', tech: 'Cloudflare Tunnel', externalUrl: null },
 ];
 
 const USER_ENV = { ...process.env, XDG_RUNTIME_DIR: process.env.XDG_RUNTIME_DIR || '/run/user/0' };
