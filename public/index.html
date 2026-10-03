@@ -435,8 +435,9 @@ tailwind.config = {
         </form>
 
         <div id="telbot-log-wrap" class="hidden space-y-1.5">
-          <div class="flex items-center justify-between"><span class="text-[11px] font-mono text-muted">journalctl -u telbot -n 120</span><button id="telbot-log-refresh" type="button" class="h-6 px-2 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text">Refresh</button></div>
+          <div class="flex flex-wrap items-center justify-between gap-2"><span class="text-[11px] font-mono text-muted">journalctl -u telbot -n 150 <span id="telbot-log-filter-info" class="hidden ml-1 text-[10px] font-mono text-amber-400"></span></span><div class="flex items-center gap-1.5 shrink-0"><label class="inline-flex items-center gap-1 text-[11px] text-muted cursor-pointer select-none" title="Tampilkan baris spam jaringan (context deadline)"><input id="telbot-log-raw-toggle" type="checkbox" class="h-3 w-3 rounded border-border bg-base"> raw</label><button id="telbot-log-refresh" type="button" class="h-6 px-2 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text">Refresh</button></div></div>
           <pre id="telbot-log" class="max-h-[320px] overflow-auto rounded bg-black border border-border p-2 text-[11px] font-mono text-zinc-300 whitespace-pre-wrap break-words leading-relaxed"></pre>
+          <div id="telbot-log-filter-note" class="hidden text-[10px] font-mono text-muted bg-amber-500/10 border border-amber-500/20 rounded px-2 py-1 leading-relaxed"></div>
         </div>
       </div>
 
@@ -1236,16 +1237,31 @@ tailwind.config = {
     }
     async function refreshTelbotLogs(){
       var l=document.getElementById('telbot-log'); var w=document.getElementById('telbot-log-wrap');
+      var info=document.getElementById('telbot-log-filter-info'); var note=document.getElementById('telbot-log-filter-note');
+      var rawToggle=document.getElementById('telbot-log-raw-toggle');
       if(!l) return;
       if(w) w.classList.remove('hidden');
       l.textContent='memuat logs...';
+      if(info) { info.classList.add('hidden'); info.textContent=''; }
+      if(note) { note.classList.add('hidden'); note.textContent=''; }
+      var useRaw = !!(rawToggle && rawToggle.checked);
       try{
-        var r=await fetch('/api/telbot/logs?n=150',{credentials:'same-origin',cache:'no-store'});
+        var url = '/api/telbot/logs?n=150' + (useRaw ? '&raw=1' : '');
+        var r=await fetch(url,{credentials:'same-origin',cache:'no-store'});
         var j=await r.json();
         l.textContent=j.logs||'(kosong)';
         l.scrollTop=l.scrollHeight;
+        if(!useRaw && j.filtered && j.dropped>0){
+          if(info){ info.textContent='• ' + j.dropped + '/' + j.total + ' spam disembunyikan'; info.classList.remove('hidden'); }
+          if(note){ note.textContent='[' + j.dropped + ' baris "context deadline exceeded / getUpdates" disembunyikan  -  flapping jaringan Telegram, bot tetap running. Centang raw untuk lihat semua]'; note.classList.remove('hidden'); }
+        } else if(useRaw && j.dropped!==undefined){
+          // raw mode: no filter note
+        } else if(j.filtered){
+          if(info){ info.textContent='• filtered'; info.classList.remove('hidden'); }
+        }
       }catch(e){ l.textContent='gagal load logs: '+(e.message||e); }
     }
+    (function(){ var rt=document.getElementById('telbot-log-raw-toggle'); if(rt) rt.addEventListener('change', function(){ refreshTelbotLogs(); }); })();
     function applyView(tab){
       window._portalView = tab;
       try{ localStorage.setItem(KEY, tab); }catch(e){}

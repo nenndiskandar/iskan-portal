@@ -473,7 +473,7 @@ function startRaplSampler() {
 
 startRaplSampler();
 
-// docker mem cache — biar /api/status gak ke-block 2s oleh `docker stats`
+// docker mem cache  -  biar /api/status gak ke-block 2s oleh `docker stats`
 const dockerMemCache = new Map();
 // warm cache once at boot (background, non-blocking)
 setTimeout(() => {
@@ -689,6 +689,26 @@ function maskToken(tok) {
   if (!tok || tok.length < 8) return tok ? '••••' : '';
   return tok.slice(0,4) + '••••' + tok.slice(-4);
 }
+function filterTelbotLogs(raw) {
+  if (!raw || !String(raw).trim()) return { filtered: raw || '', dropped: 0, total: 0 };
+  const text = String(raw);
+  const lines = text.split('\n');
+  const noisyRe = /context deadline exceeded|Failed to get updates|getUpdates/i;
+  let kept = [];
+  let dropped = 0;
+  for (const line of lines) {
+    if (noisyRe.test(line)) { dropped++; continue; }
+    kept.push(line);
+  }
+  let filtered = kept.join('\n').trim();
+  if (dropped > 0) {
+    const summary = `[` + dropped + ` baris "context deadline exceeded / getUpdates" disembunyikan  -  flapping jaringan Telegram, bot tetap running]`;
+    if (!filtered) filtered = summary + '\n(tidak ada log lain  -  semua yang terfilter adalah spam jaringan)';
+    else filtered = filtered + '\n\n' + summary;
+  }
+  filtered = filtered.replace(/\n{3,}/g, '\n\n');
+  return { filtered, dropped, total: lines.length };
+}
 app.get('/api/telbot/status', async (req, res) => {
   if (!isAuthenticated(req)) return res.status(401).json({ error: 'Unauthorized' });
   try {
@@ -696,11 +716,16 @@ app.get('/api/telbot/status', async (req, res) => {
     const hasToken = !!(env.TELKOMSEL_BOT_TOKEN && env.TELKOMSEL_BOT_TOKEN !== 'your_bot_token_here' && env.TELKOMSEL_BOT_TOKEN.length > 10);
     const hasAdmin = !!(env.TELEGRAM_ADMIN_ID && env.TELEGRAM_ADMIN_ID !== 'your_telegram_id' && /^\d+$/.test(String(env.TELEGRAM_ADMIN_ID).trim()));
     const configured = hasToken && hasAdmin;
-    const [info, enabledRaw, logs] = await Promise.all([
+    const [info, enabledRaw, logsRaw] = await Promise.all([
       systemctlShow('telbot.service', false),
       systemctlIsEnabled('telbot.service', false),
       run('journalctl', ['-u', 'telbot.service', '-n', '60', '--no-pager'], 4000)
     ]);
+    let _telbotFiltered = { filtered: '', dropped: 0, total: 0 };
+    try { _telbotFiltered = filterTelbotLogs(logsRaw ? String(logsRaw) : ''); } catch(e) { _telbotFiltered = { filtered: logsRaw ? String(logsRaw).trim() : '', dropped: 0, total: logsRaw ? String(logsRaw).split('\n').length : 0 }; }
+    const logs = _telbotFiltered.filtered;
+    const logsDropped = _telbotFiltered.dropped;
+    const logsTotal = _telbotFiltered.total;
     const active = info ? info.ActiveState : 'unknown';
     const sub = info ? info.SubState : 'unknown';
     const enabled = enabledRaw;
@@ -727,7 +752,10 @@ app.get('/api/telbot/status', async (req, res) => {
       dataDir: TELBOT_DIR,
       dataFiles,
       service: { active, sub, enabled, autoBoot, pid: info && info.MainPID && info.MainPID !== '0' ? Number(info.MainPID) : null, memory: info ? fmtBytes(info.MemoryCurrent) : null },
-      logs: logs ? String(logs).trim().split('\n').slice(-60).join('\n') : ''
+      logs: logs,
+      logsDropped,
+      logsTotal,
+      logsFiltered: logsDropped > 0
     });
   } catch(e){
     res.status(500).json({ error: String(e.message || e) });
@@ -780,8 +808,10 @@ app.post('/api/telbot/action', async (req, res) => {
     // run returns null on err, but we want journal
     await new Promise(r => setTimeout(r, 800));
     const info = await systemctlShow('telbot.service', false);
-    const logs = await run('journalctl', ['-u', 'telbot.service', '-n', '30', '--no-pager'], 4000);
-    res.json({ ok: true, action: act, active: info ? info.ActiveState : 'unknown', sub: info ? info.SubState : 'unknown', logs: logs ? String(logs).trim().split('\n').slice(-30).join('\n') : '' });
+    const rawLogs = await run('journalctl', ['-u', 'telbot.service', '-n', '30', '--no-pager'], 4000);
+    let _actF = { filtered: rawLogs ? String(rawLogs).trim().split('\n').slice(-30).join('\n') : '', dropped: 0, total: rawLogs ? String(rawLogs).trim().split('\n').length : 0 };
+    try { const full = rawLogs ? String(rawLogs).trim() : ''; const ff = filterTelbotLogs(full); _actF = { filtered: String(ff.filtered).split('\n').slice(-30).join('\n'), dropped: ff.dropped, total: ff.total }; } catch(e) {}
+    res.json({ ok: true, action: act, active: info ? info.ActiveState : 'unknown', sub: info ? info.SubState : 'unknown', logs: _actF.filtered, logsDropped: _actF.dropped, logsTotal: _actF.total, logsFiltered: _actF.dropped > 0 });
   } catch(e){
     res.status(500).json({ error: String(e.message || e) });
   }
@@ -789,8 +819,12 @@ app.post('/api/telbot/action', async (req, res) => {
 app.get('/api/telbot/logs', async (req, res) => {
   if (!isAuthenticated(req)) return res.status(401).json({ error: 'Unauthorized' });
   const n = Math.min(500, Math.max(10, parseInt(req.query.n || '120', 10) || 120));
-  const logs = await run('journalctl', ['-u', 'telbot.service', '-n', String(n), '--no-pager'], 5000);
-  res.json({ ok: true, logs: logs ? String(logs).trim() : '(no logs yet)' });
+  const raw = await run('journalctl', ['-u', 'telbot.service', '-n', String(n), '--no-pager'], 5000);
+  const rawStr = raw ? String(raw).trim() : '(no logs yet)';
+  if (req.query.raw === '1') return res.json({ ok: true, logs: rawStr, raw: true, dropped: 0, total: rawStr.split('\n').length });
+  let f = { filtered: rawStr, dropped: 0, total: rawStr.split('\n').length };
+  try { f = filterTelbotLogs(rawStr); } catch(e) {}
+  res.json({ ok: true, logs: f.filtered, dropped: f.dropped, total: f.total, filtered: f.dropped > 0, rawAvailable: true });
 });
 
 app.use(express.static(path.join(__dirname, 'public'), {
