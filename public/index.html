@@ -122,6 +122,7 @@ tailwind.config = {
   <div id="portal-view-tabs" class="mb-3 flex items-center gap-1 p-1 rounded-lg bg-surface border border-border w-fit max-w-full overflow-x-auto no-scrollbar" role="tablist" aria-label="Pilih tampilan">
     <button data-view-tab="tasks" role="tab" aria-selected="true" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium bg-text text-base border border-text whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg> Task Manager <span data-tasks-count class="opacity-60 font-mono text-[11px] hidden"></span></button>
     <button data-view-tab="services" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16"><path d="M0 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6zm2-1a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H2z"/></svg> Services <span data-services-count class="opacity-60 font-mono text-[11px]">-</span></button>
+    <button data-view-tab="ssh" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg> SSH</button>
   </div>
 
   <!-- ===== TASK MANAGER ===== -->
@@ -337,6 +338,39 @@ tailwind.config = {
     </div>
   </div>
 
+  <!-- SSH - ttyd iframe (mobile-friendly) -->
+  <section id="ssh-section" class="hidden space-y-3">
+    <div class="rounded border border-border bg-surface/30 overflow-hidden">
+      <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 border-b border-border/60 bg-surface/20">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="h-2 w-2 rounded-full bg-accent"></span>
+          <span class="text-xs font-semibold uppercase tracking-wider text-muted">Web Terminal</span>
+          <span class="hidden sm:inline text-[11px] font-mono text-muted">ssh.nendi.web.id</span>
+          <span id="ssh-status" class="text-[11px] font-mono text-muted hidden">loading...</span>
+        </div>
+        <div class="flex items-center gap-1.5 shrink-0">
+          <a href="https://ssh.nendi.web.id" target="_blank" rel="noopener" class="inline-flex h-7 items-center gap-1 px-2.5 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text">Open ↗</a>
+          <button id="ssh-fullscreen" type="button" class="inline-flex h-7 items-center gap-1 px-2.5 rounded bg-base border border-border text-[11px] font-medium text-text hover:bg-border">Fullscreen</button>
+          <button id="ssh-reload" type="button" class="inline-flex h-7 items-center justify-center w-7 rounded bg-base border border-border text-muted hover:text-text" title="Reload">
+            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
+          </button>
+        </div>
+      </div>
+      <div id="ssh-frame-wrap" class="relative bg-black">
+        <iframe id="ssh-iframe" title="Web Terminal" class="w-full block bg-black" style="height: min(72vh, 640px); min-height: 380px; border: 0;" allow="clipboard-read; clipboard-write; fullscreen" loading="lazy"></iframe>
+        <div id="ssh-loader" class="absolute inset-0 flex flex-col items-center justify-center bg-black/90 text-muted">
+          <svg class="h-6 w-6 mb-3 animate-spin text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
+          <span class="text-xs">Memuat terminal...</span>
+          <button id="ssh-load-btn" type="button" class="mt-3 h-7 px-3 rounded bg-accent text-base text-xs font-semibold hover:bg-teal-500">Muat terminal</button>
+        </div>
+      </div>
+      <div class="px-3 py-2 flex flex-wrap gap-1.5 text-[11px]">
+        <span class="px-1.5 py-0.5 rounded bg-base border border-border/40 text-muted font-mono">login: root + password</span>
+        <span class="px-1.5 py-0.5 rounded bg-base border border-border/40 text-muted hidden sm:inline">Tip: putar HP landscape untuk keyboard luas</span>
+      </div>
+    </div>
+  </section>
+
   <footer class="mt-6 flex flex-col gap-2 sm:gap-3 border-t border-border pt-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] text-xs text-muted sm:flex-row sm:items-center sm:justify-between w-full min-w-0">
     <span id="meta" class="leading-relaxed break-words min-w-0 flex-1">-</span>
     <span id="updated" class="shrink-0 whitespace-nowrap font-mono text-[11px] sm:text-xs">Last updated: -</span>
@@ -481,6 +515,24 @@ tailwind.config = {
       } else if (svc.externalUrl && svc.dashboardPath) {
         // also show subtle hostname under
         // keep dash as primary; could optionally show hostname chip
+      }
+      // SSH via tunnel - show hostname + copy ssh command
+      if (svc.sshHost) {
+        badge.textContent = svc.sshHost + ':22';
+        badge.className = 'inline-flex items-center gap-1 px-2 py-0.5 rounded border border-accent/20 bg-accent/10 text-accent text-[11px] font-mono';
+        badge.classList.remove('hidden');
+        if (wrap) wrap.classList.remove('hidden');
+        var sshHint = document.createElement('div');
+        sshHint.className = 'mt-1.5 flex items-center gap-2 text-[11px] font-mono';
+        sshHint.innerHTML = '<span class="text-muted">ssh</span><code class="px-1.5 py-0.5 rounded bg-base border border-border text-text break-all">ssh root@' + svc.sshHost + '</code><button data-copy-ssh class="shrink-0 h-6 px-2 rounded bg-surface border border-border text-muted hover:text-text text-[11px]">Copy</button>';
+        var descEl = node.querySelector('[data-desc]');
+        if (descEl && descEl.parentNode) descEl.parentNode.insertBefore(sshHint, descEl.nextSibling);
+        var btn = sshHint.querySelector('[data-copy-ssh]');
+        if (btn) btn.addEventListener('click', function(){
+          var cmd = 'ssh root@' + svc.sshHost;
+          if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(cmd).then(function(){ btn.textContent='Copied!'; setTimeout(function(){btn.textContent='Copy';},1200); });
+          else { var ta=document.createElement('textarea'); ta.value=cmd; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy'); btn.textContent='Copied!';}catch(e){} document.body.removeChild(ta); setTimeout(function(){btn.textContent='Copy';},1200); }
+        });
       }
       // LAN-only for portfolio
       if (svc.localUrl && !svc.externalUrl) {
@@ -886,10 +938,33 @@ tailwind.config = {
     var tmSection = document.getElementById('tm-section');
     var groups = document.getElementById('groups');
     var servicesPanel = document.getElementById('services-panel');
+    var sshSection = document.getElementById('ssh-section');
+    function loadSSH(){
+      var frame = document.getElementById('ssh-iframe');
+      var loader = document.getElementById('ssh-loader');
+      var status = document.getElementById('ssh-status');
+      if (!frame) return;
+      if (frame.getAttribute('src')) return;
+      var url = 'https://ssh.nendi.web.id';
+      frame.setAttribute('src', url);
+      if (status) { status.classList.remove('hidden'); status.textContent = 'loading...'; }
+      frame.addEventListener('load', function(){
+        if (loader) loader.classList.add('hidden');
+        if (status) status.textContent = 'connected';
+        setTimeout(function(){ if(status) status.classList.add('hidden'); }, 2000);
+      });
+      frame.addEventListener('error', function(){
+        if (status) status.textContent = 'error - coba Reload';
+      });
+      // timeout fallback hide loader after 12s even if no load event
+      setTimeout(function(){ if(loader && !loader.classList.contains('hidden')) { /* keep loader but allow manual */ } }, 12000);
+    }
     function applyView(tab){
       window._portalView = tab;
       try{ localStorage.setItem(KEY, tab); }catch(e){}
       var isTasks = (tab === 'tasks');
+      var isServices = (tab === 'services');
+      var isSSH = (tab === 'ssh');
       document.querySelectorAll('[data-view-tab]').forEach(function(b){
         var on = (b.getAttribute('data-view-tab') === tab);
         b.setAttribute('aria-selected', on ? 'true' : 'false');
@@ -898,8 +973,9 @@ tailwind.config = {
           : 'shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap';
       });
       if (tmSection) tmSection.classList.toggle('hidden', !isTasks);
-      if (groups) groups.classList.toggle('hidden', isTasks);
-      if (servicesPanel) servicesPanel.classList.toggle('hidden', isTasks);
+      if (servicesPanel) servicesPanel.classList.toggle('hidden', !isServices);
+      if (sshSection) sshSection.classList.toggle('hidden', !isSSH);
+      if (isSSH) loadSSH();
       // sync poll interval display for top bar if present
       var topInt = document.getElementById('tm-interval-top');
       var curInt = document.getElementById('tm-interval');
@@ -909,6 +985,29 @@ tailwind.config = {
     document.querySelectorAll('[data-view-tab]').forEach(function(b){
       b.addEventListener('click', function(){ applyView(b.getAttribute('data-view-tab')); });
     });
+    // SSH controls
+    var sshBtn = document.getElementById('ssh-load-btn');
+    if (sshBtn) sshBtn.addEventListener('click', function(){ var f=document.getElementById('ssh-iframe'); if(f && !f.getAttribute('src')) { f.setAttribute('src','https://ssh.nendi.web.id'); var l=document.getElementById('ssh-loader'); if(l) l.classList.add('hidden'); }});
+    var sshReload = document.getElementById('ssh-reload');
+    if (sshReload) sshReload.addEventListener('click', function(){
+      var f=document.getElementById('ssh-iframe'); var l=document.getElementById('ssh-loader');
+      if(f){ f.removeAttribute('src'); if(l) l.classList.remove('hidden'); setTimeout(function(){ f.setAttribute('src','https://ssh.nendi.web.id'); }, 80); }
+    });
+    var sshFs = document.getElementById('ssh-fullscreen');
+    if (sshFs) sshFs.addEventListener('click', function(){
+      var wrap=document.getElementById('ssh-frame-wrap'); if(!wrap) return;
+      if (!document.fullscreenElement) { if(wrap.requestFullscreen) wrap.requestFullscreen(); else if(wrap.webkitRequestFullscreen) wrap.webkitRequestFullscreen(); }
+      else { if(document.exitFullscreen) document.exitFullscreen(); }
+    });
+    // responsive height for mobile: adjust iframe on resize/fullscreen
+    function adjSSHHeight(){
+      var f=document.getElementById('ssh-iframe'); if(!f) return;
+      var isFs = !!document.fullscreenElement;
+      if (isFs) f.style.height = '100vh';
+      else f.style.height = (window.innerWidth < 640 ? 'min(68vh, 520px)' : 'min(72vh, 640px)');
+    }
+    window.addEventListener('resize', adjSSHHeight);
+    document.addEventListener('fullscreenchange', adjSSHHeight);
   }
 })();
 </script>
