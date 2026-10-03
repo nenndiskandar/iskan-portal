@@ -16,6 +16,7 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
 <script>
 tailwind.config = {
   theme: {
@@ -123,6 +124,7 @@ tailwind.config = {
     <button data-view-tab="tasks" role="tab" aria-selected="true" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium bg-text text-base border border-text whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg> Task Manager <span data-tasks-count class="opacity-60 font-mono text-[11px] hidden"></span></button>
     <button data-view-tab="services" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16"><path d="M0 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6zm2-1a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H2z"/></svg> Services <span data-services-count class="opacity-60 font-mono text-[11px]">-</span></button>
     <button data-view-tab="ssh" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg> SSH</button>
+    <button data-view-tab="kuota" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 10 7 10s7-5 7-10a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg> Kuota</button>
   </div>
 
   <!-- ===== TASK MANAGER ===== -->
@@ -367,6 +369,72 @@ tailwind.config = {
       <div class="px-3 py-2 flex flex-wrap gap-1.5 text-[11px]">
         <span class="px-1.5 py-0.5 rounded bg-base border border-border/40 text-muted font-mono">login: root + password</span>
         <span class="px-1.5 py-0.5 rounded bg-base border border-border/40 text-muted hidden sm:inline">Tip: putar HP landscape untuk keyboard luas</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Kuota - 0xtbug/telbot (support webui) -->
+  <section id="kuota-section" class="hidden space-y-3">
+    <div class="rounded border border-border bg-surface/30 overflow-hidden">
+      <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 border-b border-border/60 bg-surface/20">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="h-2 w-2 rounded-full bg-accent"></span>
+          <span class="text-xs font-semibold uppercase tracking-wider text-muted">Kuota</span>
+          <span class="hidden sm:inline text-[11px] font-mono text-muted">0xtbug/telbot · Telkomsel via Telegram/CLI/MCP</span>
+          <span id="kuota-status" class="text-[11px] font-mono text-muted hidden">loading...</span>
+        </div>
+        <div class="flex items-center gap-1.5 shrink-0 flex-wrap">
+          <a href="https://github.com/0xtbug/telbot" target="_blank" rel="noopener" class="inline-flex h-7 items-center gap-1 px-2.5 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text">GitHub ↗</a>
+          <a href="https://github.com/0xtbug/telbot/releases" target="_blank" rel="noopener" class="hidden sm:inline-flex h-7 items-center gap-1 px-2.5 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text">Releases</a>
+          <button id="kuota-reload" type="button" class="inline-flex h-7 items-center justify-center w-7 rounded bg-base border border-border text-muted hover:text-text" title="Reload README">
+            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- WebUI support -->
+      <div class="p-3 border-b border-border/40 bg-base/30">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-2 justify-between">
+          <div class="min-w-0">
+            <div class="text-xs font-semibold text-text flex items-center gap-1.5">WebUI Support <span class="px-1.5 py-0.5 rounded bg-accent/15 border border-accent/30 text-[10px] font-mono text-accent">iframe</span></div>
+            <div class="text-[11px] text-muted leading-relaxed">GitHub blok iframe (X-Frame-Options: deny). README di-render live di bawah. Jika telbot punya webui lokal (mis. :8081), masukkan URL-nya untuk embed di sini.</div>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button id="kuota-webui-toggle" type="button" class="h-7 px-3 rounded bg-base border border-border text-[11px] font-medium text-text">Tampilkan WebUI</button>
+            <button id="kuota-webui-fs" type="button" class="hidden h-7 px-2.5 rounded bg-base border border-border text-[11px] font-medium text-muted hover:text-text">Fullscreen</button>
+          </div>
+        </div>
+        <div id="kuota-webui-box" class="hidden mt-3 space-y-2">
+          <div class="flex flex-col sm:flex-row gap-2">
+            <input id="kuota-webui-url" type="url" inputmode="url" placeholder="https://contoh:8081 atau http://localhost:8081" class="flex-1 min-w-0 h-8 px-2.5 rounded bg-surface border border-border text-xs font-mono text-text placeholder:text-muted focus:outline-none focus:border-accent">
+            <button id="kuota-webui-load" type="button" class="h-8 px-3 rounded bg-accent text-base text-xs font-semibold hover:bg-teal-500">Load</button>
+            <a id="kuota-webui-open" href="#" target="_blank" rel="noopener" class="hidden sm:inline-flex h-8 items-center px-3 rounded bg-surface border border-border text-xs font-medium text-muted hover:text-text">Open ↗</a>
+          </div>
+          <div id="kuota-webui-wrap" class="relative rounded border border-border overflow-hidden bg-black hidden" style="height: min(70vh, 600px); min-height: 360px;">
+            <iframe id="kuota-webui-frame" title="Telbot WebUI" class="w-full h-full block bg-white" style="border:0;" allow="clipboard-read; clipboard-write; fullscreen" loading="lazy"></iframe>
+            <div id="kuota-webui-loader" class="absolute inset-0 hidden flex-col items-center justify-center bg-black/80 text-muted text-xs">Memuat...</div>
+          </div>
+          <div class="text-[11px] text-muted">Tips: webui harus allow iframe (tanpa X-Frame-Options: deny). Simpan URL di localStorage otomatis.</div>
+        </div>
+      </div>
+
+      <!-- README live -->
+      <div class="p-3 sm:p-4">
+        <div id="kuota-readme" class="prose prose-invert max-w-none text-sm leading-relaxed prose-headings:text-text prose-a:text-accent hover:prose-a:text-teal-400 prose-code:text-accent prose-code:bg-surface prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-surface prose-pre:border prose-pre:border-border/60 prose-table:text-xs prose-th:text-muted prose-td:text-text prose-hr:border-border/60 prose-strong:text-text prose-li:marker:text-muted">
+          <div class="flex flex-col items-center justify-center py-8 text-muted">
+            <svg class="h-6 w-6 mb-3 animate-spin text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
+            <span class="text-xs">Memuat README dari GitHub...</span>
+            <span class="text-[11px] font-mono mt-1">raw.githubusercontent.com/0xtbug/telbot/main/README.md</span>
+          </div>
+        </div>
+        <div class="mt-4 flex flex-wrap gap-1.5 text-[11px]">
+          <a href="https://github.com/0xtbug/telbot/blob/main/docs/telegram-bot.md" target="_blank" rel="noopener" class="px-2 py-1 rounded bg-base border border-border/40 text-muted hover:text-text">Telegram Bot</a>
+          <a href="https://github.com/0xtbug/telbot/blob/main/docs/cli.md" target="_blank" rel="noopener" class="px-2 py-1 rounded bg-base border border-border/40 text-muted hover:text-text">CLI Mode</a>
+          <a href="https://github.com/0xtbug/telbot/blob/main/docs/mcp-server.md" target="_blank" rel="noopener" class="px-2 py-1 rounded bg-base border border-border/40 text-muted hover:text-text">MCP Server</a>
+          <a href="https://github.com/0xtbug/telbot/blob/main/docs/systemd.md" target="_blank" rel="noopener" class="px-2 py-1 rounded bg-base border border-border/40 text-muted hover:text-text">Systemd</a>
+          <a href="https://github.com/0xtbug/telbot/blob/main/docs/openwrt.md" target="_blank" rel="noopener" class="px-2 py-1 rounded bg-base border border-border/40 text-muted hover:text-text">OpenWrt</a>
+          <a href="https://raw.githubusercontent.com/0xtbug/telbot/main/telbot-skills/SKILL.md" target="_blank" rel="noopener" class="px-2 py-1 rounded bg-base border border-border/40 text-muted hover:text-text">SKILL.md</a>
+        </div>
       </div>
     </div>
   </section>
@@ -939,6 +1007,8 @@ tailwind.config = {
     var groups = document.getElementById('groups');
     var servicesPanel = document.getElementById('services-panel');
     var sshSection = document.getElementById('ssh-section');
+    var kuotaSection = document.getElementById('kuota-section');
+    var kuotaLoaded = false;
     function loadSSH(){
       var frame = document.getElementById('ssh-iframe');
       var loader = document.getElementById('ssh-loader');
@@ -959,12 +1029,46 @@ tailwind.config = {
       // timeout fallback hide loader after 12s even if no load event
       setTimeout(function(){ if(loader && !loader.classList.contains('hidden')) { /* keep loader but allow manual */ } }, 12000);
     }
+    function loadKuota(){
+      if (kuotaLoaded) return;
+      kuotaLoaded = true;
+      var box = document.getElementById('kuota-readme');
+      var status = document.getElementById('kuota-status');
+      if (!box) return;
+      if (status) { status.classList.remove('hidden'); status.textContent = 'loading kuota...'; }
+      var url = 'https://raw.githubusercontent.com/0xtbug/telbot/main/README.md';
+      fetch(url, { cache: 'no-store' })
+        .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
+        .then(function(md){
+          if (window.marked) {
+            try { marked.setOptions({ gfm: true, breaks: true }); box.innerHTML = marked.parse(md); }
+            catch(e){ box.innerHTML = '<pre class=\"text-xs font-mono whitespace-pre-wrap bg-surface p-3 rounded border border-border\">' + md.replace(/</g,'&lt;') + '</pre>'; }
+          } else {
+            box.innerHTML = '<pre class=\"text-xs font-mono whitespace-pre-wrap bg-surface p-3 rounded border border-border\">' + md.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</pre>';
+          }
+          // fix links to open new tab
+          box.querySelectorAll('a').forEach(function(a){ a.setAttribute('target','_blank'); a.setAttribute('rel','noopener'); });
+          if (status) status.textContent = 'ready';
+          setTimeout(function(){ if(status) status.classList.add('hidden'); }, 1800);
+        })
+        .catch(function(err){
+          box.innerHTML = '<div class=\"rounded border border-error/30 bg-error/10 p-3 text-xs text-muted\">Gagal memuat README: ' + (err.message||err) + '<br><a href=\"https://github.com/0xtbug/telbot\" target=\"_blank\" rel=\"noopener\" class=\"text-accent underline\">Buka di GitHub ↗</a></div>';
+          if (status) status.textContent = 'error';
+        });
+      // restore webui url from storage
+      try {
+        var saved = localStorage.getItem('kuotaWebuiUrl');
+        var inp = document.getElementById('kuota-webui-url');
+        if (saved && inp) inp.value = saved;
+      } catch(e){}
+    }
     function applyView(tab){
       window._portalView = tab;
       try{ localStorage.setItem(KEY, tab); }catch(e){}
       var isTasks = (tab === 'tasks');
       var isServices = (tab === 'services');
       var isSSH = (tab === 'ssh');
+      var isKuota = (tab === 'kuota');
       document.querySelectorAll('[data-view-tab]').forEach(function(b){
         var on = (b.getAttribute('data-view-tab') === tab);
         b.setAttribute('aria-selected', on ? 'true' : 'false');
@@ -975,7 +1079,9 @@ tailwind.config = {
       if (tmSection) tmSection.classList.toggle('hidden', !isTasks);
       if (servicesPanel) servicesPanel.classList.toggle('hidden', !isServices);
       if (sshSection) sshSection.classList.toggle('hidden', !isSSH);
+      if (kuotaSection) kuotaSection.classList.toggle('hidden', !isKuota);
       if (isSSH) loadSSH();
+      if (isKuota) loadKuota();
       // sync poll interval display for top bar if present
       var topInt = document.getElementById('tm-interval-top');
       var curInt = document.getElementById('tm-interval');
@@ -993,6 +1099,37 @@ tailwind.config = {
       var f=document.getElementById('ssh-iframe'); var l=document.getElementById('ssh-loader');
       if(f){ f.removeAttribute('src'); if(l) l.classList.remove('hidden'); setTimeout(function(){ f.setAttribute('src','https://ssh.nendi.web.id'); }, 80); }
     });
+    // Kuota controls
+    var kuotaReload = document.getElementById('kuota-reload');
+    if (kuotaReload) kuotaReload.addEventListener('click', function(){ kuotaLoaded=false; var b=document.getElementById('kuota-readme'); if(b) b.innerHTML='<div class="flex flex-col items-center justify-center py-8 text-muted"><svg class="h-6 w-6 mb-3 animate-spin text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg><span class="text-xs">Memuat ulang...</span></div>'; loadKuota(); });
+    var kuotaToggle = document.getElementById('kuota-webui-toggle');
+    var kuotaBox = document.getElementById('kuota-webui-box');
+    var kuotaFs = document.getElementById('kuota-webui-fs');
+    var kuotaWrap = document.getElementById('kuota-webui-wrap');
+    var kuotaFrame = document.getElementById('kuota-webui-frame');
+    var kuotaInput = document.getElementById('kuota-webui-url');
+    var kuotaLoad = document.getElementById('kuota-webui-load');
+    var kuotaOpen = document.getElementById('kuota-webui-open');
+    if (kuotaToggle && kuotaBox) kuotaToggle.addEventListener('click', function(){
+      var hid = kuotaBox.classList.contains('hidden');
+      kuotaBox.classList.toggle('hidden', !hid);
+      kuotaToggle.textContent = hid ? 'Sembunyikan WebUI' : 'Tampilkan WebUI';
+      if (kuotaFs) kuotaFs.classList.toggle('hidden', !hid);
+    });
+    if (kuotaLoad && kuotaFrame && kuotaInput) kuotaLoad.addEventListener('click', function(){
+      var u = (kuotaInput.value||'').trim();
+      if (!u) { kuotaInput.focus(); return; }
+      if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+      try { localStorage.setItem('kuotaWebuiUrl', u); } catch(e){}
+      if (kuotaOpen) { kuotaOpen.href = u; kuotaOpen.classList.remove('hidden'); }
+      if (kuotaWrap) kuotaWrap.classList.remove('hidden');
+      kuotaFrame.setAttribute('src', u);
+    });
+    if (kuotaInput) kuotaInput.addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); if(kuotaLoad) kuotaLoad.click(); }});
+    if (kuotaFs && kuotaWrap) kuotaFs.addEventListener('click', function(){
+      if (!document.fullscreenElement) { if(kuotaWrap.requestFullscreen) kuotaWrap.requestFullscreen(); else if(kuotaWrap.webkitRequestFullscreen) kuotaWrap.webkitRequestFullscreen(); }
+      else { if(document.exitFullscreen) document.exitFullscreen(); }
+    });
     var sshFs = document.getElementById('ssh-fullscreen');
     if (sshFs) sshFs.addEventListener('click', function(){
       var wrap=document.getElementById('ssh-frame-wrap'); if(!wrap) return;
@@ -1001,10 +1138,16 @@ tailwind.config = {
     });
     // responsive height for mobile: adjust iframe on resize/fullscreen
     function adjSSHHeight(){
-      var f=document.getElementById('ssh-iframe'); if(!f) return;
-      var isFs = !!document.fullscreenElement;
-      if (isFs) f.style.height = '100vh';
-      else f.style.height = (window.innerWidth < 640 ? 'min(68vh, 520px)' : 'min(72vh, 640px)');
+      var f=document.getElementById('ssh-iframe'); if(f){
+        var isFs = !!document.fullscreenElement;
+        if (isFs && document.fullscreenElement && document.fullscreenElement.id==='ssh-frame-wrap') f.style.height = '100vh';
+        else f.style.height = (window.innerWidth < 640 ? 'min(68vh, 520px)' : 'min(72vh, 640px)');
+      }
+      var kw=document.getElementById('kuota-webui-wrap'); if(kw){
+        var isKwFs = !!document.fullscreenElement && document.fullscreenElement.id==='kuota-webui-wrap';
+        if (isKwFs) kw.style.height = '100vh';
+        else kw.style.height = (window.innerWidth < 640 ? 'min(68vh, 520px)' : 'min(70vh, 600px)');
+      }
     }
     window.addEventListener('resize', adjSSHHeight);
     document.addEventListener('fullscreenchange', adjSSHHeight);
