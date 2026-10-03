@@ -122,15 +122,12 @@ tailwind.config = {
   <div id="portal-view-tabs" class="mb-3 flex items-center gap-1 p-1 rounded-lg bg-surface border border-border w-fit max-w-full overflow-x-auto no-scrollbar" role="tablist" aria-label="Pilih tampilan">
     <button data-view-tab="tasks" role="tab" aria-selected="true" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium bg-text text-base border border-text whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg> Task Manager <span data-tasks-count class="opacity-60 font-mono text-[11px] hidden"></span></button>
     <button data-view-tab="services" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16"><path d="M0 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6zm2-1a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H2z"/></svg> Services <span data-services-count class="opacity-60 font-mono text-[11px]">-</span></button>
-    <button data-view-tab="ssh" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg> SSH</button>
+    <button data-view-tab="terminal" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg> Terminal</button>
     <button data-view-tab="kuota" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 10 7 10s7-5 7-10a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg> Kuota</button>
-    <button data-view-tab="drama" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/><circle cx="12" cy="13.5" r="2"/></svg> Drama</button>
-    <button data-view-tab="clipper" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M15 10l4-4v8l-4-4z"/><rect x="3" y="6" width="11" height="12" rx="1.5"/></svg> Clipper</button>
     <button data-view-tab="9r" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M4 4h8v8H4z"/><path d="M12 12h8v8h-8z"/><path d="M4 16h4"/><path d="M16 8h4"/></svg> 9R</button>
-    <button data-view-tab="omni" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8a4 4 0 0 1 4 4M12 8a4 4 0 0 0-4 4"/><path d="M12 16v-4"/></svg> Omni</button>
     <button data-view-tab="cf" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z"/><path d="M7 12a5 5 0 0 1 5-5"/><path d="M12 12l2.2 2.2"/></svg> CF</button>
     <button data-view-tab="owrt" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 12h10M12 7v10"/><circle cx="12" cy="12" r="2.5"/></svg> OWRT</button>
-    <button data-view-tab="portfolio" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h10M7 12h10M7 16h5"/></svg> Portfolio</button>
+    <button data-view-tab="andromodem" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="13" width="18" height="7" rx="1.5"/><path d="M7 13V10"/><path d="M12 13V9"/><path d="M17 13V10"/><circle cx="7" cy="16.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="12" cy="16.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="17" cy="16.5" r="0.9" fill="currentColor" stroke="none"/></svg> Andromodem</button>
   </div>
 
   <!-- ===== TASK MANAGER ===== -->
@@ -347,29 +344,29 @@ tailwind.config = {
   </div>
 
   <!-- SSH - ttyd iframe (mobile-friendly) -->
-  <section id="ssh-section" class="hidden space-y-3">
+  <section id="terminal-section" class="hidden space-y-3">
     <div class="rounded border border-border bg-surface/30 overflow-hidden">
       <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 border-b border-border/60 bg-surface/20">
         <div class="flex items-center gap-2 min-w-0">
           <span class="h-2 w-2 rounded-full bg-accent"></span>
           <span class="text-xs font-semibold uppercase tracking-wider text-muted">Web Terminal</span>
           <span class="hidden sm:inline text-[11px] font-mono text-muted">ssh.nendi.web.id</span>
-          <span id="ssh-status" class="text-[11px] font-mono text-muted hidden">loading...</span>
+          <span id="terminal-status" class="text-[11px] font-mono text-muted hidden">loading...</span>
         </div>
         <div class="flex items-center gap-1.5 shrink-0">
           <a href="https://ssh.nendi.web.id" target="_blank" rel="noopener" class="inline-flex h-7 items-center gap-1 px-2.5 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text">Open ↗</a>
-          <button id="ssh-fullscreen" type="button" class="inline-flex h-7 items-center gap-1 px-2.5 rounded bg-base border border-border text-[11px] font-medium text-text hover:bg-border">Fullscreen</button>
-          <button id="ssh-reload" type="button" class="inline-flex h-7 items-center justify-center w-7 rounded bg-base border border-border text-muted hover:text-text" title="Reload">
+          <button id="terminal-fullscreen" type="button" class="inline-flex h-7 items-center gap-1 px-2.5 rounded bg-base border border-border text-[11px] font-medium text-text hover:bg-border">Fullscreen</button>
+          <button id="terminal-reload" type="button" class="inline-flex h-7 items-center justify-center w-7 rounded bg-base border border-border text-muted hover:text-text" title="Reload">
             <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
           </button>
         </div>
       </div>
-      <div id="ssh-frame-wrap" class="relative bg-black">
-        <iframe id="ssh-iframe" title="Web Terminal" class="w-full block bg-black" style="height: min(72vh, 640px); min-height: 380px; border: 0;" allow="clipboard-read; clipboard-write; fullscreen" loading="lazy"></iframe>
-        <div id="ssh-loader" class="absolute inset-0 flex flex-col items-center justify-center bg-black/90 text-muted">
+      <div id="terminal-frame-wrap" class="relative bg-black">
+        <iframe id="terminal-iframe" title="Web Terminal" class="w-full block bg-black" style="height: min(72vh, 640px); min-height: 380px; border: 0;" allow="clipboard-read; clipboard-write; fullscreen" loading="lazy"></iframe>
+        <div id="terminal-loader" class="absolute inset-0 flex flex-col items-center justify-center bg-black/90 text-muted">
           <svg class="h-6 w-6 mb-3 animate-spin text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
           <span class="text-xs">Memuat terminal...</span>
-          <button id="ssh-load-btn" type="button" class="mt-3 h-7 px-3 rounded bg-accent text-base text-xs font-semibold hover:bg-teal-500">Muat terminal</button>
+          <button id="terminal-load-btn" type="button" class="mt-3 h-7 px-3 rounded bg-accent text-base text-xs font-semibold hover:bg-teal-500">Muat terminal</button>
         </div>
       </div>
       <div class="px-3 py-2 flex flex-wrap gap-1.5 text-[11px]">
@@ -460,52 +457,6 @@ tailwind.config = {
     </div>
   </section>
 
-  <!-- Drama - iskan-drama :3003 -->
-  <section id="drama-section" class="hidden space-y-3">
-    <div class="rounded border border-border bg-surface/30 overflow-hidden">
-      <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 border-b border-border/60 bg-surface/20">
-        <div class="flex items-center gap-2 min-w-0">
-          <span class="h-2 w-2 rounded-full bg-accent"></span>
-          <span class="text-xs font-semibold uppercase tracking-wider text-muted">Drama</span>
-          <span class="hidden sm:inline text-[11px] font-mono text-muted">drama.nendi.web.id · :3003</span>
-          <span id="drama-status" class="text-[11px] font-mono text-muted hidden">loading...</span>
-        </div>
-        <div class="flex items-center gap-1.5 shrink-0">
-          <a href="https://drama.nendi.web.id" target="_blank" rel="noopener" class="inline-flex h-7 items-center gap-1 px-2.5 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text">Open ↗</a>
-          <button id="drama-fullscreen" type="button" class="inline-flex h-7 items-center gap-1 px-2.5 rounded bg-base border border-border text-[11px] font-medium text-text hover:bg-border">Fullscreen</button>
-          <button id="drama-reload" type="button" class="inline-flex h-7 items-center justify-center w-7 rounded bg-base border border-border text-muted hover:text-text" title="Reload"><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg></button>
-        </div>
-      </div>
-      <div id="drama-frame-wrap" class="relative bg-black">
-        <iframe id="drama-iframe" title="Drama Dashboard" class="w-full block bg-white" style="height: min(72vh, 680px); min-height: 420px; border:0;" allow="clipboard-read; clipboard-write; fullscreen" loading="lazy"></iframe>
-        <div id="drama-loader" class="absolute inset-0 flex flex-col items-center justify-center bg-black/90 text-muted"><svg class="h-6 w-6 mb-3 animate-spin text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg><span class="text-xs">Memuat Drama...</span><button id="drama-load-btn" type="button" class="mt-3 h-7 px-3 rounded bg-accent text-base text-xs font-semibold hover:bg-teal-500">Muat</button></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Clipper - autoclipper-webjs :3000 -->
-  <section id="clipper-section" class="hidden space-y-3">
-    <div class="rounded border border-border bg-surface/30 overflow-hidden">
-      <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 border-b border-border/60 bg-surface/20">
-        <div class="flex items-center gap-2 min-w-0">
-          <span class="h-2 w-2 rounded-full bg-accent"></span>
-          <span class="text-xs font-semibold uppercase tracking-wider text-muted">Clipper</span>
-          <span class="hidden sm:inline text-[11px] font-mono text-muted">clipper.nendi.web.id · :3000</span>
-          <span id="clipper-status" class="text-[11px] font-mono text-muted hidden">loading...</span>
-        </div>
-        <div class="flex items-center gap-1.5 shrink-0">
-          <a href="https://clipper.nendi.web.id" target="_blank" rel="noopener" class="inline-flex h-7 items-center gap-1 px-2.5 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text">Open ↗</a>
-          <button id="clipper-fullscreen" type="button" class="inline-flex h-7 items-center gap-1 px-2.5 rounded bg-base border border-border text-[11px] font-medium text-text hover:bg-border">Fullscreen</button>
-          <button id="clipper-reload" type="button" class="inline-flex h-7 items-center justify-center w-7 rounded bg-base border border-border text-muted hover:text-text" title="Reload"><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg></button>
-        </div>
-      </div>
-      <div id="clipper-frame-wrap" class="relative bg-black">
-        <iframe id="clipper-iframe" title="Clipper Dashboard" class="w-full block bg-white" style="height: min(72vh, 680px); min-height: 420px; border:0;" allow="clipboard-read; clipboard-write; fullscreen" loading="lazy"></iframe>
-        <div id="clipper-loader" class="absolute inset-0 flex flex-col items-center justify-center bg-black/90 text-muted"><svg class="h-6 w-6 mb-3 animate-spin text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg><span class="text-xs">Memuat Clipper...</span><button id="clipper-load-btn" type="button" class="mt-3 h-7 px-3 rounded bg-accent text-base text-xs font-semibold hover:bg-teal-500">Muat</button></div>
-      </div>
-    </div>
-  </section>
-
   <!-- 9R - 9router :20127 -->
   <section id="9r-section" class="hidden space-y-3">
     <div class="rounded border border-border bg-surface/30 overflow-hidden">
@@ -525,35 +476,6 @@ tailwind.config = {
       <div id="9r-frame-wrap" class="relative bg-black">
         <iframe id="9r-iframe" title="9Router Dashboard" class="w-full block bg-white" style="height: min(72vh, 680px); min-height: 420px; border:0;" allow="clipboard-read; clipboard-write; fullscreen" loading="lazy"></iframe>
         <div id="9r-loader" class="absolute inset-0 flex flex-col items-center justify-center bg-black/90 text-muted"><svg class="h-6 w-6 mb-3 animate-spin text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg><span class="text-xs">Memuat 9Router...</span><button id="9r-load-btn" type="button" class="mt-3 h-7 px-3 rounded bg-accent text-base text-xs font-semibold hover:bg-teal-500">Muat</button></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Omni - omniroute :20128 (DENY iframe, fallback) -->
-  <section id="omni-section" class="hidden space-y-3">
-    <div class="rounded border border-border bg-surface/30 overflow-hidden">
-      <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 border-b border-border/60 bg-surface/20">
-        <div class="flex items-center gap-2 min-w-0">
-          <span class="h-2 w-2 rounded-full bg-amber-500"></span>
-          <span class="text-xs font-semibold uppercase tracking-wider text-muted">OmniRoute</span>
-          <span class="hidden sm:inline text-[11px] font-mono text-muted">omni.nendi.web.id · :20128 · DENY iframe</span>
-          <span id="omni-status" class="text-[11px] font-mono text-amber-400 hidden">external only</span>
-        </div>
-        <div class="flex items-center gap-1.5 shrink-0">
-          <a href="https://omni.nendi.web.id/dashboard" target="_blank" rel="noopener" class="inline-flex h-7 items-center gap-1 px-3 rounded bg-accent text-base text-xs font-semibold hover:bg-teal-500">Buka Dashboard ↗</a>
-          <a href="https://omni.nendi.web.id/api/health" target="_blank" rel="noopener" class="hidden sm:inline-flex h-7 items-center gap-1 px-2.5 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text">Health</a>
-        </div>
-      </div>
-      <div class="p-4 sm:p-6 bg-base/20">
-        <div class="rounded border border-amber-500/20 bg-amber-500/10 p-3 sm:p-4">
-          <div class="text-xs font-semibold text-amber-400 flex items-center gap-1.5"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 9v6"/><circle cx="12" cy="17" r="1" fill="currentColor"/><path d="M12 3L3 18h18L12 3z"/></svg> Tidak bisa di-iframe</div>
-          <div class="mt-1.5 text-[11px] leading-relaxed text-muted">OmniRoute mengirim <code class="px-1 py-0.5 rounded bg-surface border border-border text-[11px] font-mono">X-Frame-Options: DENY</code> + <code class="px-1 py-0.5 rounded bg-surface border border-border text-[11px] font-mono">frame-ancestors 'none'</code> - browser blokir iframe. Buka via tombol di atas (tab baru) atau pakai API langsung.</div>
-          <div class="mt-3 flex flex-wrap gap-2">
-            <a href="https://omni.nendi.web.id/dashboard" target="_blank" rel="noopener" class="inline-flex h-8 items-center gap-1.5 px-3.5 rounded bg-text text-base text-xs font-semibold hover:bg-zinc-200">Dashboard ↗</a>
-            <a href="https://llm.nendi.web.id/api/health" target="_blank" rel="noopener" class="inline-flex h-8 items-center px-3 rounded bg-surface border border-border text-xs font-medium text-muted hover:text-text">llm.nendi.web.id</a>
-          </div>
-        </div>
-        <div class="mt-3 text-[11px] font-mono text-muted">Tunnel v8 · omni+llm dual → :20128 · cloudflared 2026.9.3 · 4 conns active</div>
       </div>
     </div>
   </section>
@@ -604,26 +526,25 @@ tailwind.config = {
       <div class="px-3 py-2 text-[11px] text-muted">LuCI via tunnel → <code class="px-1 py-0.5 rounded bg-surface border border-border font-mono">http://192.168.1.1:80</code> · tanpa port-forward.</div>
     </div>
   </section>
-
-  <!-- Portfolio - iskan-portfolio :3004 apex -->
-  <section id="portfolio-section" class="hidden space-y-3">
+  <!-- Andromodem - 192.168.1.1:49153 via tunnel andromodem.nendi.web.id -->
+  <section id="andromodem-section" class="hidden space-y-3">
     <div class="rounded border border-border bg-surface/30 overflow-hidden">
       <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 border-b border-border/60 bg-surface/20">
         <div class="flex items-center gap-2 min-w-0">
           <span class="h-2 w-2 rounded-full bg-accent"></span>
-          <span class="text-xs font-semibold uppercase tracking-wider text-muted">Portfolio</span>
-          <span class="hidden sm:inline text-[11px] font-mono text-muted">nendi.web.id · :3004 · apex</span>
-          <span id="portfolio-status" class="text-[11px] font-mono text-muted hidden">loading...</span>
+          <span class="text-xs font-semibold uppercase tracking-wider text-muted">Andromodem</span>
+          <span class="hidden sm:inline text-[11px] font-mono text-muted">andromodem.nendi.web.id · 192.168.1.1:49153</span>
+          <span id="andromodem-status" class="text-[11px] font-mono text-muted hidden">loading...</span>
         </div>
         <div class="flex items-center gap-1.5 shrink-0">
-          <a href="https://nendi.web.id" target="_blank" rel="noopener" class="inline-flex h-7 items-center gap-1 px-2.5 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text">Open ↗</a>
-          <button id="portfolio-fullscreen" type="button" class="inline-flex h-7 items-center gap-1 px-2.5 rounded bg-base border border-border text-[11px] font-medium text-text hover:bg-border">Fullscreen</button>
-          <button id="portfolio-reload" type="button" class="inline-flex h-7 items-center justify-center w-7 rounded bg-base border border-border text-muted hover:text-text" title="Reload"><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg></button>
+          <a href="https://andromodem.nendi.web.id" target="_blank" rel="noopener" class="inline-flex h-7 items-center gap-1 px-2.5 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text">Open ↗</a>
+          <button id="andromodem-fullscreen" type="button" class="inline-flex h-7 items-center gap-1 px-2.5 rounded bg-base border border-border text-[11px] font-medium text-text hover:bg-border">Fullscreen</button>
+          <button id="andromodem-reload" type="button" class="inline-flex h-7 items-center justify-center w-7 rounded bg-base border border-border text-muted hover:text-text" title="Reload"><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg></button>
         </div>
       </div>
-      <div id="portfolio-frame-wrap" class="relative bg-black">
-        <iframe id="portfolio-iframe" title="Portfolio" class="w-full block bg-white" style="height: min(72vh, 680px); min-height: 420px; border:0;" allow="clipboard-read; clipboard-write; fullscreen" loading="lazy"></iframe>
-        <div id="portfolio-loader" class="absolute inset-0 flex flex-col items-center justify-center bg-black/90 text-muted"><svg class="h-6 w-6 mb-3 animate-spin text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg><span class="text-xs">Memuat Portfolio...</span><button id="portfolio-load-btn" type="button" class="mt-3 h-7 px-3 rounded bg-accent text-base text-xs font-semibold hover:bg-teal-500">Muat</button></div>
+      <div id="andromodem-frame-wrap" class="relative bg-black">
+        <iframe id="andromodem-iframe" title="Andromodem" class="w-full block bg-white" style="height: min(72vh, 680px); min-height: 420px; border:0;" allow="clipboard-read; clipboard-write; fullscreen" loading="lazy"></iframe>
+        <div id="andromodem-loader" class="absolute inset-0 flex flex-col items-center justify-center bg-black/90 text-muted"><svg class="h-6 w-6 mb-3 animate-spin text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg><span class="text-xs">Memuat Andromodem...</span><button id="andromodem-load-btn" type="button" class="mt-3 h-7 px-3 rounded bg-accent text-base text-xs font-semibold hover:bg-teal-500">Muat</button></div>
       </div>
     </div>
   </section>
@@ -1192,19 +1113,14 @@ tailwind.config = {
   function initPortalViewTabs(){
     var KEY = 'portalViewTab';
     window._portalView = localStorage.getItem(KEY) || 'tasks';
+    if (window._portalView === 'ssh') { window._portalView = 'terminal'; try{ localStorage.setItem(KEY, 'terminal'); }catch(e){} }
     var tmSection = document.getElementById('tm-section');
     var groups = document.getElementById('groups');
     var servicesPanel = document.getElementById('services-panel');
-    var sshSection = document.getElementById('ssh-section');
-    var kuotaSection = document.getElementById('kuota-section');
-    var dramaSection = document.getElementById('drama-section');
-    var clipperSection = document.getElementById('clipper-section');
-    var rSection = document.getElementById('9r-section');
-    var omniSection = document.getElementById('omni-section');
-    var cfSection = document.getElementById('cf-section');
+    var terminalSection = document.getElementById('terminal-section');
+    var kuotaSection = document.getElementById('kuota-section');    var rSection = document.getElementById('9r-section');    var cfSection = document.getElementById('cf-section');
     var owrtSection = document.getElementById('owrt-section');
-    var portfolioSection = document.getElementById('portfolio-section');
-    var kuotaLoaded = false;
+    var andromodemSection = document.getElementById('andromodem-section');    var kuotaLoaded = false;
     function loadFrame(id, url, loaderId, statusId){
       var f=document.getElementById(id), l=document.getElementById(loaderId), st=document.getElementById(statusId);
       if(!f) return;
@@ -1214,17 +1130,13 @@ tailwind.config = {
       f.addEventListener('load', function(){ if(l) l.classList.add('hidden'); if(st){ st.textContent='connected'; setTimeout(function(){ st.classList.add('hidden'); }, 1800); }});
       f.addEventListener('error', function(){ if(st) st.textContent='error - coba Reload'; });
       setTimeout(function(){ if(l && !l.classList.contains('hidden')){} }, 12000);
-    }
-    function loadDrama(){ loadFrame('drama-iframe','https://drama.nendi.web.id','drama-loader','drama-status'); }
-    function loadClipper(){ loadFrame('clipper-iframe','https://clipper.nendi.web.id','clipper-loader','clipper-status'); }
-    function load9r(){ loadFrame('9r-iframe','https://9r.nendi.web.id','9r-loader','9r-status'); }
+    }    function load9r(){ loadFrame('9r-iframe','https://9r.nendi.web.id','9r-loader','9r-status'); }
     function loadCf(){ loadFrame('cf-iframe','https://cf.nendi.web.id','cf-loader','cf-status'); }
-    function loadOwrt(){ loadFrame('owrt-iframe','https://owrt.nendi.web.id','owrt-loader','owrt-status'); }
-    function loadPortfolio(){ loadFrame('portfolio-iframe','https://nendi.web.id','portfolio-loader','portfolio-status'); }
-    function loadSSH(){
-      var frame = document.getElementById('ssh-iframe');
-      var loader = document.getElementById('ssh-loader');
-      var status = document.getElementById('ssh-status');
+    function loadAndromodem(){ loadFrame('andromodem-iframe','https://andromodem.nendi.web.id','andromodem-loader','andromodem-status'); }
+    function loadOwrt(){ loadFrame('owrt-iframe','https://owrt.nendi.web.id','owrt-loader','owrt-status'); }    function loadTerminal(){
+      var frame = document.getElementById('terminal-iframe');
+      var loader = document.getElementById('terminal-loader');
+      var status = document.getElementById('terminal-status');
       if (!frame) return;
       if (frame.getAttribute('src')) return;
       var url = 'https://ssh.nendi.web.id';
@@ -1339,15 +1251,12 @@ tailwind.config = {
       try{ localStorage.setItem(KEY, tab); }catch(e){}
       var isTasks = (tab === 'tasks');
       var isServices = (tab === 'services');
-      var isSSH = (tab === 'ssh');
+      var isTerminal = (tab === 'terminal' || tab === 'ssh');
       var isKuota = (tab === 'kuota');
-      var isDrama = (tab === 'drama');
-      var isClipper = (tab === 'clipper');
       var is9r = (tab === '9r');
-      var isOmni = (tab === 'omni');
       var isCf = (tab === 'cf');
       var isOwrt = (tab === 'owrt');
-      var isPortfolio = (tab === 'portfolio');
+      var isAndromodem = (tab === 'andromodem');
       document.querySelectorAll('[data-view-tab]').forEach(function(b){
         var on = (b.getAttribute('data-view-tab') === tab);
         b.setAttribute('aria-selected', on ? 'true' : 'false');
@@ -1357,23 +1266,25 @@ tailwind.config = {
       });
       if (tmSection) tmSection.classList.toggle('hidden', !isTasks);
       if (servicesPanel) servicesPanel.classList.toggle('hidden', !isServices);
-      if (sshSection) sshSection.classList.toggle('hidden', !isSSH);
+      if (terminalSection) terminalSection.classList.toggle('hidden', !isTerminal);
       if (kuotaSection) kuotaSection.classList.toggle('hidden', !isKuota);
-      if (dramaSection) dramaSection.classList.toggle('hidden', !isDrama);
-      if (clipperSection) clipperSection.classList.toggle('hidden', !isClipper);
+      
+      
       if (rSection) rSection.classList.toggle('hidden', !is9r);
-      if (omniSection) omniSection.classList.toggle('hidden', !isOmni);
+      
       if (cfSection) cfSection.classList.toggle('hidden', !isCf);
       if (owrtSection) owrtSection.classList.toggle('hidden', !isOwrt);
-      if (portfolioSection) portfolioSection.classList.toggle('hidden', !isPortfolio);
-      if (isSSH) loadSSH();
+      if (andromodemSection) andromodemSection.classList.toggle('hidden', !isAndromodem);
+      
+      if (isTerminal) loadTerminal();
       if (isKuota) loadKuota();
-      if (isDrama) loadDrama();
-      if (isClipper) loadClipper();
+      
+      
       if (is9r) load9r();
       if (isCf) loadCf();
       if (isOwrt) loadOwrt();
-      if (isPortfolio) loadPortfolio();
+      if (isAndromodem) loadAndromodem();
+      
       // sync poll interval display for top bar if present
       var topInt = document.getElementById('tm-interval-top');
       var curInt = document.getElementById('tm-interval');
@@ -1384,11 +1295,11 @@ tailwind.config = {
       b.addEventListener('click', function(){ applyView(b.getAttribute('data-view-tab')); });
     });
     // SSH controls
-    var sshBtn = document.getElementById('ssh-load-btn');
-    if (sshBtn) sshBtn.addEventListener('click', function(){ var f=document.getElementById('ssh-iframe'); if(f && !f.getAttribute('src')) { f.setAttribute('src','https://ssh.nendi.web.id'); var l=document.getElementById('ssh-loader'); if(l) l.classList.add('hidden'); }});
-    var sshReload = document.getElementById('ssh-reload');
+    var sshBtn = document.getElementById('terminal-load-btn');
+    if (sshBtn) sshBtn.addEventListener('click', function(){ var f=document.getElementById('terminal-iframe'); if(f && !f.getAttribute('src')) { f.setAttribute('src','https://ssh.nendi.web.id'); var l=document.getElementById('terminal-loader'); if(l) l.classList.add('hidden'); }});
+    var sshReload = document.getElementById('terminal-reload');
     if (sshReload) sshReload.addEventListener('click', function(){
-      var f=document.getElementById('ssh-iframe'); var l=document.getElementById('ssh-loader');
+      var f=document.getElementById('terminal-iframe'); var l=document.getElementById('terminal-loader');
       if(f){ f.removeAttribute('src'); if(l) l.classList.remove('hidden'); setTimeout(function(){ f.setAttribute('src','https://ssh.nendi.web.id'); }, 80); }
     });
     // Dashboard controls - generic
@@ -1407,12 +1318,10 @@ tailwind.config = {
         else { if(document.exitFullscreen) document.exitFullscreen(); }
       });
     }
-    wireDash('drama','https://drama.nendi.web.id');
-    wireDash('clipper','https://clipper.nendi.web.id');
     wireDash('9r','https://9r.nendi.web.id');
     wireDash('cf','https://cf.nendi.web.id');
     wireDash('owrt','https://owrt.nendi.web.id');
-    wireDash('portfolio','https://nendi.web.id');
+    wireDash('andromodem','https://andromodem.nendi.web.id');
     // Kuota help toggle (local, bukan GitHub)
     var kuotaHelpBtn2=document.getElementById('kuota-help');
     var kuotaHelpBox2=document.getElementById('kuota-help-box');
@@ -1451,9 +1360,9 @@ tailwind.config = {
     setTimeout(function(){ try{ if(window._portalView==='kuota') fetchTelbotStatus(); }catch(e){} }, 700);
 
 
-    var sshFs = document.getElementById('ssh-fullscreen');
+    var sshFs = document.getElementById('terminal-fullscreen');
     if (sshFs) sshFs.addEventListener('click', function(){
-      var wrap=document.getElementById('ssh-frame-wrap'); if(!wrap) return;
+      var wrap=document.getElementById('terminal-frame-wrap'); if(!wrap) return;
       if (!document.fullscreenElement) { if(wrap.requestFullscreen) wrap.requestFullscreen(); else if(wrap.webkitRequestFullscreen) wrap.webkitRequestFullscreen(); }
       else { if(document.exitFullscreen) document.exitFullscreen(); }
     });
@@ -1461,7 +1370,7 @@ tailwind.config = {
     function adjSSHHeight(){
       var isFs = !!document.fullscreenElement;
       var fsId = isFs && document.fullscreenElement ? document.fullscreenElement.id : '';
-      var pairs = [['ssh-iframe','ssh-frame-wrap'],['drama-iframe','drama-frame-wrap'],['clipper-iframe','clipper-frame-wrap'],['9r-iframe','9r-frame-wrap'],['cf-iframe','cf-frame-wrap'],['owrt-iframe','owrt-frame-wrap'],['portfolio-iframe','portfolio-frame-wrap']];
+      var pairs = [['terminal-iframe','terminal-frame-wrap'],['9r-iframe','9r-frame-wrap'],['cf-iframe','cf-frame-wrap'],['owrt-iframe','owrt-frame-wrap'],['andromodem-iframe','andromodem-frame-wrap']];
       pairs.forEach(function(p){
         var f=document.getElementById(p[0]); if(!f) return;
         if(isFs && fsId===p[1]) f.style.height='100vh';
