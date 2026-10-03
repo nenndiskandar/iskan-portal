@@ -70,11 +70,6 @@ tailwind.config = {
         <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v13"/><path d="M7 12l5 5 5-5"/><path d="M3 21h18"/></svg>
         Install
       </button>
-      <button id="refresh" type="button"
-        class="inline-flex h-10 sm:h-9 items-center justify-center gap-2 rounded bg-surface px-3 text-sm font-medium text-text border border-border hover:bg-border active:bg-zinc-700">
-        <svg id="refresh-icon" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
-        Refresh <span id="countdown-badge" class="ml-1 opacity-50 font-mono tabular-nums text-[11px]">(15s)</span>
-      </button>
       </div>
     </div>
   </header>
@@ -115,20 +110,28 @@ tailwind.config = {
     </div>
   </div>
 
+  <!-- ===== View mode (Simple/Detail) - di atas tabs ===== -->
+  <div class="mb-3 flex items-center justify-end gap-2">
+    <span class="text-[11px] font-mono text-muted" id="tm-interval-top">poll 1.5s - 60 pts - 4 cores</span>
+    <div class="flex items-center rounded bg-base border border-border p-0.5" role="group" aria-label="View mode">
+      <button id="btn-view-simple" type="button" class="h-7 px-3 rounded text-xs font-medium bg-surface text-text border border-border shadow-sm">Simple</button>
+      <button id="btn-view-detail" type="button" class="h-7 px-3 rounded text-xs font-medium text-muted hover:text-text">Detail</button>
+    </div>
+  </div>
+  <!-- ===== Portal Tabs: Task Manager | Services (di atas Task Manager) ===== -->
+  <div id="portal-view-tabs" class="mb-3 flex items-center gap-1 p-1 rounded-lg bg-surface border border-border w-fit max-w-full overflow-x-auto no-scrollbar" role="tablist" aria-label="Pilih tampilan">
+    <button data-view-tab="tasks" role="tab" aria-selected="true" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium bg-text text-base border border-text whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg> Task Manager <span data-tasks-count class="opacity-60 font-mono text-[11px] hidden"></span></button>
+    <button data-view-tab="services" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16"><path d="M0 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6zm2-1a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H2z"/></svg> Services <span data-services-count class="opacity-60 font-mono text-[11px]">-</span></button>
+  </div>
+
   <!-- ===== TASK MANAGER ===== -->
   <section id="tm-section" data-view="simple" class="mb-5">
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2.5">
+    <div class="flex items-center gap-2 mb-2.5">
       <h2 class="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-2">
         <svg class="w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg>
         Task Manager · Live
       </h2>
-      <div class="flex items-center gap-2 self-start sm:self-auto">
-        <span class="text-[11px] font-mono text-muted" id="tm-interval">poll 1.5s · 60 pts · 4 cores</span>
-        <div class="flex items-center rounded bg-base border border-border p-0.5" role="group" aria-label="View mode">
-          <button id="btn-view-simple" type="button" class="h-8 sm:h-7 px-3 rounded text-xs font-medium bg-surface text-text border border-border shadow-sm">Simple</button>
-          <button id="btn-view-detail" type="button" class="h-8 sm:h-7 px-3 rounded text-xs font-medium text-muted hover:text-text">Detail</button>
-        </div>
-      </div>
+      <span class="text-[11px] font-mono text-muted" id="tm-interval">poll 1.5s · 60 pts · 4 cores</span>
     </div>
 
     <!-- Grid 2x3 on desktop, 1 col mobile -->
@@ -312,11 +315,25 @@ tailwind.config = {
   <!-- visible compact running count kept for legacy ids -->
   <div class="hidden"><span id="sum-up2"></span><span id="sum-total2"></span></div>
 
-  <!-- Services -->
-  <div id="groups" class="space-y-4">
+  <!-- Services (header + list) - refresh ada di dalam Services -->
+  <div id="services-panel" class="space-y-3">
+    <div id="services-header" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded border border-border bg-surface/30 px-3 py-2.5">
+      <div class="flex items-center gap-2">
+        <span class="h-2 w-2 rounded-full bg-accent"></span>
+        <span class="text-xs font-semibold uppercase tracking-wider text-muted">Services</span>
+        <span id="services-count" data-services-count class="text-xs font-mono text-muted">-</span>
+        <span class="text-[11px] text-muted hidden sm:inline">- <span id="services-sum-up"></span> up / <span id="services-sum-total"></span> total</span>
+      </div>
+      <button id="refresh" type="button" class="inline-flex h-8 items-center justify-center gap-2 rounded bg-base px-3 text-xs font-medium text-text border border-border hover:bg-border active:bg-zinc-700 shrink-0">
+        <svg id="refresh-icon" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
+        Refresh <span id="countdown-badge" class="ml-1 opacity-50 font-mono tabular-nums text-[11px]">(15s)</span>
+      </button>
+    </div>
+    <div id="groups" class="space-y-4">
     <div id="initial-loader" class="py-12 flex flex-col items-center justify-center text-muted animate-pulse">
       <svg class="h-6 w-6 mb-3 animate-spin text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
       <span class="text-sm">Syncing infrastructure state...</span>
+    </div>
     </div>
   </div>
 
@@ -484,9 +501,16 @@ tailwind.config = {
   function render(data) {
     document.getElementById('sum-up').textContent = data.summary.up;
     document.getElementById('sum-total').textContent = data.summary.total;
+    var ssu = document.getElementById('services-sum-up'); if(ssu) ssu.textContent = data.summary.up;
+    var sst = document.getElementById('services-sum-total'); if(sst) sst.textContent = data.summary.total;
+    var topInt = document.getElementById('tm-interval-top'); var curInt = document.getElementById('tm-interval'); if(topInt && curInt) topInt.textContent = curInt.textContent;
     // legacy ids compat
     var su = document.getElementById('sum-up'); if (su) su.textContent = data.summary.up;
     var st = document.getElementById('sum-total'); if (st) st.textContent = data.summary.total;
+    // services count for tab badge
+    (function(){
+      var el = document.querySelector('[data-services-count]'); if(el) el.textContent = '(' + (data.services||[]).length + ')';
+    })();
     document.getElementById('meta').textContent = 'Host: ' + data.host + ' | Node ' + data.node + ' | Portal RSS ' + (data.gatewayRss || 'n/a');
     var timeOpts = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
     document.getElementById('updated').textContent = 'Last updated: ' + new Date(data.generatedAt).toLocaleTimeString('id-ID', timeOpts);
@@ -688,6 +712,8 @@ tailwind.config = {
       var m = (mode === 'simple') ? 'simple' : 'detail';
       if(tmSection) tmSection.setAttribute('data-view', m);
       document.body.setAttribute('data-view', m);
+      // keep top bar interval in sync with tm-interval
+      try{ var ti=document.getElementById('tm-interval'); var tt=document.getElementById('tm-interval-top'); if(ti&&tt) tt.textContent = ti.textContent; }catch(e){}
       var detailGrid = document.getElementById('tm-detail-grid');
       var simpleGrid = document.getElementById('tm-simple-grid');
       if(detailGrid) detailGrid.classList.toggle('hidden', m === 'simple');
@@ -847,12 +873,43 @@ tailwind.config = {
   };
 
   // boot
-  document.addEventListener('DOMContentLoaded', function(){ try{ initCharts(); }catch(e){ console.error(e); } });
+  document.addEventListener('DOMContentLoaded', function(){ try{ initCharts(); }catch(e){ console.error(e); } try{ initPortalViewTabs(); }catch(e){} });
   // if already loaded (script at bottom), init now
   try { initCharts(); } catch(e) {}
+  try { initPortalViewTabs(); } catch(e) {}
   load();
   pollMetrics();
   metricsTimer = setInterval(pollMetrics, 1500);
+  function initPortalViewTabs(){
+    var KEY = 'portalViewTab';
+    window._portalView = localStorage.getItem(KEY) || 'tasks';
+    var tmSection = document.getElementById('tm-section');
+    var groups = document.getElementById('groups');
+    var servicesPanel = document.getElementById('services-panel');
+    function applyView(tab){
+      window._portalView = tab;
+      try{ localStorage.setItem(KEY, tab); }catch(e){}
+      var isTasks = (tab === 'tasks');
+      document.querySelectorAll('[data-view-tab]').forEach(function(b){
+        var on = (b.getAttribute('data-view-tab') === tab);
+        b.setAttribute('aria-selected', on ? 'true' : 'false');
+        b.className = on
+          ? 'shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium bg-text text-base border border-text whitespace-nowrap'
+          : 'shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap';
+      });
+      if (tmSection) tmSection.classList.toggle('hidden', !isTasks);
+      if (groups) groups.classList.toggle('hidden', isTasks);
+      if (servicesPanel) servicesPanel.classList.toggle('hidden', isTasks);
+      // sync poll interval display for top bar if present
+      var topInt = document.getElementById('tm-interval-top');
+      var curInt = document.getElementById('tm-interval');
+      if (topInt && curInt) topInt.textContent = curInt.textContent;
+    }
+    applyView(window._portalView);
+    document.querySelectorAll('[data-view-tab]').forEach(function(b){
+      b.addEventListener('click', function(){ applyView(b.getAttribute('data-view-tab')); });
+    });
+  }
 })();
 </script>
 <script>
