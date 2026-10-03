@@ -4,9 +4,11 @@ const { execFile } = require('child_process');
 const os = require('os');
 const fs = require('fs');
 const crypto = require('crypto');
+const http = require('http');
 
 const app = express();
 const PORT = process.env.PORT || 3005;
+const TELBOT_WEB_PORT = 8095;
 const AUTH_FILE = path.join(__dirname, '.portal_auth');
 const DEFAULT_PASS = 'iskan2026';
 const TELBOT_ENV = '/root/telbot-data/.env';
@@ -161,6 +163,93 @@ app.post('/api/auth/change-password', (req, res) => {
   res.setHeader('Set-Cookie', `portal_token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_TTL_MS/1000}`);
   res.json({ ok: true, message: 'Password berhasil diubah' });
 });
+
+// ---- telbot web reverse proxy: /telbot/* -> http://127.0.0.1:TELBOT_WEB_PORT/* (native http, no extra deps) ----
+function proxyTelbot(req, res) {
+  if (!isAuthenticated(req)) {
+    return res.status(401).json({ error: 'Unauthorized · login dulu di /login.html' });
+  }
+  let targetPath = req.originalUrl.replace(/^\/telbot/, '');
+  if (!targetPath || targetPath === '') targetPath = '/';
+  if (targetPath[0] !== '/') targetPath = '/' + targetPath;
+  // Preserve query string already in originalUrl; targetPath includes it
+  const headers = { ...req.headers };
+  headers.host = '127.0.0.1:' + TELBOT_WEB_PORT;
+  headers['x-forwarded-for'] = req.ip || req.socket.remoteAddress || '';
+  headers['x-forwarded-proto'] = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+  headers['x-forwarded-host'] = req.headers.host || '';
+  delete headers['connection'];
+  delete headers['content-length']; // will re-set if we have bodyData
+  let bodyData = null;
+  const ct = (req.headers['content-type'] || '').toLowerCase();
+  const hasBody = req.body != null && typeof req.body === 'object' && !(req.body instanceof Buffer) && Object.keys(req.body).length > 0;
+  if (hasBody && req.method !== 'GET' && req.method !== 'HEAD') {
+    if (ct.includes('application/json')) {
+      bodyData = Buffer.from(JSON.stringify(req.body));
+      headers['content-type'] = 'application/json';
+    } else if (ct.includes('application/x-www-form-urlencoded')) {
+      const qs = new URLSearchParams(req.body).toString();
+      bodyData = Buffer.from(qs);
+      headers['content-type'] = 'application/x-www-form-urlencoded';
+    } else {
+      bodyData = Buffer.from(JSON.stringify(req.body));
+      if (!headers['content-type']) headers['content-type'] = 'application/json';
+    }
+    headers['content-length'] = String(Buffer.byteLength(bodyData));
+  } else if (typeof req.body === 'string' && req.body.length > 0 && req.method !== 'GET' && req.method !== 'HEAD') {
+    bodyData = Buffer.from(req.body);
+    headers['content-length'] = String(Buffer.byteLength(bodyData));
+  } else if (Buffer.isBuffer(req.body) && req.body.length > 0) {
+    bodyData = req.body;
+    headers['content-length'] = String(bodyData.length);
+  }
+  const opts = {
+    hostname: '127.0.0.1',
+    port: TELBOT_WEB_PORT,
+    path: targetPath,
+    method: req.method,
+    headers: headers,
+  };
+  const proxyReq = http.request(opts, (proxyRes) => {
+    const resHeaders = { ...proxyRes.headers };
+    delete resHeaders['transfer-encoding'];
+    if (resHeaders.location) {
+      const loc = String(resHeaders.location);
+      const telHost = 'http://127.0.0.1:' + TELBOT_WEB_PORT;
+      const telHost2 = 'http://localhost:' + TELBOT_WEB_PORT;
+      if (loc.startsWith(telHost)) resHeaders.location = '/telbot' + loc.slice(telHost.length) || '/telbot/';
+      else if (loc.startsWith(telHost2)) resHeaders.location = '/telbot' + loc.slice(telHost2.length) || '/telbot/';
+    }
+    res.writeHead(proxyRes.statusCode, resHeaders);
+    proxyRes.pipe(res);
+  });
+  proxyReq.on('error', (err) => {
+    console.error('[telbot-proxy] error:', err.message);
+    if (!res.headersSent) {
+      res.status(502).json({ error: 'Telbot web tidak tersedia (127.0.0.1:' + TELBOT_WEB_PORT + '): ' + err.message });
+    } else {
+      try { res.end(); } catch(e){}
+    }
+  });
+  proxyReq.setTimeout(10000, () => {
+    proxyReq.destroy(new Error('proxy timeout'));
+  });
+  req.on('close', () => { try { proxyReq.destroy(); } catch(e){} });
+  if (bodyData) {
+    proxyReq.write(bodyData);
+    proxyReq.end();
+  } else {
+    // pipe streaming body (for file uploads / raw)
+    // if body already consumed by express.json and empty, piping will end immediately
+    req.pipe(proxyReq);
+    // if readable already ended (e.g. GET or parsed JSON with no pipe data), ensure proxyReq ends
+    if (req.readableEnded) {
+      // piping an ended readable should auto-end, but ensure after tick
+      setImmediate(() => { if (!proxyReq.writableEnded) try { proxyReq.end(); } catch(e){} });
+    }
+  }
+}
+app.use('/telbot', proxyTelbot);
 
 // ---- auth gate for protected routes ----
 app.use((req, res, next) => {
@@ -384,6 +473,17 @@ function startRaplSampler() {
 
 startRaplSampler();
 
+// docker mem cache — biar /api/status gak ke-block 2s oleh `docker stats`
+const dockerMemCache = new Map();
+// warm cache once at boot (background, non-blocking)
+setTimeout(() => {
+  for (const svc of SERVICES) if (svc.docker) {
+    run('docker', ['stats', '--no-stream', '--format', '{{.MemUsage}}', svc.unit], 2500).then(out => {
+      try { const m = out ? String(out).trim().split(/\s*\/\s*/)[0] : null; if(m) dockerMemCache.set(svc.unit, { mem:m, ts:Date.now() }); } catch(e){}
+    });
+  }
+}, 1500);
+
 app.get('/api/sysinfo', async (req, res) => {
   const diskInfo = await getDiskUsage();
   res.json({
@@ -525,8 +625,18 @@ app.get('/api/status', async (req, res) => {
           const status = dc ? dc.status : 'not found';
           let mem = null;
           if (running) {
-            const stats = await run('docker', ['stats', '--no-stream', '--format', '{{.MemUsage}}', svc.unit], 5000);
-            if (stats) { const m = stats.trim().split(/\s*\/\s*/)[0]; mem = m || null; }
+            const cached = dockerMemCache.get(svc.unit);
+            if (cached) mem = cached.mem;
+            // background refresh if stale (not awaited - fire & forget, never blocks /api/status)
+            const ts = cached ? cached.ts : 0;
+            if (Date.now() - ts > 8000) {
+              run('docker', ['stats', '--no-stream', '--format', '{{.MemUsage}}', svc.unit], 2500).then(out => {
+                try {
+                  const m = out ? String(out).trim().split(/\s*\/\s*/)[0] : null;
+                  if (m) dockerMemCache.set(svc.unit, { mem: m, ts: Date.now() });
+                } catch(e){}
+              });
+            }
           }
           const enabled = restartPolicy;
           const autoBoot = restartPolicy === 'always' || restartPolicy === 'unless-stopped';
