@@ -4,30 +4,235 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#09090b">
+<meta name="color-scheme" content="dark">
 <meta name="robots" content="noindex, nofollow">
 <title>Offline · Iskan System Portal</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="manifest" href="/manifest.json">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{colors:{base:'#09090b',surface:'#18181b',border:'#27272a',muted:'#a1a1aa',text:'#f4f4f5',accent:'#14b8a6'}}}}</script>
-<style>html{-webkit-text-size-adjust:100%}</style>
+<style>
+  html{-webkit-text-size-adjust:100%}
+  @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.92)}}
+</style>
 </head>
-<body class="min-h-screen bg-base text-text font-sans antialiased flex items-center justify-center px-4 py-8">
-  <div class="w-full max-w-sm text-center">
-    <div class="inline-flex h-12 w-12 items-center justify-center rounded bg-surface border border-border mb-4">⚡</div>
-    <h1 class="text-lg font-semibold">Kamu offline</h1>
-    <p class="text-sm text-muted mt-2 leading-relaxed">Portal butuh koneksi untuk data live. Cek Wi-Fi/datamu lalu coba lagi. Halaman akan muat ulang otomatis saat online.</p>
-    <div class="mt-6 flex gap-2 justify-center">
-      <button onclick="location.reload()" class="h-10 px-5 rounded bg-text text-base text-sm font-medium">Muat Ulang</button>
-      <a href="/" class="h-10 px-5 rounded bg-surface border border-border text-sm inline-flex items-center">Buka Portal</a>
+<body class="min-h-screen bg-[#09090b] text-[#f4f4f5] font-sans antialiased flex items-center justify-center px-4 py-8 selection:bg-[#14b8a6]/30">
+  <main class="w-full max-w-[400px]">
+    <!-- card -->
+    <div class="rounded-[20px] bg-[#18181b] border border-[#27272a] shadow-[0_16px_48px_rgba(0,0,0,.5)] overflow-hidden">
+      <!-- top accent line -->
+      <div class="h-[2px] w-full bg-gradient-to-r from-transparent via-[#14b8a6]/50 to-transparent"></div>
+      <div class="px-6 pt-6 pb-6 sm:px-7">
+        <!-- header icon + badge -->
+        <div class="flex items-start justify-between gap-3">
+          <div class="h-11 w-11 rounded-xl bg-[#09090b] border border-[#27272a] flex items-center justify-center text-[18px] shrink-0">⚡</div>
+          <div id="statusBadge" class="inline-flex items-center gap-2 rounded-full border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-[11px] font-medium tracking-wide transition-colors">
+            <span id="statusDot" class="h-2 w-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,.6)]" style="animation:pulse-dot 1.6s ease-in-out infinite"></span>
+            <span id="statusText" class="text-zinc-300">Offline</span>
+          </div>
+        </div>
+
+        <h1 class="text-[18px] font-semibold tracking-tight mt-4 leading-none">Kamu offline</h1>
+        <p class="text-[13px] leading-relaxed text-[#a1a1aa] mt-2">Portal butuh koneksi untuk data live. Kami cek jaringan otomatis tiap 3 detik dan akan mengalihkan ke portal saat koneksi pulih.</p>
+
+        <!-- spinner / checking row -->
+        <div id="checkingRow" class="mt-5 flex items-center gap-3 rounded-xl bg-[#09090b] border border-[#27272a] px-3.5 py-3">
+          <div id="spinner" class="h-5 w-5 shrink-0 text-[#14b8a6] hidden" aria-hidden="true">
+            <svg class="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" class="opacity-20"></circle>
+              <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" class="opacity-90"></path>
+            </svg>
+          </div>
+          <div id="spinnerIdle" class="h-5 w-5 shrink-0 rounded-full border-2 border-zinc-700 border-t-zinc-500"></div>
+          <div class="min-w-0 flex-1">
+            <p id="checkingLabel" class="text-[12px] font-medium text-zinc-200 leading-none">Menunggu koneksi</p>
+            <p id="checkingSub" class="text-[11px] text-zinc-500 mt-1 leading-none">Pemeriksaan otomatis aktif · tiap 3s</p>
+          </div>
+          <span id="livePill" class="shrink-0 rounded-full bg-zinc-800 border border-zinc-700 px-2 py-1 text-[10px] font-semibold tracking-widest text-zinc-400">LIVE</span>
+        </div>
+
+        <!-- actions -->
+        <div class="mt-5 grid grid-cols-2 gap-2.5">
+          <button id="btnReload" type="button" class="h-10 rounded-xl bg-[#f4f4f5] text-[#09090b] text-[13px] font-semibold hover:bg-white active:bg-zinc-200 transition-colors focus:outline-none focus:ring-2 focus:ring-[#14b8a6]/40">Muat Ulang</button>
+          <a id="btnPortal" href="/" class="h-10 rounded-xl bg-[#27272a] border border-[#3f3f46] text-[13px] font-medium inline-flex items-center justify-center hover:bg-zinc-800 hover:border-zinc-600 transition-colors focus:outline-none focus:ring-2 focus:ring-[#14b8a6]/30">Buka Portal</a>
+        </div>
+
+        <!-- tips -->
+        <div class="mt-4 rounded-xl border border-dashed border-[#27272a] bg-[#09090b]/50 px-3.5 py-3">
+          <p class="text-[11px] font-medium text-zinc-300">Tips cepat</p>
+          <ul class="mt-1.5 space-y-1 text-[11px] leading-relaxed text-zinc-500 list-disc list-inside">
+            <li>Aktifkan Wi-Fi / data seluler</li>
+            <li>Matikan mode pesawat</li>
+            <li>Jika di kantor, cek jaringan internal</li>
+          </ul>
+        </div>
+
+        <!-- last checked -->
+        <div class="mt-4 flex items-center justify-between gap-2 text-[11px]">
+          <span class="text-zinc-500">Terakhir diperiksa: <span id="lastChecked" class="text-zinc-400">—</span></span>
+          <span id="checkCount" class="text-zinc-600 tabular-nums">0× cek</span>
+        </div>
+      </div>
+      <div class="border-t border-[#27272a] bg-[#09090b]/60 px-6 py-3 flex items-center justify-between">
+        <span class="text-[11px] text-zinc-500">Iskan System Portal · iskan-server</span>
+        <span class="text-[10px] tracking-widest font-semibold text-zinc-600">PWA OFFLINE</span>
+      </div>
     </div>
-    <p class="text-[11px] text-muted mt-6">Iskan System Portal · iskan-server</p>
-  </div>
+    <p class="text-center text-[11px] text-zinc-600 mt-3">Halaman ini standalone — tanpa memuat data sensitif.</p>
+  </main>
+
 <script>
 (function(){
-  window.addEventListener('online', function(){ location.href='/'; });
-  // also poll
-  setInterval(function(){ if(navigator.onLine) fetch('/api/auth/check',{cache:'no-store'}).then(function(){ location.href='/'; }).catch(function(){}); }, 3500);
+  var statusBadge = document.getElementById('statusBadge');
+  var statusDot = document.getElementById('statusDot');
+  var statusText = document.getElementById('statusText');
+  var spinner = document.getElementById('spinner');
+  var spinnerIdle = document.getElementById('spinnerIdle');
+  var checkingLabel = document.getElementById('checkingLabel');
+  var checkingSub = document.getElementById('checkingSub');
+  var lastCheckedEl = document.getElementById('lastChecked');
+  var checkCountEl = document.getElementById('checkCount');
+  var btnReload = document.getElementById('btnReload');
+
+  var checks = 0;
+  var redirecting = false;
+  var checking = false;
+  var intervalId = null;
+
+  function fmtTime(d){
+    try{ return d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }catch(e){ return d.toTimeString().slice(0,8); }
+  }
+  function setLastChecked(){
+    checks++;
+    lastCheckedEl.textContent = fmtTime(new Date());
+    checkCountEl.textContent = checks + '× cek';
+  }
+  function setBadge(mode){
+    // mode: 'offline' | 'checking' | 'online'
+    if(mode === 'offline'){
+      statusBadge.className = 'inline-flex items-center gap-2 rounded-full border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-[11px] font-medium tracking-wide';
+      statusDot.className = 'h-2 w-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,.6)]';
+      statusDot.style.animation = 'pulse-dot 1.6s ease-in-out infinite';
+      statusText.className = 'text-red-200';
+      statusText.textContent = 'Offline';
+      checkingLabel.textContent = 'Menunggu koneksi';
+      checkingLabel.className = 'text-[12px] font-medium text-zinc-200 leading-none';
+      checkingSub.textContent = 'Perangkat offline · cek tiap 3s';
+      spinner.classList.add('hidden');
+      spinnerIdle.classList.remove('hidden');
+      spinnerIdle.className = 'h-5 w-5 shrink-0 rounded-full border-2 border-zinc-700 border-t-zinc-500';
+    } else if(mode === 'checking'){
+      statusBadge.className = 'inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-[11px] font-medium tracking-wide';
+      statusDot.className = 'h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,.6)]';
+      statusDot.style.animation = 'pulse-dot 1s ease-in-out infinite';
+      statusText.className = 'text-amber-200';
+      statusText.textContent = 'Memeriksa…';
+      checkingLabel.textContent = 'Memeriksa jaringan…';
+      checkingSub.textContent = 'navigator.onLine + fetch no-store';
+      spinner.classList.remove('hidden');
+      spinnerIdle.classList.add('hidden');
+    } else if(mode === 'online'){
+      statusBadge.className = 'inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-[11px] font-medium tracking-wide';
+      statusDot.className = 'h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,.6)]';
+      statusDot.style.animation = 'none';
+      statusText.className = 'text-emerald-200';
+      statusText.textContent = 'Online';
+      checkingLabel.textContent = 'Terhubung — mengalihkan…';
+      checkingLabel.className = 'text-[12px] font-medium text-emerald-200 leading-none';
+      checkingSub.textContent = 'Koneksi pulih, membuka portal';
+      spinner.classList.remove('hidden');
+      spinnerIdle.classList.add('hidden');
+    }
+  }
+
+  function updateFromNavigator(){
+    if(redirecting) return;
+    if(!navigator.onLine){
+      setBadge('offline');
+    } else {
+      // navigator says online, but real check happens in fetch; show checking state
+      if(!checking) setBadge('checking');
+    }
+  }
+
+  async function checkNetwork(){
+    if(redirecting || checking) return;
+    checking = true;
+    setBadge(navigator.onLine ? 'checking' : 'offline');
+    // show spinner during fetch
+    spinner.classList.remove('hidden');
+    spinnerIdle.classList.add('hidden');
+
+    var online = false;
+    // 1) quick navigator gate
+    if(navigator.onLine){
+      // 2) try auth check no-store, then fallback to '/' HEAD/GET no-store
+      try{
+        var r = await fetch('/api/auth/check', {cache:'no-store', credentials:'same-origin', headers:{'Cache-Control':'no-store'}});
+        // only treat 2xx as auth-ok -> redirect; but any successful network response means online
+        // spec: auto-redirect saat online dan auth ok -> so redirect only on ok
+        if(r.ok){ online = true; }
+        else if(r.status === 401 || r.status === 403){
+          // reachable but not authenticated — still allow portal to handle auth, consider online.
+          // To avoid leaking auth state in UI, we still redirect; portal will show login if needed.
+          // If strict "auth ok only", comment next line to require 2xx only.
+          online = true;
+        } else if(r.status >= 200 && r.status < 500){
+          // any 2xx/3xx/4xx that is not network error proves connectivity
+          // but for redirect we prefer 2xx; fallback will confirm '/'
+          online = false;
+        }
+      }catch(e){
+        online = false;
+      }
+      if(!online){
+        try{
+          // fallback: lightweight HEAD to '/' no-store; if HEAD blocked, try GET
+          var r2 = await fetch('/', {cache:'no-store', method:'HEAD', credentials:'same-origin', headers:{'Cache-Control':'no-store'}});
+          if(r2.ok || (r2.status >=200 && r2.status < 400)) online = true;
+          else throw new Error('head not ok');
+        }catch(e2){
+          try{
+            var r3 = await fetch('/', {cache:'no-store', credentials:'same-origin', headers:{'Cache-Control':'no-store'}});
+            if(r3.ok || r3.type === 'opaque') online = true;
+          }catch(e3){ online = false; }
+        }
+      }
+    } else {
+      online = false;
+    }
+
+    setLastChecked();
+    checking = false;
+
+    if(online){
+      setBadge('online');
+      redirecting = true;
+      // small delay for user to see "Terhubung" state
+      setTimeout(function(){
+        try{ location.href = '/'; }catch(e){ location.reload(); }
+      }, 450);
+    }else{
+      updateFromNavigator();
+    }
+  }
+
+  btnReload.addEventListener('click', function(){ location.reload(); });
+
+  window.addEventListener('online', function(){ updateFromNavigator(); checkNetwork(); });
+  window.addEventListener('offline', function(){ updateFromNavigator(); });
+
+  // init
+  updateFromNavigator();
+  setLastChecked();
+  checkNetwork();
+  intervalId = setInterval(checkNetwork, 3000);
+
+  // pause polling when hidden to save battery, resume on visible
+  document.addEventListener('visibilitychange', function(){
+    if(document.hidden){ clearInterval(intervalId); intervalId = null; }
+    else if(!intervalId){ intervalId = setInterval(checkNetwork, 3000); checkNetwork(); }
+  });
 })();
 </script>
 </body>

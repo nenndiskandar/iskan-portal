@@ -832,7 +832,8 @@ app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders(res, filePath) {
     if (filePath.endsWith('/sw.js')) {
       res.setHeader('Service-Worker-Allowed', '/');
-      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Content-Type', 'application/javascript');
     }
     if (filePath.endsWith('/manifest.json')) {
       res.setHeader('Content-Type', 'application/manifest+json');

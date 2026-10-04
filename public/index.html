@@ -53,6 +53,11 @@ tailwind.config = {
 </style>
 </head>
 <body class="min-h-full bg-base text-text font-sans antialiased overflow-x-hidden">
+<!-- net-banner: offline indicator (hidden by default) -->
+<div id="net-banner" class="hidden fixed top-0 inset-x-0 z-[60] items-center justify-between gap-3 px-4 py-2.5 bg-zinc-900 border-b border-zinc-700 text-xs" role="alert" aria-live="polite" style="display:none">
+  <span class="flex items-center gap-2 text-amber-300 font-medium"><span class="h-2 w-2 rounded-full bg-amber-400"></span> Kamu offline - data live dijeda</span>
+  <button id="net-retry" type="button" class="shrink-0 inline-flex h-7 items-center px-3 rounded bg-accent text-base text-xs font-semibold hover:bg-teal-500 active:bg-teal-600">Coba lagi</button>
+</div>
 <main class="mx-auto max-w-6xl w-full min-w-0 px-4 py-4 sm:px-6 sm:py-6">
 
   <!-- Header -->
@@ -985,16 +990,24 @@ tailwind.config = {
 
   var metricsTimer = null;
   function pollMetrics() {
+    if (typeof window.__isOnline !== 'undefined' && window.__isOnline === false) return;
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return;
     fetch('/api/metrics', { cache: 'no-store' })
       .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
       .then(function(m){ updateCharts(m); })
       .catch(function(){});
   }
+  try { window.__netPollMetrics = pollMetrics; } catch(e) {}
+  window.__pausePolling = function(){ if(metricsTimer){ clearInterval(metricsTimer); metricsTimer=null; } };
+  window.__resumePolling = function(){ if(!metricsTimer){ try{ pollMetrics(); }catch(e){} metricsTimer=setInterval(pollMetrics, 1500); } };
+  try { window.addEventListener('netchange', function(e){ if(e && e.detail && e.detail.online===false) window.__pausePolling(); else if(e && e.detail && e.detail.online===true) window.__resumePolling(); }); } catch(e) {}
 
   // ===== main loops =====
   var nextLoadTime = Date.now() + 15000;
   var countdownSpan = document.getElementById('countdown-badge');
   setInterval(function () {
+    if (typeof window.__isOnline !== 'undefined' && window.__isOnline === false) { if(countdownSpan) countdownSpan.textContent='(offline)'; return; }
+    if (typeof navigator !== 'undefined' && !navigator.onLine) { if(countdownSpan) countdownSpan.textContent='(offline)'; return; }
     if (!window.latestData) return;
     var diff = (Date.now() - window.latestRenderTime) / 1000;
     if (window.latestData.server) {
@@ -1022,6 +1035,8 @@ tailwind.config = {
     wrap.appendChild(div);
   }
   function load() {
+    if (typeof window.__isOnline !== 'undefined' && window.__isOnline === false) { if(refBtn) refBtn.disabled=false; if(refIcon) refIcon.classList.remove('animate-spin'); var _wg=document.getElementById('groups'); if(_wg) _wg.classList.remove('opacity-40'); return; }
+    if (typeof navigator !== 'undefined' && !navigator.onLine) { if(refBtn) refBtn.disabled=false; if(refIcon) refIcon.classList.remove('animate-spin'); return; }
     var wrap = document.getElementById('groups');
     refBtn.disabled = true;
     refIcon.classList.add('animate-spin');
@@ -1044,6 +1059,7 @@ tailwind.config = {
     refBtn.disabled = false;
     refIcon.classList.remove('animate-spin');
   }
+  try { window.__netLoad = load; } catch(e) {}
   refBtn.addEventListener('click', load);
   // auth: logout / change password
   var btnLogout=document.getElementById('btn-logout');
@@ -1400,13 +1416,118 @@ tailwind.config = {
 })();
 </script>
 <script>
+// --- Online/Offline net detection (banner + verify) ---
+(function(){
+  var banner = document.getElementById('net-banner');
+  var retryBtn = document.getElementById('net-retry');
+  var hdrLive = document.getElementById('hdr-live');
+  var liveOnHTML = hdrLive ? hdrLive.innerHTML : '<span class="h-2 w-2 rounded-full bg-accent animate-pulse"></span> LIVE';
+  var liveOffHTML = '<span class="h-2 w-2 rounded-full bg-zinc-500"></span> OFFLINE';
+  // ensure banner hidden initially via style + class
+  function isOnline(){ return typeof navigator !== 'undefined' ? navigator.onLine : true; }
+  function updateNetUI(online){
+    if (online === undefined) online = isOnline();
+    window.__isOnline = online;
+    if (hdrLive){
+      hdrLive.innerHTML = online ? liveOnHTML : liveOffHTML;
+      hdrLive.className = online ? 'inline-flex items-center gap-1.5 text-xs' : 'inline-flex items-center gap-1.5 text-xs text-muted';
+    }
+    if (banner){
+      if (online){
+        banner.classList.add('hidden');
+        banner.classList.remove('flex');
+        banner.style.display='none';
+        document.body.style.paddingTop='';
+      } else {
+        banner.classList.remove('hidden');
+        banner.classList.add('flex');
+        banner.style.display='flex';
+        // offset body so banner doesn't cover header
+        try{ document.body.style.paddingTop = banner.offsetHeight + 'px'; }catch(e){}
+      }
+    }
+    try{ window.dispatchEvent(new CustomEvent('netchange', {detail:{online: online}})); }catch(e){ var ev=document.createEvent('CustomEvent'); ev.initCustomEvent('netchange', false,false,null); ev.detail={online:online}; window.dispatchEvent(ev); }
+    if (online){
+      if (typeof window.__resumePolling === 'function') try{ window.__resumePolling(); }catch(e){}
+      if (typeof window.__netPollMetrics === 'function') try{ window.__netPollMetrics(); }catch(e){}
+      if (typeof window.__netLoad === 'function') try{ window.__netLoad(); }catch(e){}
+    } else {
+      if (typeof window.__pausePolling === 'function') try{ window.__pausePolling(); }catch(e){}
+    }
+  }
+  window.isOnline = isOnline;
+  window.updateNetUI = updateNetUI;
+  window.addEventListener('online', function(){ verifyNet(true); });
+  window.addEventListener('offline', function(){ updateNetUI(false); });
+  if (retryBtn) retryBtn.addEventListener('click', function(){ verifyNet(true); });
+  async function verifyNet(force){
+    var navOnline = isOnline();
+    if (!navOnline){ updateNetUI(false); return false; }
+    // try HEAD /api/auth/check first, fallback to /api/status
+    var tryHead = async function(url){
+      var ctrl = new AbortController();
+      var t = setTimeout(function(){ try{ ctrl.abort(); }catch(e){} }, 2800);
+      try{
+        var r = await fetch(url, { method:'HEAD', cache:'no-store', signal: ctrl.signal });
+        clearTimeout(t);
+        // 2xx, 401/403 means server reachable (auth layer), 404 means endpoint missing but server is up
+        if (r.ok || r.status===401 || r.status===403 || r.status===404) return {ok:true, status:r.status, reachable:true};
+        return {ok:false, status:r.status, reachable:false};
+      }catch(e){ clearTimeout(t); throw e; }
+    };
+    try{
+      var res = await tryHead('/api/auth/check');
+      if (res.reachable || res.status===404){
+        // if 404 from auth/check, fallback to /api/status to confirm really online
+        if (res.status===404){
+          try{
+            var res2 = await tryHead('/api/status');
+            if (res2.ok || res2.status===401 || res2.status===403 || res2.status===404){ updateNetUI(true); return true; }
+            updateNetUI(false); return false;
+          }catch(e2){ updateNetUI(false); return false; }
+        }
+        updateNetUI(true); return true;
+      }
+      updateNetUI(false); return false;
+    }catch(e){
+      try{
+        var resF = await tryHead('/api/status');
+        if (resF.ok || resF.status===401 || resF.status===403 || resF.status===404){ updateNetUI(true); return true; }
+        updateNetUI(false); return false;
+      }catch(e2){ updateNetUI(false); return false; }
+    }
+  }
+  window.verifyNet = verifyNet;
+  // initial UI
+  try{ updateNetUI(isOnline()); }catch(e){}
+  setTimeout(function(){ verifyNet(); }, 900);
+  setInterval(function(){ verifyNet(); }, 4000);
+})();
+</script>
+<script>
   // --- PWA: service worker + install prompt ---
   (function(){
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function(){
         navigator.serviceWorker.register('/sw.js').then(function(reg){
-          // console.log('SW registered', reg.scope);
+          if (reg.waiting) console.log('SW waiting to activate');
+          reg.addEventListener('updatefound', function(){
+            var nw = reg.installing;
+            if (!nw) return;
+            nw.addEventListener('statechange', function(){
+              if (nw.state === 'installed' && navigator.serviceWorker.controller){
+                console.log('SW update installed — new content available');
+                try{ window.dispatchEvent(new CustomEvent('swUpdate', {detail: reg})); }catch(e){}
+              } else if (nw.state === 'installed' && !navigator.serviceWorker.controller){
+                console.log('SW installed for first time');
+              }
+            });
+          });
         }).catch(function(err){ console.warn('SW failed', err); });
+      });
+      var _swRefreshing=false;
+      navigator.serviceWorker.addEventListener('controllerchange', function(){
+        if(_swRefreshing) return; _swRefreshing=true; window.location.reload();
       });
     }
     var deferredPrompt = null;

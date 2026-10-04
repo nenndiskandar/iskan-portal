@@ -1,4 +1,5 @@
 {
+  "id": "/",
   "name": "Iskan System Portal",
   "short_name": "Iskan Portal",
   "description": "Task Manager · iskan-server · CPU · RAM · Disk · Network · GPU · Power",
@@ -33,17 +34,48 @@
       "purpose": "any maskable"
     }
   ],
-  "screenshots": [],
+  "screenshots": [
+    {
+      "src": "/screenshots/wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Task Manager — Dashboard Live"
+    },
+    {
+      "src": "/screenshots/narrow.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Task Manager — Mobile"
+    }
+  ],
   "shortcuts": [
     {
       "name": "Buka Portal",
+      "short_name": "Portal",
       "url": "/",
-      "description": "Buka Task Manager portal"
+      "description": "Buka Task Manager portal",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     },
     {
       "name": "Ganti Password",
+      "short_name": "Password",
       "url": "/?action=changepw",
-      "description": "Ubah password portal"
+      "description": "Ubah password portal",
+      "icons": [
+        {
+          "src": "/icons/icon-512.png",
+          "sizes": "512x512",
+          "type": "image/png"
+        }
+      ]
     }
   ],
   "handle_links": "preferred",
@@ -55,5 +87,6 @@
   },
   "edge_side_panel": {
     "preferred_width": 420
-  }
+  },
+  "prefer_related_applications": false
 }
