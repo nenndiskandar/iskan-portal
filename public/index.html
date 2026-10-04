@@ -328,14 +328,14 @@ tailwind.config = {
 
   <!-- Services (header + list) - refresh ada di dalam Services -->
   <div id="services-panel" class="space-y-3">
-    <div id="services-header" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded border border-border bg-surface/30 px-3 py-2.5">
+    <div id="services-header" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded border border-border bg-surface/30 px-3 py-2">
       <div class="flex items-center gap-2">
         <span class="h-2 w-2 rounded-full bg-accent"></span>
-        <span class="text-xs font-semibold uppercase tracking-wider text-muted">Services</span>
+        <span class="text-xs font-semibold uppercase tracking-wide text-muted">Services</span>
         <span id="services-count" data-services-count class="text-xs font-mono text-muted">-</span>
         <span class="text-[11px] text-muted hidden sm:inline">- <span id="services-sum-up"></span> up / <span id="services-sum-total"></span> total</span>
       </div>
-      <button id="refresh" type="button" class="inline-flex h-8 items-center justify-center gap-2 rounded bg-base px-3 text-xs font-medium text-text border border-border hover:bg-border active:bg-zinc-700 shrink-0">
+      <button id="refresh" type="button" class="inline-flex h-8 min-h-[44px] items-center justify-center gap-2 rounded bg-base px-3 text-xs font-medium text-text border border-border hover:bg-border active:bg-zinc-700 shrink-0">
         <svg id="refresh-icon" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
         Refresh <span id="countdown-badge" class="ml-1 opacity-50 font-mono tabular-nums text-[11px]">(15s)</span>
       </button>
@@ -360,8 +360,8 @@ tailwind.config = {
         </div>
         <div class="flex items-center gap-1.5 shrink-0">
           <a href="https://ssh.nendi.web.id" target="_blank" rel="noopener" class="inline-flex h-7 items-center gap-1 px-2.5 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text">Open ↗</a>
-          <button id="terminal-fullscreen" type="button" class="inline-flex h-7 items-center gap-1 px-2.5 rounded bg-base border border-border text-[11px] font-medium text-text hover:bg-border">Fullscreen</button>
-          <button id="terminal-reload" type="button" class="inline-flex h-7 items-center justify-center w-7 rounded bg-base border border-border text-muted hover:text-text" title="Reload">
+          <button id="terminal-fullscreen" type="button" class="inline-flex h-7 min-h-[44px] min-w-[44px] items-center justify-center gap-1 px-2.5 rounded bg-base border border-border text-[11px] font-medium text-text hover:bg-border">Fullscreen</button>
+          <button id="terminal-reload" type="button" class="inline-flex h-7 min-h-[44px] min-w-[44px] items-center justify-center w-7 rounded bg-base border border-border text-muted hover:text-text" title="Reload">
             <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
           </button>
         </div>
@@ -475,8 +475,8 @@ tailwind.config = {
         </div>
         <div class="flex items-center gap-1.5 shrink-0">
           <a href="https://9r.nendi.web.id" target="_blank" rel="noopener" class="inline-flex h-7 items-center gap-1 px-2.5 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text">Open ↗</a>
-          <button id="9r-fullscreen" type="button" class="inline-flex h-7 items-center gap-1 px-2.5 rounded bg-base border border-border text-[11px] font-medium text-text hover:bg-border">Fullscreen</button>
-          <button id="9r-reload" type="button" class="inline-flex h-7 items-center justify-center w-7 rounded bg-base border border-border text-muted hover:text-text" title="Reload"><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg></button>
+          <button id="9r-fullscreen" type="button" class="inline-flex h-7 min-h-[44px] min-w-[44px] items-center justify-center gap-1 px-2.5 rounded bg-base border border-border text-[11px] font-medium text-text hover:bg-border">Fullscreen</button>
+          <button id="9r-reload" type="button" class="inline-flex h-7 min-h-[44px] min-w-[44px] items-center justify-center w-7 rounded bg-base border border-border text-muted hover:text-text" title="Reload"><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg></button>
         </div>
       </div>
       <div id="9r-frame-wrap" class="relative bg-black">
@@ -498,8 +498,8 @@ tailwind.config = {
         </div>
         <div class="flex items-center gap-1.5 shrink-0">
           <a href="https://cf.nendi.web.id" target="_blank" rel="noopener" class="inline-flex h-7 items-center gap-1 px-2.5 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text">Open ↗</a>
-          <button id="cf-fullscreen" type="button" class="inline-flex h-7 items-center gap-1 px-2.5 rounded bg-base border border-border text-[11px] font-medium text-text hover:bg-border">Fullscreen</button>
-          <button id="cf-reload" type="button" class="inline-flex h-7 items-center justify-center w-7 rounded bg-base border border-border text-muted hover:text-text" title="Reload"><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg></button>
+          <button id="cf-fullscreen" type="button" class="inline-flex h-7 min-h-[44px] min-w-[44px] items-center justify-center gap-1 px-2.5 rounded bg-base border border-border text-[11px] font-medium text-text hover:bg-border">Fullscreen</button>
+          <button id="cf-reload" type="button" class="inline-flex h-7 min-h-[44px] min-w-[44px] items-center justify-center w-7 rounded bg-base border border-border text-muted hover:text-text" title="Reload"><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg></button>
         </div>
       </div>
       <div id="cf-frame-wrap" class="relative bg-black">
@@ -521,8 +521,8 @@ tailwind.config = {
         </div>
         <div class="flex items-center gap-1.5 shrink-0">
           <a href="https://metacubex.nendi.web.id/ui/metacubexd/#/setup?hostname=metacubex.nendi.web.id&secret=rzx" target="_blank" rel="noopener" class="inline-flex h-7 items-center gap-1 px-2.5 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text">Open ↗</a>
-          <button id="metacubex-fullscreen" type="button" class="inline-flex h-7 items-center gap-1 px-2.5 rounded bg-base border border-border text-[11px] font-medium text-text hover:bg-border">Fullscreen</button>
-          <button id="metacubex-reload" type="button" class="inline-flex h-7 items-center justify-center w-7 rounded bg-base border border-border text-muted hover:text-text" title="Reload"><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg></button>
+          <button id="metacubex-fullscreen" type="button" class="inline-flex h-7 min-h-[44px] min-w-[44px] items-center justify-center gap-1 px-2.5 rounded bg-base border border-border text-[11px] font-medium text-text hover:bg-border">Fullscreen</button>
+          <button id="metacubex-reload" type="button" class="inline-flex h-7 min-h-[44px] min-w-[44px] items-center justify-center w-7 rounded bg-base border border-border text-muted hover:text-text" title="Reload"><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg></button>
         </div>
       </div>
       <div id="metacubex-frame-wrap" class="relative bg-black">
@@ -544,8 +544,8 @@ tailwind.config = {
         </div>
         <div class="flex items-center gap-1.5 shrink-0">
           <a href="https://andromodem.nendi.web.id" target="_blank" rel="noopener" class="inline-flex h-7 items-center gap-1 px-2.5 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text">Open ↗</a>
-          <button id="andromodem-fullscreen" type="button" class="inline-flex h-7 items-center gap-1 px-2.5 rounded bg-base border border-border text-[11px] font-medium text-text hover:bg-border">Fullscreen</button>
-          <button id="andromodem-reload" type="button" class="inline-flex h-7 items-center justify-center w-7 rounded bg-base border border-border text-muted hover:text-text" title="Reload"><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg></button>
+          <button id="andromodem-fullscreen" type="button" class="inline-flex h-7 min-h-[44px] min-w-[44px] items-center justify-center gap-1 px-2.5 rounded bg-base border border-border text-[11px] font-medium text-text hover:bg-border">Fullscreen</button>
+          <button id="andromodem-reload" type="button" class="inline-flex h-7 min-h-[44px] min-w-[44px] items-center justify-center w-7 rounded bg-base border border-border text-muted hover:text-text" title="Reload"><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg></button>
         </div>
       </div>
       <div id="andromodem-frame-wrap" class="relative bg-black">
@@ -564,45 +564,46 @@ tailwind.config = {
 <template id="group-tpl">
   <section>
     <h2 class="mb-2 text-xs font-semibold uppercase tracking-wider text-muted" data-group-head></h2>
-    <ul class="grid grid-cols-1 md:grid-cols-2 gap-3" data-group-list></ul>
+    <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5" data-group-list></ul>
   </section>
 </template>
 
+<!-- R-31 compact-card: hemat ruang vertikal, hierarchy tetap - p-2.5/gap-1/text-[13px]/badge px-1 py-px/stats gap-1 & px-2 py-1 -->
 <template id="svc-tpl">
-  <li class="rounded border border-border bg-surface/40 p-3 flex flex-col gap-1.5 min-w-0 overflow-hidden hover:bg-surface/60 transition-colors group/card">
+  <li class="rounded border border-border bg-surface/40 p-2.5 flex flex-col gap-1 min-w-0 overflow-hidden hover:bg-surface/60 transition-colors group/card">
     <!-- top: dot + name + badges -->
     <div class="flex items-start justify-between gap-2">
       <div class="flex items-center gap-2 min-w-0">
         <span class="h-2.5 w-2.5 rounded-full shrink-0 mt-0.5" data-dot></span>
-        <h3 class="text-sm font-semibold leading-tight truncate" data-name></h3>
+        <h3 class="text-[13px] font-semibold leading-tight truncate" data-name></h3>
       </div>
       <div class="flex flex-col items-end gap-1 shrink-0">
-        <span data-state class="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide border leading-none"></span>
-        <span data-autoboot hidden class="px-1.5 py-0.5 rounded text-[10px] font-medium border leading-none"></span>
+        <span data-state class="px-1 py-px rounded text-[10px] font-semibold uppercase tracking-wide border leading-none"></span>
+        <span data-autoboot hidden class="px-1 py-px rounded text-[10px] font-medium border leading-none"></span>
       </div>
     </div>
     <!-- dashboard / external links · tepat di bawah badge Running/Dead -->
-    <div data-links class="hidden flex flex-wrap gap-1.5" data-links-wrap>
+    <div data-links class="hidden flex flex-wrap gap-1" data-links-wrap>
       <a data-dashboard-link href="#" target="_blank" rel="noopener" class="hidden inline-flex items-center gap-1 h-6 px-2 rounded bg-accent/10 border border-accent/20 text-[11px] font-medium text-accent hover:bg-accent/20">Dashboard ↗</a>
       <a data-external-link href="#" target="_blank" rel="noopener" class="hidden inline-flex items-center gap-1 h-6 px-2 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text hover:bg-border">Public ↗</a>
       <span data-local-badge class="hidden inline-flex items-center gap-1 h-6 px-2 rounded bg-zinc-800 border border-zinc-700 text-[11px] font-mono text-muted">LAN only</span>
     </div>
     <p class="text-xs text-muted leading-snug line-clamp-2 min-h-[2.2em] svc-detail" data-desc></p>
     <!-- stats grid 2x2 -->
-    <div class="grid grid-cols-2 gap-1.5 mt-1 svc-detail">
-      <div data-tech-wrap hidden class="rounded bg-base border border-border/40 px-2 py-1.5">
+    <div class="grid grid-cols-2 gap-1 mt-1 svc-detail">
+      <div data-tech-wrap hidden class="rounded bg-base border border-border/40 px-2 py-1">
         <div class="text-[10px] uppercase tracking-wider text-muted opacity-70">Stack</div>
         <div class="text-xs font-mono text-text truncate leading-none mt-0.5" data-tech></div>
       </div>
-      <div data-port-wrap hidden class="rounded bg-base border border-border/40 px-2 py-1.5">
+      <div data-port-wrap hidden class="rounded bg-base border border-border/40 px-2 py-1">
         <div class="text-[10px] uppercase tracking-wider text-muted opacity-70">Port</div>
         <div class="text-xs font-mono text-text leading-none mt-0.5" data-port></div>
       </div>
-      <div data-pid-wrap hidden class="rounded bg-base border border-border/40 px-2 py-1.5">
+      <div data-pid-wrap hidden class="rounded bg-base border border-border/40 px-2 py-1">
         <div class="text-[10px] uppercase tracking-wider text-muted opacity-70">PID</div>
         <div class="text-xs font-mono text-text leading-none mt-0.5" data-pid></div>
       </div>
-      <div data-mem-wrap hidden class="rounded bg-base border border-border/40 px-2 py-1.5">
+      <div data-mem-wrap hidden class="rounded bg-base border border-border/40 px-2 py-1">
         <div class="text-[10px] uppercase tracking-wider text-muted opacity-70">RAM</div>
         <div class="text-xs font-mono text-text leading-none mt-0.5" data-mem></div>
       </div>
@@ -1516,7 +1517,7 @@ tailwind.config = {
             if (!nw) return;
             nw.addEventListener('statechange', function(){
               if (nw.state === 'installed' && navigator.serviceWorker.controller){
-                console.log('SW update installed — new content available');
+                console.log('SW update installed - new content available');
                 try{ window.dispatchEvent(new CustomEvent('swUpdate', {detail: reg})); }catch(e){}
               } else if (nw.state === 'installed' && !navigator.serviceWorker.controller){
                 console.log('SW installed for first time');
