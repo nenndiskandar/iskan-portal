@@ -116,6 +116,14 @@ tailwind.config = {
   </div>
 
 
+  <!-- ===== View mode (Simple/Detail) - tanpa poll label ===== -->
+  <div class="mb-3 flex items-center justify-end">
+    <div class="flex items-center rounded bg-base border border-border p-0.5" role="group" aria-label="View mode">
+      <button id="btn-view-simple" type="button" class="h-7 px-3 rounded text-xs font-medium bg-surface text-text border border-border shadow-sm">Simple</button>
+      <button id="btn-view-detail" type="button" class="h-7 px-3 rounded text-xs font-medium text-muted hover:text-text">Detail</button>
+    </div>
+  </div>
+
   <!-- ===== Portal Tabs: Task Manager | Services (di atas Task Manager) ===== -->
   <div id="portal-view-tabs" class="mb-3 flex flex-wrap items-center gap-1.5 p-1 rounded-lg bg-surface border border-border w-full" role="tablist" aria-label="Pilih tampilan">
     <button data-view-tab="tasks" role="tab" aria-selected="true" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium bg-text text-base border border-text whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg> Task Manager <span data-tasks-count class="opacity-60 font-mono text-[11px] hidden"></span></button>
