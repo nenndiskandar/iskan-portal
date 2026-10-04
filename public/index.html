@@ -1001,7 +1001,7 @@ tailwind.config = {
   }
   try { window.__netPollMetrics = pollMetrics; } catch(e) {}
   window.__pausePolling = function(){ if(metricsTimer){ clearInterval(metricsTimer); metricsTimer=null; } };
-  window.__resumePolling = function(){ if(!metricsTimer){ try{ pollMetrics(); }catch(e){} metricsTimer=setInterval(pollMetrics, 10000); } };
+  window.__resumePolling = function(){ if(!metricsTimer){ try{ pollMetrics(); }catch(e){} metricsTimer=setInterval(pollMetrics, 1000); } };
   try { window.addEventListener('netchange', function(e){ if(e && e.detail && e.detail.online===false) window.__pausePolling(); else if(e && e.detail && e.detail.online===true) window.__resumePolling(); }); } catch(e) {}
 
   // ===== main loops - Services manual only, no auto-refresh =====
@@ -1119,7 +1119,7 @@ tailwind.config = {
   try { initPortalViewTabs(); } catch(e) {}
   load();
   pollMetrics();
-  metricsTimer = setInterval(pollMetrics, 10000);
+  metricsTimer = setInterval(pollMetrics, 1000);
   function initPortalViewTabs(){
     var KEY = 'portalViewTab';
     window._portalView = localStorage.getItem(KEY) || 'tasks';
