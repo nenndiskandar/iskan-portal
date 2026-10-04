@@ -371,6 +371,9 @@ let prevNet = null;
 let prevDiskIo = null;
 let prevTs = null;
 let primaryIface = null;
+let overviewPrevNet = null;
+let overviewPrevDisk = null;
+let overviewPrevTs = null;
 
 function readCpuSnapshot() {
   try {
@@ -441,6 +444,180 @@ function readDiskIoSnapshot() {
   } catch(e) {}
   return null;
 }
+function readCpuTemps() {
+  try {
+    var temps = {};
+    var pkg = null;
+    var cores = [];
+    var all = [];
+    try {
+      var base = '/sys/class/hwmon/hwmon1';
+      if (fs.existsSync(base)) {
+        for (var i = 1; i <= 10; i++) {
+          var p = base + '/temp' + i + '_input';
+          try {
+            if (!fs.existsSync(p)) continue;
+            var v = parseInt(fs.readFileSync(p, 'utf8').trim(), 10);
+            if (isNaN(v)) continue;
+            var label = '';
+            try { label = fs.readFileSync(base + '/temp' + i + '_label', 'utf8').trim(); } catch(e) {}
+            var c = Number((v / 1000).toFixed(1));
+            if (label.indexOf('Package') !== -1 || i === 1) {
+              if (pkg == null) pkg = c;
+              else pkg = c;
+            } else if (label.indexOf('Core') !== -1) {
+              cores.push(c);
+            }
+            all.push({ label: label || ('temp' + i), temp: c });
+          } catch(e) {}
+        }
+      }
+    } catch(e) {}
+    if (pkg == null) {
+      try {
+        var t = fs.readFileSync('/sys/class/thermal/thermal_zone2/temp', 'utf8');
+        var n = parseInt(t.trim(), 10);
+        if (!isNaN(n)) pkg = Number((n / 1000).toFixed(1));
+      } catch(e) {}
+    }
+    if (pkg == null && all.length) pkg = all[0].temp;
+    temps.pkg = pkg;
+    temps.cores = cores;
+    temps.all = all;
+    var zones = [];
+    try {
+      var dirs = fs.readdirSync('/sys/class/thermal');
+      dirs.forEach(function(d) {
+        if (d.indexOf('thermal_zone') === 0) {
+          try {
+            var tt = fs.readFileSync('/sys/class/thermal/' + d + '/temp', 'utf8');
+            var nn = parseInt(tt.trim(), 10);
+            var tp = '';
+            try { tp = fs.readFileSync('/sys/class/thermal/' + d + '/type', 'utf8').trim(); } catch(e) {}
+            if (!isNaN(nn)) zones.push({ type: tp, temp: Number((nn / 1000).toFixed(1)) });
+          } catch(e) {}
+        }
+      });
+    } catch(e) {}
+    temps.zones = zones;
+    return temps;
+  } catch(e) { return { pkg: null, cores: [], zones: [], all: [] }; }
+}
+function fmtUptimeOverview(sec) {
+  if (sec == null || sec < 0) return '-';
+  var d = Math.floor(sec / 86400);
+  var h = Math.floor((sec % 86400) / 3600);
+  var m = Math.floor((sec % 3600) / 60);
+  var s = Math.floor(sec % 60);
+  if (d > 0) return d + 'd ' + h + 'h ' + m + 'm ' + s + 's';
+  if (h > 0) return h + 'h ' + m + 'm ' + s + 's';
+  if (m > 0) return m + 'm ' + s + 's';
+  return s + 's';
+}
+function readMeminfoDetailed(){
+  try{
+    const txt = fs.readFileSync('/proc/meminfo','utf8');
+    const m = {};
+    txt.split('\n').forEach(l=>{
+      const a=l.split(':');
+      if(a.length<2) return;
+      const k=a[0].trim(), v=parseInt(a[1].trim().split(/\s+/)[0],10)*1024;
+      if(!isNaN(v)) m[k]=v;
+    });
+    return {
+      memTotal: m.MemTotal||os.totalmem(),
+      memAvailable: m.MemAvailable||os.freemem(),
+      memBuffers: m.Buffers||0,
+      memCached: (m.Cached||0)+(m.SReclaimable||0),
+      memFree: m.MemFree||os.freemem(),
+    };
+  }catch(e){ return null; }
+}
+function readThermal(){
+  try{
+    let cpuTemp=null, boardTemp=null, amlThermal=null;
+    // hwmon coretemp
+    try{
+      const c1=parseInt(fs.readFileSync('/sys/class/hwmon/hwmon1/temp1_input','utf8').trim(),10);
+      if(!isNaN(c1)) cpuTemp=Math.round(c1/1000);
+    }catch(e){}
+    // fallback thermal_zone x86_pkg_temp
+    if(cpuTemp==null){
+      try{
+        for(let i=0;i<4;i++){
+          const type=fs.readFileSync('/sys/class/thermal/thermal_zone'+i+'/type','utf8').trim();
+          if(type==='x86_pkg_temp'){
+            const t=parseInt(fs.readFileSync('/sys/class/thermal/thermal_zone'+i+'/temp','utf8').trim(),10);
+            if(!isNaN(t)) cpuTemp=Math.round(t/1000);
+            break;
+          }
+        }
+      }catch(e){}
+    }
+    // board / acpitz
+    try{
+      const t2=parseInt(fs.readFileSync('/sys/class/thermal/thermal_zone0/temp','utf8').trim(),10);
+      if(!isNaN(t2)) boardTemp=Math.round(t2/1000);
+    }catch(e){}
+    // aml_thermal on OpenWrt mapped to boardTemp; on VPS we alias cpuTemp
+    amlThermal=boardTemp!=null?boardTemp:cpuTemp;
+    // per-core temps
+    let coreTemps=[];
+    try{
+      for(let k=2;k<=5;k++){
+        try{ const v=parseInt(fs.readFileSync('/sys/class/hwmon/hwmon1/temp'+k+'_input','utf8').trim(),10); if(!isNaN(v)) coreTemps.push(Math.round(v/1000)); }catch(e){}
+      }
+    }catch(e){}
+    // cpu-thermal alias for x86_pkg_temp zone2
+    let cpuThermal=null;
+    try{ cpuThermal=parseInt(fs.readFileSync('/sys/class/thermal/thermal_zone2/temp','utf8').trim(),10); if(!isNaN(cpuThermal)) cpuThermal=Math.round(cpuThermal/1000); else cpuThermal=cpuTemp; }catch(e){ cpuThermal=cpuTemp; }
+    return { cpuTemp, boardTemp, amlThermal, cpuThermal, coreTemps };
+  }catch(e){ return { cpuTemp:null, boardTemp:null, amlThermal:null, cpuThermal:null, coreTemps:[] }; }
+}
+function readDfDetailed(){
+  try{
+    const out = require('child_process').execFileSync('df', ['-B1','/','/tmp','/dev/shm'], {timeout:1500}).toString();
+    const lines=out.trim().split('\n').slice(1);
+    const map={};
+    lines.forEach(l=>{
+      const p=l.trim().split(/\s+/);
+      if(p.length<6) return;
+      const mp=p[5];
+      map[mp]={ total: Number(p[1]), used: Number(p[2]), avail: Number(p[3]), percent: p[4] };
+    });
+    return map;
+  }catch(e){ return {}; }
+}
+function readNetDetailed(){
+  try{
+    const txt=fs.readFileSync('/proc/net/dev','utf8');
+    const out={};
+    txt.split('\n').forEach(l=>{
+      const m=l.match(/^\s*([^:]+):\s*(.+)/);
+      if(!m) return;
+      const iface=m[1].trim();
+      const vals=m[2].trim().split(/\s+/).map(Number);
+      out[iface]={ rx: vals[0], tx: vals[8] };
+      // try operstate/speed
+      try{ out[iface].speed=parseInt(fs.readFileSync('/sys/class/net/'+iface+'/speed','utf8').trim(),10); }catch(e){ out[iface].speed=null; }
+      try{ out[iface].operstate=fs.readFileSync('/sys/class/net/'+iface+'/operstate','utf8').trim(); }catch(e){ out[iface].operstate='unknown'; }
+      try{ out[iface].carrier=fs.readFileSync('/sys/class/net/'+iface+'/carrier','utf8').trim(); }catch(e){ out[iface].carrier=null; }
+    });
+    return out;
+  }catch(e){ return {}; }
+}
+function readFirmware(){
+  try{
+    const txt=fs.readFileSync('/etc/os-release','utf8');
+    const m=txt.match(/PRETTY_NAME="([^"]+)"/);
+    if(m) return m[1];
+    const m2=txt.match(/PRETTY_NAME=([^\n]+)/);
+    if(m2) return m2[1].replace(/"/g,'').trim();
+  }catch(e){}
+  return 'Debian '+os.release();
+}
+function readPveKernel(){ try{ return fs.readFileSync('/proc/sys/kernel/osrelease','utf8').trim(); }catch(e){ return os.release(); } }
+
 let raplState = { pkgW: 0, coreW: 0, uncoreW: 0, pkgEnergy: null, coreEnergy: null, uncoreEnergy: null, lastTs: 0, tdpW: 77, maxRange: 65532610987 };
 function readRaplFile(p) { try { return parseInt(require('fs').readFileSync(p,'utf8').trim(),10); } catch(e){ return null; } }
 function startRaplSampler() {
@@ -511,6 +688,12 @@ app.get('/api/metrics', async (req, res) => {
   const memTotal = os.totalmem();
   const memUsed = memTotal - os.freemem();
   const memPct = memTotal ? (memUsed / memTotal * 100) : 0;
+  const memDet = readMeminfoDetailed();
+  const thermal = readThermal();
+  const dfMap = readDfDetailed();
+  const netMap = readNetDetailed();
+  const firmware = readFirmware();
+  const kernel = readPveKernel();
 
   let cpuPercent = 0;
   let perCorePct = [];
@@ -556,11 +739,35 @@ app.get('/api/metrics', async (req, res) => {
   if (diskIoSnap) prevDiskIo = diskIoSnap;
   prevTs = now;
 
+  // gather ip/gateway/dns for overview
+  let enpIp='192.168.1.111';
+  try{
+    const ifs=os.networkInterfaces();
+    const enp=(ifs['enp2s0']||[]).find(a=>a.family==='IPv4');
+    if(enp) enpIp=enp.address;
+  }catch(e){}
+  let gateway=null;
+  try{
+    const gwOut=require('child_process').execFileSync('ip',['-4','route','show','default'],{timeout:1200}).toString();
+    const m=gwOut.match(/via\s+([\d.]+)/);
+    if(m) gateway=m[1];
+  }catch(e){}
+  let dns=null;
+  try{
+    const r=fs.readFileSync('/etc/resolv.conf','utf8');
+    const m=r.match(/nameserver\s+([^\s]+)/);
+    if(m) dns=m[1];
+  }catch(e){}
+
   res.json({
     ts: now,
     intervalSec: intervalSec || 0,
+    hostname: os.hostname(),
+    firmware,
+    kernel,
+    localTime: new Date().toISOString(),
     cpu: {
-      model: os.cpus()[0]?.model || 'Unknown',
+      model: os.cpus()[0]?.model || 'Intel i5-3470',
       cores: os.cpus().length,
       percent: Number(cpuPercent.toFixed(1)),
       perCore: perCorePct.map(v=>Number(v.toFixed(1))),
@@ -570,6 +777,12 @@ app.get('/api/metrics', async (req, res) => {
       total: memTotal, used: memUsed, free: memTotal - memUsed,
       percent: Number(memPct.toFixed(1)),
       totalFmt: fmtBytes(memTotal), usedFmt: fmtBytes(memUsed), freeFmt: fmtBytes(memTotal - memUsed),
+      available: memDet?memDet.memAvailable:null,
+      availableFmt: memDet?fmtBytes(memDet.memAvailable):'-',
+      buffered: memDet?memDet.memBuffers:null,
+      bufferedFmt: memDet?fmtBytes(memDet.memBuffers):'-',
+      cached: memDet?memDet.memCached:null,
+      cachedFmt: memDet?fmtBytes(memDet.memCached):'-',
     },
     disk: {
       total: diskInfo?.totalRaw || 0, used: diskInfo?.usedRaw || 0,
@@ -577,13 +790,19 @@ app.get('/api/metrics', async (req, res) => {
       totalFmt: diskInfo?.total || '-', usedFmt: diskInfo?.used || '-', percentFmt: diskInfo?.percent || '0%',
       readBps, writeBps,
       readFmt: fmtBps(readBps), writeFmt: fmtBps(writeBps),
+      dfMap,
     },
     net: {
       iface: netSnap?.iface || primaryIface || 'enp2s0',
       rx: netSnap?.rx || 0, tx: netSnap?.tx || 0,
       rxBps, txBps,
       rxFmt: fmtBps(rxBps), txFmt: fmtBps(txBps),
+      enpIp,
+      gateway,
+      dns,
+      detailed: netMap,
     },
+    thermal,
     power: {
       pkgW: raplState.pkgW,
       coreW: raplState.coreW,

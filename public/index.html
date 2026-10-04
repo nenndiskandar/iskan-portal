@@ -125,8 +125,9 @@ tailwind.config = {
   </div>
 
   <!-- ===== Portal Tabs: Task Manager | Services (di atas Task Manager) ===== -->
-  <div id="portal-view-tabs" class="mb-3 flex flex-wrap items-center gap-1.5 p-1 rounded-lg bg-surface border border-border w-full" role="tablist" aria-label="Pilih tampilan">
-    <button data-view-tab="tasks" role="tab" aria-selected="true" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium bg-text text-base border border-text whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg> Task Manager <span data-tasks-count class="opacity-60 font-mono text-[11px] hidden"></span></button>
+  <div id="portal-view-tabs" class="flex flex-wrap w-full gap-1.5 p-1 rounded-lg bg-surface border border-border mb-3" role="tablist" aria-label="Pilih tampilan">
+    <button data-view-tab="overview" role="tab" aria-selected="true" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium bg-text text-base border border-text whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> Overview</button>
+    <button data-view-tab="tasks" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg> Task Manager <span data-tasks-count class="opacity-60 font-mono text-[11px] hidden"></span></button>
     <button data-view-tab="services" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16"><path d="M0 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6zm2-1a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H2z"/></svg> Services <span data-services-count class="opacity-60 font-mono text-[11px]">-</span></button>
     <button data-view-tab="terminal" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg> Terminal</button>
     <button data-view-tab="kuota" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 10 7 10s7-5 7-10a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg> Kuota</button>
@@ -136,7 +137,112 @@ tailwind.config = {
     <button data-view-tab="andromodem" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="13" width="18" height="7" rx="1.5"/><path d="M7 13V10"/><path d="M12 13V9"/><path d="M17 13V10"/><circle cx="7" cy="16.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="12" cy="16.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="17" cy="16.5" r="0.9" fill="currentColor" stroke="none"/></svg> Andromodem</button>
   </div>
 
-  <!-- ===== TASK MANAGER ===== -->
+  <!-- ===== OVERVIEW (default, OpenWrt-style adapt VPS 192.168.1.111) ===== -->
+  <section id="overview-section" class="mb-5 space-y-3">
+    <div class="flex items-center gap-2">
+      <h2 class="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-2">
+        <svg class="w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        Overview · VPS 192.168.1.111
+      </h2>
+      <span class="ml-auto text-[11px] font-mono text-muted flex items-center gap-1.5"><span id="overview-live-dot" class="h-2 w-2 rounded-full bg-accent animate-pulse"></span><span id="overview-live-text" class="hidden sm:inline">LIVE</span><span id="overview-localtime" class="tabular-nums">-</span></span>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-[13px]">
+      <!-- Basic System Info -->
+      <div class="rounded border border-border bg-surface/40 p-2.5 flex flex-col gap-1 min-w-0">
+        <div class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted border-b border-border/40 pb-1.5 mb-1">
+          <span class="h-2 w-2 rounded-full bg-accent"></span> Basic System Info
+        </div>
+        <div class="flex flex-col gap-1 font-mono text-xs">
+          <div class="flex justify-between gap-2"><span class="text-muted shrink-0">Model</span><span id="overview-model" class="text-text truncate text-right">Intel i5-3470</span></div>
+          <div class="flex justify-between gap-2"><span class="text-muted shrink-0">Firmware</span><span id="overview-firmware" class="text-text truncate text-right">-</span></div>
+          <div class="flex justify-between gap-2"><span class="text-muted shrink-0">Kernel</span><span id="overview-kernel" class="text-text truncate text-right">6.1.0-53-generic</span></div>
+          <div class="flex justify-between gap-2"><span class="text-muted shrink-0">Local Time</span><span id="overview-localtime-dup" class="text-text tabular-nums text-right">-</span></div>
+          <div class="flex justify-between gap-2"><span class="text-muted shrink-0">Hostname</span><span id="overview-hostname" class="text-text truncate text-right">-</span></div>
+          <div class="flex justify-between gap-2"><span class="text-muted shrink-0">Server IP</span><span class="text-text truncate text-right">192.168.1.111</span></div>
+        </div>
+      </div>
+      <!-- Sensor & Uptime -->
+      <div class="rounded border border-border bg-surface/40 p-2.5 flex flex-col gap-1 min-w-0">
+        <div class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted border-b border-border/40 pb-1.5 mb-1">
+          <span class="h-2 w-2 rounded-full bg-amber-400"></span> Sensor &amp; Uptime
+        </div>
+        <div class="flex flex-col gap-1 font-mono text-xs">
+          <div class="flex justify-between gap-2"><span class="text-muted">Uptime</span><span id="overview-uptime" class="text-text tabular-nums text-right">-</span></div>
+          <div class="flex justify-between gap-2"><span class="text-muted">CPU Temp</span><span id="overview-cpu-temp" class="text-text tabular-nums text-right">-</span></div>
+          <div class="flex justify-between gap-2"><span class="text-muted">Board <span class="opacity-60">(aml_thermal)</span></span><span id="overview-aml-thermal" class="text-text tabular-nums text-right">-</span></div>
+          <div class="flex justify-between gap-2"><span class="text-muted">CPU Thermal</span><span id="overview-cpu-thermal" class="text-text tabular-nums text-right">-</span></div>
+          <div class="flex justify-between gap-2"><span class="text-muted">Load Avg</span><span id="overview-load" class="text-text tabular-nums text-right">-</span></div>
+          <div class="flex justify-between gap-2"><span class="text-muted">CPU Usage</span><span id="overview-cpu-pct" class="text-text tabular-nums text-right">-</span></div>
+        </div>
+      </div>
+      <!-- System Resources -->
+      <div class="rounded border border-border bg-surface/40 p-2.5 flex flex-col gap-1 min-w-0">
+        <div class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted border-b border-border/40 pb-1.5 mb-1">
+          <span class="h-2 w-2 rounded-full bg-sky-400"></span> System Resources
+        </div>
+        <div class="flex flex-col gap-1 font-mono text-xs">
+          <div class="text-[10px] uppercase tracking-wider text-muted opacity-70">Memory</div>
+          <div class="grid grid-cols-2 gap-x-3 gap-y-1">
+            <span class="text-muted">Total</span><span id="overview-mem-total" class="text-text text-right tabular-nums">-</span>
+            <span class="text-muted">Available</span><span id="overview-mem-available" class="text-text text-right tabular-nums">-</span>
+            <span class="text-muted">Used</span><span id="overview-mem-used" class="text-text text-right tabular-nums">-</span>
+            <span class="text-muted">Buffered</span><span id="overview-mem-buffered" class="text-text text-right tabular-nums">-</span>
+            <span class="text-muted">Cached</span><span id="overview-mem-cached" class="text-text text-right tabular-nums">-</span>
+          </div>
+          <div class="h-1.5 w-full bg-base rounded overflow-hidden border border-border/40"><div id="overview-mem-bar" class="h-full bg-sky-400 transition-all duration-700" style="width:0%"></div></div>
+          <div class="text-[10px] uppercase tracking-wider text-muted opacity-70 mt-1">Storage</div>
+          <div class="flex justify-between gap-2"><span class="text-muted">Disk /</span><span id="overview-disk" class="text-text text-right tabular-nums">-</span></div>
+          <div class="h-1.5 w-full bg-base rounded overflow-hidden border border-border/40"><div id="overview-disk-bar" class="h-full bg-amber-400 transition-all duration-700" style="width:0%"></div></div>
+          <div class="flex justify-between gap-2"><span class="text-muted">Temp /tmp</span><span id="overview-tmp" class="text-text text-right tabular-nums">-</span></div>
+          <div class="flex justify-between gap-2"><span class="text-muted">Tmpfs /dev/shm</span><span id="overview-tmpfs" class="text-text text-right tabular-nums">-</span></div>
+        </div>
+      </div>
+      <!-- Network Dashboard -->
+      <div class="rounded border border-border bg-surface/40 p-2.5 flex flex-col gap-1 min-w-0">
+        <div class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted border-b border-border/40 pb-1.5 mb-1">
+          <span class="h-2 w-2 rounded-full bg-violet-400"></span> Network Dashboard
+        </div>
+        <div class="flex flex-col gap-1.5 font-mono text-xs">
+          <div class="rounded bg-base border border-border/40 p-2">
+            <div class="flex justify-between items-center gap-2"><span class="text-muted">Ethernet enp2s0</span><span id="overview-net-enp2s0-status" class="text-accent text-[11px] font-medium whitespace-nowrap">100M · Connected</span></div>
+            <div class="flex gap-3 mt-1 text-[11px]"><span class="text-muted">↓ RX <span id="overview-net-enp2s0-rx" class="text-text tabular-nums">-</span></span><span class="text-muted">↑ TX <span id="overview-net-enp2s0-tx" class="text-text tabular-nums">-</span></span></div>
+            <div class="flex justify-between gap-2 mt-1 text-[11px]"><span class="text-muted">IP</span><span id="overview-net-enp2s0-ip" class="text-text">192.168.1.111</span></div>
+          </div>
+          <div class="rounded bg-base border border-border/40 p-2 flex justify-between items-center gap-2"><span class="text-muted">eth1</span><span id="overview-net-eth1-status" class="text-muted text-[11px]">No link</span></div>
+          <div class="rounded bg-base border border-border/40 p-2 flex justify-between items-center gap-2"><span class="text-muted">wwan0</span><span id="overview-net-wwan0-status" class="text-muted text-[11px]">No link</span></div>
+        </div>
+      </div>
+      <!-- Network Status -->
+      <div class="rounded border border-border bg-surface/40 p-2.5 flex flex-col gap-1 min-w-0">
+        <div class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted border-b border-border/40 pb-1.5 mb-1">
+          <span class="h-2 w-2 rounded-full bg-emerald-400"></span> Network Status
+        </div>
+        <div class="flex flex-col gap-1 font-mono text-xs">
+          <div class="text-[10px] uppercase tracking-wider text-muted opacity-70">IPv4 Upstream</div>
+          <div class="flex justify-between gap-2"><span class="text-muted">Status</span><span id="overview-wan-status" class="text-text text-right">Connected</span></div>
+          <div class="flex justify-between gap-2"><span class="text-muted">Address</span><span id="overview-wan-ipv4" class="text-text text-right">192.168.1.111</span></div>
+          <div class="flex justify-between gap-2"><span class="text-muted">Gateway</span><span id="overview-wan-gateway" class="text-text text-right">-</span></div>
+          <div class="flex justify-between gap-2"><span class="text-muted">DNS</span><span id="overview-wan-dns" class="text-text text-right truncate">-</span></div>
+          <div class="flex justify-between gap-2"><span class="text-muted">Proto</span><span id="overview-wan-proto" class="text-text text-right">DHCP</span></div>
+          <div class="flex justify-between gap-2"><span class="text-muted">Server</span><span class="text-text text-right">192.168.1.111</span></div>
+        </div>
+      </div>
+      <!-- Node Summary -->
+      <div class="rounded border border-border bg-surface/40 p-2.5 flex flex-col gap-1 min-w-0">
+        <div class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted border-b border-border/40 pb-1.5 mb-1">
+          <span class="h-2 w-2 rounded-full bg-zinc-500"></span> Node Summary
+        </div>
+        <div class="flex flex-col gap-1 font-mono text-xs">
+          <div class="flex justify-between gap-2"><span class="text-muted">Services Up</span><span id="overview-services-up" class="text-text text-right">-</span></div>
+          <div class="flex justify-between gap-2"><span class="text-muted">Load 15m</span><span id="overview-load15" class="text-text text-right tabular-nums">-</span></div>
+          <div class="flex justify-between gap-2"><span class="text-muted">Power</span><span id="overview-power" class="text-text text-right tabular-nums">-</span></div>
+          <div class="flex justify-between gap-2"><span class="text-muted">Kernel</span><span id="overview-kernel-dup" class="text-text text-right truncate">6.1.0-53</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+    <!-- ===== TASK MANAGER ===== -->
   <section id="tm-section" data-view="simple" class="mb-5">
     <div class="flex items-center gap-2 mb-2.5">
       <h2 class="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-2">
@@ -938,6 +1044,62 @@ tailwind.config = {
     if (diskChart) { diskChart.data.datasets[0].data = hist.dRead.slice(); diskChart.data.datasets[1].data = hist.dWrite.slice(); diskChart.update('none'); }
     if (netChart) { netChart.data.datasets[0].data = hist.nRx.slice(); netChart.data.datasets[1].data = hist.nTx.slice(); netChart.update('none'); }
     if (powerChart) { powerChart.data.datasets[0].data = hist.power.slice(); powerChart.update('none'); }
+    try{ updateOverview(m); }catch(e){}
+  }
+
+  function updateOverview(m){
+    try{
+      function set(id, val){ var e=document.getElementById(id); if(e) e.textContent=val; }
+      if(m.hostname) set('overview-hostname', m.hostname);
+      if(m.firmware) set('overview-firmware', m.firmware);
+      if(m.kernel){ set('overview-kernel', m.kernel); var kd=document.getElementById('overview-kernel-dup'); if(kd) kd.textContent=m.kernel; }
+      if(m.localTime){ try{ var d=new Date(m.localTime); var s=d.toLocaleString('id-ID',{dateStyle:'medium', timeStyle:'medium'}); set('overview-localtime', s); set('overview-localtime-dup', s); }catch(e){ set('overview-localtime', m.localTime); set('overview-localtime-dup', m.localTime); } }
+      if(m.uptime!=null) set('overview-uptime', (typeof fmtUptime==='function'? fmtUptime(m.uptime): Math.floor(m.uptime)+'s'));
+      if(m.thermal){
+        set('overview-cpu-temp', m.thermal.cpuTemp!=null? m.thermal.cpuTemp+' \u00B0C' : '-');
+        set('overview-aml-thermal', m.thermal.amlThermal!=null? m.thermal.amlThermal+' \u00B0C' : '-');
+        set('overview-cpu-thermal', m.thermal.cpuThermal!=null? m.thermal.cpuThermal+' \u00B0C' : '-');
+      }
+      if(m.cpu && m.cpu.load) set('overview-load', m.cpu.load.join(' '));
+      if(m.cpu && m.cpu.percent!=null) set('overview-cpu-pct', m.cpu.percent.toFixed(1)+' %');
+      if(m.cpu && m.cpu.load) set('overview-load15', String(m.cpu.load[2]));
+      if(m.ram){
+        set('overview-mem-total', m.ram.totalFmt||'-');
+        set('overview-mem-available', m.ram.availableFmt||'-');
+        set('overview-mem-used', m.ram.usedFmt||'-');
+        set('overview-mem-buffered', m.ram.bufferedFmt||'-');
+        set('overview-mem-cached', m.ram.cachedFmt||'-');
+        var bar=document.getElementById('overview-mem-bar'); if(bar && m.ram.percent!=null) bar.style.width=m.ram.percent+'%';
+      }
+      if(m.disk){
+        var dt=(m.disk.usedFmt||'-')+' / '+(m.disk.totalFmt||'-')+' ('+(m.disk.percentFmt|| (m.disk.percent!=null? m.disk.percent.toFixed(0)+'%':'-'))+')';
+        set('overview-disk', dt);
+        var db=document.getElementById('overview-disk-bar'); if(db) db.style.width=(m.disk.percent||0)+'%';
+        if(m.disk.dfMap){
+          var tmp=m.disk.dfMap['/tmp']; if(tmp){ var tu=(typeof fmtBytes==='function'? fmtBytes(tmp.used): tmp.used); var tt=(typeof fmtBytes==='function'? fmtBytes(tmp.total): tmp.total); set('overview-tmp', tu+' / '+tt+' ('+tmp.percent+')'); } else set('overview-tmp','-');
+          var shm=m.disk.dfMap['/dev/shm']; if(shm){ var st=(typeof fmtBytes==='function'? fmtBytes(shm.total): shm.total); set('overview-tmpfs', st+' ('+shm.percent+')'); } else set('overview-tmpfs','-');
+        }
+      }
+      if(m.net){
+        set('overview-net-enp2s0-ip', m.net.enpIp||'-');
+        set('overview-wan-ipv4', m.net.enpIp||'-');
+        set('overview-wan-gateway', m.net.gateway||'-');
+        set('overview-wan-dns', m.net.dns||'-');
+        if(m.net.rxFmt) set('overview-net-enp2s0-rx', m.net.rxFmt);
+        if(m.net.txFmt) set('overview-net-enp2s0-tx', m.net.txFmt);
+        var det=m.net.detailed||{};
+        var enp=det['enp2s0']; var stEl=document.getElementById('overview-net-enp2s0-status');
+        if(stEl && enp){ var speed=enp.speed? enp.speed+'M':'100M'; var up=(enp.operstate==='up'||enp.carrier==='1')?'Connected':'No link'; stEl.textContent=speed+' \u00B7 '+up; stEl.className=up==='Connected'?'text-accent text-[11px] font-medium whitespace-nowrap':'text-muted text-[11px]'; }
+      }
+      if(m.power && m.power.estTotalW!=null) set('overview-power', m.power.estTotalW.toFixed(1)+' W');
+      if(window.latestData && window.latestData.services){ var ups=window.latestData.services.filter(function(s){return s.healthy;}).length; set('overview-services-up', ups+' / '+window.latestData.services.length); }
+    }catch(e){}
+  }
+  function refreshOverview(){
+    fetch('/api/metrics',{cache:'no-store'}).then(function(r){ return r.json(); }).then(function(m){ try{ updateOverview(m); updateCharts(m); }catch(e){} }).catch(function(){});
+    if(!window.latestData){
+      fetch('/api/status',{cache:'no-store'}).then(function(r){ return r.json(); }).then(function(d){ window.latestData=d; window.latestRenderTime=Date.now(); try{ var u=d.services.filter(function(x){return x.healthy;}).length; var e=document.getElementById('overview-services-up'); if(e) e.textContent=u+' / '+d.services.length; }catch(e){} }).catch(function(){});
+    }
   }
 
   // --- View toggle: Simple vs Detail ---
@@ -1122,9 +1284,10 @@ tailwind.config = {
   metricsTimer = setInterval(pollMetrics, 1000);
   function initPortalViewTabs(){
     var KEY = 'portalViewTab';
-    window._portalView = localStorage.getItem(KEY) || 'tasks';
+    window._portalView = localStorage.getItem(KEY) || 'overview';
     if (window._portalView === 'ssh') { window._portalView = 'terminal'; try{ localStorage.setItem(KEY, 'terminal'); }catch(e){} }
     if (window._portalView === 'owrt') { window._portalView = 'metacubex'; try{ localStorage.setItem(KEY, 'metacubex'); }catch(e){} }
+    var overviewSection = document.getElementById('overview-section');
     var tmSection = document.getElementById('tm-section');
     var groups = document.getElementById('groups');
     var servicesPanel = document.getElementById('services-panel');
@@ -1275,6 +1438,7 @@ tailwind.config = {
     function applyView(tab){
       window._portalView = tab;
       try{ localStorage.setItem(KEY, tab); }catch(e){}
+      var isOverview = (tab === 'overview');
       var isTasks = (tab === 'tasks');
       var isServices = (tab === 'services');
       var isTerminal = (tab === 'terminal' || tab === 'ssh');
@@ -1290,28 +1454,22 @@ tailwind.config = {
           ? 'shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium bg-text text-base border border-text whitespace-nowrap'
           : 'shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap';
       });
+      if (overviewSection) overviewSection.classList.toggle('hidden', !isOverview);
       if (tmSection) tmSection.classList.toggle('hidden', !isTasks);
       if (servicesPanel) servicesPanel.classList.toggle('hidden', !isServices);
       if (terminalSection) terminalSection.classList.toggle('hidden', !isTerminal);
       if (kuotaSection) kuotaSection.classList.toggle('hidden', !isKuota);
-      
-      
       if (rSection) rSection.classList.toggle('hidden', !is9r);
-      
       if (cfSection) cfSection.classList.toggle('hidden', !isCf);
       if (metacubexSection) metacubexSection.classList.toggle('hidden', !isMetacubex);
       if (andromodemSection) andromodemSection.classList.toggle('hidden', !isAndromodem);
-      
       if (isTerminal) loadTerminal();
       if (isKuota) loadKuota();
-      
-      
+      if (isOverview) { try{ refreshOverview(); }catch(e){} }
       if (is9r) load9r();
       if (isCf) loadCf();
       if (isMetacubex) loadMetacubex();
       if (isAndromodem) loadAndromodem();
-      
-      // sync poll interval display for top bar if present
       var topInt = document.getElementById('tm-interval-top');
       var curInt = document.getElementById('tm-interval');
       if (topInt && curInt) topInt.textContent = curInt.textContent;
