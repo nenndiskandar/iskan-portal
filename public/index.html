@@ -115,14 +115,7 @@ tailwind.config = {
     </div>
   </div>
 
-  <!-- ===== View mode (Simple/Detail) - di atas tabs ===== -->
-  <div class="mb-3 flex items-center justify-end gap-2">
-    <span class="text-[11px] font-mono text-muted" id="tm-interval-top">poll 1.5s - 60 pts - 4 cores</span>
-    <div class="flex items-center rounded bg-base border border-border p-0.5" role="group" aria-label="View mode">
-      <button id="btn-view-simple" type="button" class="h-7 px-3 rounded text-xs font-medium bg-surface text-text border border-border shadow-sm">Simple</button>
-      <button id="btn-view-detail" type="button" class="h-7 px-3 rounded text-xs font-medium text-muted hover:text-text">Detail</button>
-    </div>
-  </div>
+
   <!-- ===== Portal Tabs: Task Manager | Services (di atas Task Manager) ===== -->
   <div id="portal-view-tabs" class="mb-3 flex flex-wrap items-center gap-1.5 p-1 rounded-lg bg-surface border border-border w-full" role="tablist" aria-label="Pilih tampilan">
     <button data-view-tab="tasks" role="tab" aria-selected="true" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium bg-text text-base border border-text whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg> Task Manager <span data-tasks-count class="opacity-60 font-mono text-[11px] hidden"></span></button>
@@ -142,7 +135,7 @@ tailwind.config = {
         <svg class="w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg>
         Task Manager · Live
       </h2>
-      <span class="text-[11px] font-mono text-muted" id="tm-interval">poll 1.5s · 60 pts · 4 cores</span>
+
     </div>
 
     <!-- Grid 2x3 on desktop, 1 col mobile -->
@@ -1000,7 +993,7 @@ tailwind.config = {
   }
   try { window.__netPollMetrics = pollMetrics; } catch(e) {}
   window.__pausePolling = function(){ if(metricsTimer){ clearInterval(metricsTimer); metricsTimer=null; } };
-  window.__resumePolling = function(){ if(!metricsTimer){ try{ pollMetrics(); }catch(e){} metricsTimer=setInterval(pollMetrics, 1500); } };
+  window.__resumePolling = function(){ if(!metricsTimer){ try{ pollMetrics(); }catch(e){} metricsTimer=setInterval(pollMetrics, 10000); } };
   try { window.addEventListener('netchange', function(e){ if(e && e.detail && e.detail.online===false) window.__pausePolling(); else if(e && e.detail && e.detail.online===true) window.__resumePolling(); }); } catch(e) {}
 
   // ===== main loops - Services manual only, no auto-refresh =====
@@ -1031,12 +1024,11 @@ tailwind.config = {
     wrap.appendChild(div);
   }
   function load() {
-    if (typeof window.__isOnline !== 'undefined' && window.__isOnline === false) { if(refBtn) refBtn.disabled=false; if(refIcon) refIcon.classList.remove('animate-spin'); var _wg=document.getElementById('groups'); if(_wg) _wg.classList.remove('opacity-40'); return; }
+    if (typeof window.__isOnline !== 'undefined' && window.__isOnline === false) { if(refBtn) refBtn.disabled=false; if(refIcon) refIcon.classList.remove('animate-spin'); return; }
     if (typeof navigator !== 'undefined' && !navigator.onLine) { if(refBtn) refBtn.disabled=false; if(refIcon) refIcon.classList.remove('animate-spin'); return; }
     var wrap = document.getElementById('groups');
     refBtn.disabled = true;
     refIcon.classList.add('animate-spin');
-    if (wrap.innerHTML.trim() !== '' && !document.getElementById('initial-loader')) wrap.classList.add('opacity-40');
     var start = Date.now();
     fetch('/api/status', { cache: 'no-store' })
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
@@ -1045,12 +1037,10 @@ tailwind.config = {
         if (elapsed < 500) setTimeout(function() { finishLoad(data); }, 500 - elapsed);
         else finishLoad(data);
       })
-      .catch(function(err) { fail(err); wrap.classList.remove('opacity-40'); refBtn.disabled = false; refIcon.classList.remove('animate-spin'); });
+      .catch(function(err) { fail(err); refBtn.disabled = false; refIcon.classList.remove('animate-spin'); });
   }
   function finishLoad(data) {
     render(data);
-    var wrap = document.getElementById('groups');
-    wrap.classList.remove('opacity-40');
     refBtn.disabled = false;
     refIcon.classList.remove('animate-spin');
   }
@@ -1121,7 +1111,7 @@ tailwind.config = {
   try { initPortalViewTabs(); } catch(e) {}
   load();
   pollMetrics();
-  metricsTimer = setInterval(pollMetrics, 1500);
+  metricsTimer = setInterval(pollMetrics, 10000);
   function initPortalViewTabs(){
     var KEY = 'portalViewTab';
     window._portalView = localStorage.getItem(KEY) || 'tasks';
