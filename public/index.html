@@ -58,7 +58,7 @@ tailwind.config = {
   <span class="flex items-center gap-2 text-amber-300 font-medium"><span class="h-2 w-2 rounded-full bg-amber-400"></span> Kamu offline - data live dijeda</span>
   <button id="net-retry" type="button" class="shrink-0 inline-flex h-7 items-center px-3 rounded bg-accent text-base text-xs font-semibold hover:bg-teal-500 active:bg-teal-600">Coba lagi</button>
 </div>
-<main class="mx-auto max-w-6xl w-full min-w-0 px-4 py-4 sm:px-6 sm:py-6">
+<main class="w-full min-w-0 px-4 py-4 sm:px-6 sm:py-6">
 
   <!-- Header -->
   <header class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-4">
@@ -146,7 +146,7 @@ tailwind.config = {
     </div>
 
     <!-- Grid 2x3 on desktop, 1 col mobile -->
-    <div id="tm-detail-grid" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <div id="tm-detail-grid" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
 
       <!-- CPU -->
       <div class="rounded border border-border bg-surface/40 overflow-hidden min-w-0">
@@ -269,7 +269,7 @@ tailwind.config = {
 
     </div>
     <!-- Simple view: only percentages / key numbers -->
-    <div id="tm-simple-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+    <div id="tm-simple-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-2">
       <div class="rounded border border-border bg-surface/40 p-3">
         <div class="flex items-center gap-1.5 text-xs text-muted"><span class="h-2 w-2 rounded-full bg-accent"></span>CPU</div>
         <div class="mt-1 text-xl font-semibold tabular-nums" id="s-cpu">-%</div>
@@ -337,7 +337,7 @@ tailwind.config = {
       </div>
       <button id="refresh" type="button" class="inline-flex h-8 min-h-[44px] items-center justify-center gap-2 rounded bg-base px-3 text-xs font-medium text-text border border-border hover:bg-border active:bg-zinc-700 shrink-0">
         <svg id="refresh-icon" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
-        Refresh <span id="countdown-badge" class="ml-1 opacity-50 font-mono tabular-nums text-[11px]">(15s)</span>
+        Refresh
       </button>
     </div>
     <div id="groups" class="space-y-4">
@@ -1003,12 +1003,10 @@ tailwind.config = {
   window.__resumePolling = function(){ if(!metricsTimer){ try{ pollMetrics(); }catch(e){} metricsTimer=setInterval(pollMetrics, 1500); } };
   try { window.addEventListener('netchange', function(e){ if(e && e.detail && e.detail.online===false) window.__pausePolling(); else if(e && e.detail && e.detail.online===true) window.__resumePolling(); }); } catch(e) {}
 
-  // ===== main loops =====
-  var nextLoadTime = Date.now() + 15000;
-  var countdownSpan = document.getElementById('countdown-badge');
+  // ===== main loops - Services manual only, no auto-refresh =====
   setInterval(function () {
-    if (typeof window.__isOnline !== 'undefined' && window.__isOnline === false) { if(countdownSpan) countdownSpan.textContent='(offline)'; return; }
-    if (typeof navigator !== 'undefined' && !navigator.onLine) { if(countdownSpan) countdownSpan.textContent='(offline)'; return; }
+    if (typeof window.__isOnline !== 'undefined' && window.__isOnline === false) return;
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return;
     if (!window.latestData) return;
     var diff = (Date.now() - window.latestRenderTime) / 1000;
     if (window.latestData.server) {
@@ -1022,9 +1020,6 @@ tailwind.config = {
       var base = parseFloat(upNodes[i].getAttribute('data-real-up'));
       if (base) upNodes[i].textContent = fmtUptime(base + diff);
     }
-    var until = (nextLoadTime - Date.now()) / 1000;
-    if (until <= 0) { countdownSpan.textContent = '(0s)'; nextLoadTime = Date.now() + 15000; load(); }
-    else { countdownSpan.textContent = '(' + Math.ceil(until) + 's)'; }
   }, 1000);
 
   function fail(err) {
@@ -1041,7 +1036,6 @@ tailwind.config = {
     var wrap = document.getElementById('groups');
     refBtn.disabled = true;
     refIcon.classList.add('animate-spin');
-    nextLoadTime = Date.now() + 15000;
     if (wrap.innerHTML.trim() !== '' && !document.getElementById('initial-loader')) wrap.classList.add('opacity-40');
     var start = Date.now();
     fetch('/api/status', { cache: 'no-store' })
