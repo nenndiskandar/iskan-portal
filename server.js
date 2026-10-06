@@ -4,15 +4,11 @@ const { execFile } = require('child_process');
 const os = require('os');
 const fs = require('fs');
 const crypto = require('crypto');
-const http = require('http');
 
 const app = express();
 const PORT = process.env.PORT || 3005;
-const TELBOT_WEB_PORT = 8095;
 const AUTH_FILE = path.join(__dirname, '.portal_auth');
 const DEFAULT_PASS = 'iskan2026';
-const TELBOT_ENV = '/root/telbot-data/.env';
-const TELBOT_DIR = '/root/telbot-data';
 
 // ---- body + cookie parse ----
 app.use(express.json({ limit: '64kb' }));
@@ -164,92 +160,6 @@ app.post('/api/auth/change-password', (req, res) => {
   res.json({ ok: true, message: 'Password berhasil diubah' });
 });
 
-// ---- telbot web reverse proxy: /telbot/* -> http://127.0.0.1:TELBOT_WEB_PORT/* (native http, no extra deps) ----
-function proxyTelbot(req, res) {
-  if (!isAuthenticated(req)) {
-    return res.status(401).json({ error: 'Unauthorized · login dulu di /login.html' });
-  }
-  let targetPath = req.originalUrl.replace(/^\/telbot/, '');
-  if (!targetPath || targetPath === '') targetPath = '/';
-  if (targetPath[0] !== '/') targetPath = '/' + targetPath;
-  // Preserve query string already in originalUrl; targetPath includes it
-  const headers = { ...req.headers };
-  headers.host = '127.0.0.1:' + TELBOT_WEB_PORT;
-  headers['x-forwarded-for'] = req.ip || req.socket.remoteAddress || '';
-  headers['x-forwarded-proto'] = req.headers['x-forwarded-proto'] || req.protocol || 'http';
-  headers['x-forwarded-host'] = req.headers.host || '';
-  delete headers['connection'];
-  delete headers['content-length']; // will re-set if we have bodyData
-  let bodyData = null;
-  const ct = (req.headers['content-type'] || '').toLowerCase();
-  const hasBody = req.body != null && typeof req.body === 'object' && !(req.body instanceof Buffer) && Object.keys(req.body).length > 0;
-  if (hasBody && req.method !== 'GET' && req.method !== 'HEAD') {
-    if (ct.includes('application/json')) {
-      bodyData = Buffer.from(JSON.stringify(req.body));
-      headers['content-type'] = 'application/json';
-    } else if (ct.includes('application/x-www-form-urlencoded')) {
-      const qs = new URLSearchParams(req.body).toString();
-      bodyData = Buffer.from(qs);
-      headers['content-type'] = 'application/x-www-form-urlencoded';
-    } else {
-      bodyData = Buffer.from(JSON.stringify(req.body));
-      if (!headers['content-type']) headers['content-type'] = 'application/json';
-    }
-    headers['content-length'] = String(Buffer.byteLength(bodyData));
-  } else if (typeof req.body === 'string' && req.body.length > 0 && req.method !== 'GET' && req.method !== 'HEAD') {
-    bodyData = Buffer.from(req.body);
-    headers['content-length'] = String(Buffer.byteLength(bodyData));
-  } else if (Buffer.isBuffer(req.body) && req.body.length > 0) {
-    bodyData = req.body;
-    headers['content-length'] = String(bodyData.length);
-  }
-  const opts = {
-    hostname: '127.0.0.1',
-    port: TELBOT_WEB_PORT,
-    path: targetPath,
-    method: req.method,
-    headers: headers,
-  };
-  const proxyReq = http.request(opts, (proxyRes) => {
-    const resHeaders = { ...proxyRes.headers };
-    delete resHeaders['transfer-encoding'];
-    if (resHeaders.location) {
-      const loc = String(resHeaders.location);
-      const telHost = 'http://127.0.0.1:' + TELBOT_WEB_PORT;
-      const telHost2 = 'http://localhost:' + TELBOT_WEB_PORT;
-      if (loc.startsWith(telHost)) resHeaders.location = '/telbot' + loc.slice(telHost.length) || '/telbot/';
-      else if (loc.startsWith(telHost2)) resHeaders.location = '/telbot' + loc.slice(telHost2.length) || '/telbot/';
-    }
-    res.writeHead(proxyRes.statusCode, resHeaders);
-    proxyRes.pipe(res);
-  });
-  proxyReq.on('error', (err) => {
-    console.error('[telbot-proxy] error:', err.message);
-    if (!res.headersSent) {
-      res.status(502).json({ error: 'Telbot web tidak tersedia (127.0.0.1:' + TELBOT_WEB_PORT + '): ' + err.message });
-    } else {
-      try { res.end(); } catch(e){}
-    }
-  });
-  proxyReq.setTimeout(10000, () => {
-    proxyReq.destroy(new Error('proxy timeout'));
-  });
-  req.on('close', () => { try { proxyReq.destroy(); } catch(e){} });
-  if (bodyData) {
-    proxyReq.write(bodyData);
-    proxyReq.end();
-  } else {
-    // pipe streaming body (for file uploads / raw)
-    // if body already consumed by express.json and empty, piping will end immediately
-    req.pipe(proxyReq);
-    // if readable already ended (e.g. GET or parsed JSON with no pipe data), ensure proxyReq ends
-    if (req.readableEnded) {
-      // piping an ended readable should auto-end, but ensure after tick
-      setImmediate(() => { if (!proxyReq.writableEnded) try { proxyReq.end(); } catch(e){} });
-    }
-  }
-}
-app.use('/telbot', proxyTelbot);
 
 // ---- auth gate for protected routes ----
 app.use((req, res, next) => {
@@ -266,6 +176,7 @@ const SERVICES = [
   { unit: 'iskan-drama.service',       name: 'Iskan Drama',        kind: 'app',   port: 3003,  desc: 'Streaming SPA (Express, native http)', path: '/root/iskan-drama', tech: 'Node.js', externalUrl: 'https://drama.nendi.web.id', dashboardPath: '/' },
   { unit: 'iskan-portfolio.service',   name: 'Iskan Portfolio',    kind: 'app',   port: 3004,  desc: 'Spotlight portfolio · nendi.web.id (apex via tunnel)', path: '/root/iskan-portfolio', tech: 'React / Next.js', externalUrl: 'https://nendi.web.id', dashboardPath: '/' },
   { unit: 'autoclipper-webjs.service', name: 'Auto-Clipper WebJS', kind: 'app',   port: 3000,  desc: 'Auto-Clipper v2 web panel', path: '/root/auto-clipper-v2', tech: 'Node.js / Python', externalUrl: 'https://clipper.nendi.web.id', dashboardPath: '/' },
+  { unit: 'autoclipper-v3.service',      name: 'Auto-Clipper v3',       kind: 'app',   port: 3006,  desc: 'Auto-Clipper v3 5 tabs pipeline · AI opencos 20127 · webjs/server.v3.js', path: '/root/auto-clipper-v3', tech: 'Node.js / Python · AI', externalUrl: null, dashboardPath: '/' },
   { unit: 'iskan-portal.service',      name: 'Iskan Portal',       kind: 'app',   port: 3005,  desc: 'Portal status (halaman ini)', path: '/root/iskan-portal', tech: 'Node.js / Express', externalUrl: 'https://portal.nendi.web.id', dashboardPath: '/' },
   { unit: 'auto-clipper-v2-bot.service', name: 'Auto-Clipper Bot', kind: 'bot', port: null, desc: 'Telegram bot pipeline', tech: 'Python', externalUrl: null },
   { unit: 'hermes-gateway.service',      name: 'Hermes Gateway',   kind: 'bot', port: null, desc: 'Hermes Agent messaging gateway', user: true, tech: 'Node.js', externalUrl: null },
@@ -275,7 +186,6 @@ const SERVICES = [
   { unit: 'cf-manager',                          name: 'CF Manager',     kind: 'infra', port: 3010,  desc: 'Cloudflare multi-account manager', path: '/root/cf-manager', tech: 'Vue3 + Express / Docker', docker: true, externalUrl: 'https://cf.nendi.web.id', dashboardPath: '/' },
   { unit: 'owrt.nendi.web.id',                 name: 'OpenWrt - iskanWRT', kind: 'infra', port: null,  desc: 'Router LuCI via tunnel → 192.168.1.1:80 (MetaCubeXD di metacubex.nendi.web.id)', path: null, tech: 'OpenWrt / LuCI', externalUrl: 'https://owrt.nendi.web.id', dashboardPath: '/', target: 'http://192.168.1.1:80', noCheck: true },
   { unit: 'metacubex.nendi.web.id',            name: 'MetaCubeXD',         kind: 'infra', port: 9090,  desc: 'MetaCubeXD via tunnel → 192.168.1.1:9090/ui/metacubexd', path: null, tech: 'MetaCubeXD / Mihomo', externalUrl: 'https://metacubex.nendi.web.id/ui/metacubexd/#/setup?hostname=metacubex.nendi.web.id&secret=rzx', dashboardPath: '/ui/metacubexd/#/setup?hostname=metacubex.nendi.web.id&secret=rzx', target: 'http://192.168.1.1:9090', noCheck: true },
-  { unit: 'telbot.service',                     name: 'Telbot',           kind: 'bot',   port: null, desc: 'Telkomsel bot (0xtbug/telbot v1.1.3) · Telegram Bot/CLI/MCP', path: '/root/telbot-data', tech: 'Go 1.26 · gotgbot', externalUrl: null },
   { unit: 'ttyd.service',                       name: 'Web Terminal',     kind: 'infra', port: 7681, desc: 'Web terminal (ttyd 1.7.7) → https://ssh.nendi.web.id', path: null, tech: 'ttyd / login', externalUrl: 'https://ssh.nendi.web.id', dashboardPath: '/' },
   { unit: 'cloudflared.service',                 name: 'Cloudflared Tunnel', kind: 'infra', port: null, desc: 'Named tunnel 204640e4 → 9 hostnames (nendi.web.id + 9r/drama/portal/clipper/cf/omni/llm/owrt/ssh)', tech: 'Cloudflare Tunnel', externalUrl: null },
 ];
@@ -886,166 +796,456 @@ app.get('/api/status', async (req, res) => {
 });
 
 
-// ---- telbot (0xtbug/telbot) control API ----
-function parseTelbotEnv() {
+// ---- sidompul proxy (XL/Axis cek kuota via apigw; key di server, hindari CORS + bocor key) ----
+const SIDOMPUL_AUTH = 'Basic c2lkb21wdWxhcGk6YXBpZ3drbXNw';
+const SIDOMPUL_KEY = '60ef29aa-a648-4668-90ae-20951ef90c55';
+const SIDOMPUL_CACHE_DIR = path.join(__dirname, 'data', 'sidompul');
+try { fs.mkdirSync(SIDOMPUL_CACHE_DIR, { recursive: true }); } catch(e) {}
+function sidompulCachePath(msisdn) {
+  const safe = String(msisdn || '').replace(/\D/g, '').slice(0, 16);
+  return path.join(SIDOMPUL_CACHE_DIR, safe + '.json');
+}
+// Cache hasil GET terakhir: buka tab tampil ini, Refresh baru fetch upstream
+app.get('/api/sidompul/cache', (req, res) => {
+  if (!isAuthenticated(req)) return res.status(401).json({ error: 'Unauthorized' });
+  let msisdn = String(req.query.msisdn || '').replace(/\D/g, '');
+  if (msisdn.charAt(0) === '0') msisdn = '62' + msisdn.slice(1);
+  if (!/^62\d{8,14}$/.test(msisdn)) return res.status(400).json({ ok: false, error: 'Nomor tidak valid (contoh 0878xxx)' });
   try {
-    if (!fs.existsSync(TELBOT_ENV)) return {};
-    const txt = fs.readFileSync(TELBOT_ENV, 'utf8');
-    const out = {};
-    txt.split('\n').forEach(line => {
-      const t = line.trim();
-      if (!t || t.startsWith('#')) return;
-      const i = t.indexOf('=');
-      if (i < 1) return;
-      let k = t.slice(0,i).trim();
-      let v = t.slice(i+1).trim();
-      if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) v = v.slice(1,-1);
-      out[k] = v;
-    });
-    return out;
-  } catch(e){ return {}; }
-}
-function maskToken(tok) {
-  if (!tok || tok.length < 8) return tok ? '••••' : '';
-  return tok.slice(0,4) + '••••' + tok.slice(-4);
-}
-function filterTelbotLogs(raw) {
-  if (!raw || !String(raw).trim()) return { filtered: raw || '', dropped: 0, total: 0 };
-  const text = String(raw);
-  const lines = text.split('\n');
-  const noisyRe = /context deadline exceeded|Failed to get updates|getUpdates/i;
-  let kept = [];
-  let dropped = 0;
-  for (const line of lines) {
-    if (noisyRe.test(line)) { dropped++; continue; }
-    kept.push(line);
+    const fp = sidompulCachePath(msisdn);
+    if (!fs.existsSync(fp)) return res.status(404).json({ ok: false, cached: false, error: 'Belum ada data tersimpan, klik Refresh' });
+    const raw = JSON.parse(fs.readFileSync(fp, 'utf8'));
+    return res.json({ ok: true, cached: true, msisdn, fetchedAt: raw.fetchedAt || null, data: raw.data || raw });
+  } catch(e) {
+    return res.status(500).json({ ok: false, error: 'Gagal baca cache: ' + String((e && e.message) || e) });
   }
-  let filtered = kept.join('\n').trim();
-  if (dropped > 0) {
-    const summary = `[` + dropped + ` baris "context deadline exceeded / getUpdates" disembunyikan  -  flapping jaringan Telegram, bot tetap running]`;
-    if (!filtered) filtered = summary + '\n(tidak ada log lain  -  semua yang terfilter adalah spam jaringan)';
-    else filtered = filtered + '\n\n' + summary;
+});
+app.get('/api/sidompul/cek', async (req, res) => {
+  if (!isAuthenticated(req)) return res.status(401).json({ error: 'Unauthorized' });
+  let msisdn = String(req.query.msisdn || '').replace(/\D/g, '');
+  if (msisdn.charAt(0) === '0') msisdn = '62' + msisdn.slice(1);
+  if (!/^62\d{8,14}$/.test(msisdn)) return res.status(400).json({ ok: false, error: 'Nomor tidak valid (contoh 0878xxx)' });
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => { try { ctrl.abort(); } catch(e){} }, 15000);
+    const url = 'https://apigw.kmsp-store.com/sidompul/v4/cek_kuota?msisdn=' + encodeURIComponent(msisdn) + '&isJSON=true&_=' + Date.now();
+    const r = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json', 'Authorization': SIDOMPUL_AUTH, 'x-api-key': SIDOMPUL_KEY, 'x-app-version': '4.0.0' }, signal: ctrl.signal });
+    clearTimeout(t);
+    const text = await r.text();
+    let json = null;
+    try { json = JSON.parse(text); } catch(e) { return res.status(502).json({ ok: false, error: 'Upstream bukan JSON', raw: String(text).slice(0, 300) }); }
+    if (!r.ok) return res.status(r.status).json(json);
+    try { fs.writeFileSync(sidompulCachePath(msisdn), JSON.stringify({ fetchedAt: new Date().toISOString(), msisdn, data: json })); } catch(e) {}
+    return res.json(json);
+  } catch(e) {
+    const msg = (e && e.name === 'AbortError') ? 'Upstream timeout (15s)' : String((e && e.message) || e);
+    return res.status(502).json({ ok: false, error: msg });
   }
-  filtered = filtered.replace(/\n{3,}/g, '\n\n');
-  return { filtered, dropped, total: lines.length };
+});
+
+// ---- telkomsel halo proxy (cookie + device-id + accesstoken di server, browser hanya panggil proxy) ----
+const TSEL_DIR = path.join(__dirname, 'data', 'telkomsel');
+try { fs.mkdirSync(TSEL_DIR, { recursive: true }); } catch(e) {}
+const TSEL_AUTH_FILE = path.join(TSEL_DIR, 'auth.json');
+const TSEL_CACHE_FILE = path.join(TSEL_DIR, 'cache.json');
+function tselAuth() { try { return JSON.parse(fs.readFileSync(TSEL_AUTH_FILE, 'utf8')); } catch(e) { return null; } }
+function tselHeaders(auth) {
+  return {
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'ID',
+    'device-id': auth.deviceId,
+    'priority': 'u=1, i',
+    'Referer': 'https://www.telkomsel.com/user/halo',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36',
+    'Cookie': auth.cookie
+  };
 }
-app.get('/api/telbot/status', async (req, res) => {
+async function tselFetchJson(url, opts, ms) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => { try { ctrl.abort(); } catch(e){} }, ms || 20000);
+  try {
+    const r = await fetch(url, Object.assign({}, opts, { signal: ctrl.signal }));
+    const text = await r.text();
+    let json = null;
+    try { json = JSON.parse(text); } catch(e) { json = null; }
+    return { ok: r.ok, status: r.status, json, raw: json ? null : String(text).slice(0, 300) };
+  } finally { clearTimeout(t); }
+}
+// Cache hasil GET terakhir: buka tab tampil ini, Refresh baru fetch upstream
+app.get('/api/telkomsel/cache', (req, res) => {
   if (!isAuthenticated(req)) return res.status(401).json({ error: 'Unauthorized' });
   try {
-    const env = parseTelbotEnv();
-    const hasToken = !!(env.TELKOMSEL_BOT_TOKEN && env.TELKOMSEL_BOT_TOKEN !== 'your_bot_token_here' && env.TELKOMSEL_BOT_TOKEN.length > 10);
-    const hasAdmin = !!(env.TELEGRAM_ADMIN_ID && env.TELEGRAM_ADMIN_ID !== 'your_telegram_id' && /^\d+$/.test(String(env.TELEGRAM_ADMIN_ID).trim()));
-    const configured = hasToken && hasAdmin;
-    const [info, enabledRaw, logsRaw] = await Promise.all([
-      systemctlShow('telbot.service', false),
-      systemctlIsEnabled('telbot.service', false),
-      run('journalctl', ['-u', 'telbot.service', '-n', '60', '--no-pager'], 4000)
+    if (!fs.existsSync(TSEL_CACHE_FILE)) return res.status(404).json({ ok: false, cached: false, error: 'Belum ada data tersimpan, klik Refresh' });
+    const raw = JSON.parse(fs.readFileSync(TSEL_CACHE_FILE, 'utf8'));
+    return res.json({ ok: true, cached: true, fetchedAt: raw.fetchedAt || null, data: raw });
+  } catch(e) {
+    return res.status(500).json({ ok: false, error: 'Gagal baca cache: ' + String((e && e.message) || e) });
+  }
+});
+app.get('/api/telkomsel/cek', async (req, res) => {
+  if (!isAuthenticated(req)) return res.status(401).json({ error: 'Unauthorized' });
+  const auth = tselAuth();
+  if (!auth || !auth.cookie || !auth.deviceId) return res.status(500).json({ ok: false, error: 'auth telkomsel belum ada (data/telkomsel/auth.json)' });
+  try {
+    const H = tselHeaders(auth);
+    const [prof, bon] = await Promise.all([
+      tselFetchJson('https://www.telkomsel.com/api/customer/v1/profile', { method: 'GET', headers: H }, 20000),
+      tselFetchJson('https://www.telkomsel.com/api/customer/v1/active-bonuses?serviceType=Halo', { method: 'GET', headers: H }, 20000)
     ]);
-    let _telbotFiltered = { filtered: '', dropped: 0, total: 0 };
-    try { _telbotFiltered = filterTelbotLogs(logsRaw ? String(logsRaw) : ''); } catch(e) { _telbotFiltered = { filtered: logsRaw ? String(logsRaw).trim() : '', dropped: 0, total: logsRaw ? String(logsRaw).split('\n').length : 0 }; }
-    const logs = _telbotFiltered.filtered;
-    const logsDropped = _telbotFiltered.dropped;
-    const logsTotal = _telbotFiltered.total;
-    const active = info ? info.ActiveState : 'unknown';
-    const sub = info ? info.SubState : 'unknown';
-    const enabled = enabledRaw;
-    const autoBoot = enabled === 'enabled' || enabled === 'enabled-runtime';
-    // check binary exists
-    let binaryOk = false;
-    try { binaryOk = fs.existsSync('/usr/local/bin/telbot'); } catch(e){}
-    // data dir
-    let dataFiles = [];
-    try { dataFiles = fs.readdirSync(TELBOT_DIR).filter(f => !f.startsWith('.')).slice(0,20); } catch(e){}
-    res.json({
-      ok: true,
-      binaryOk,
-      binaryVersion: 'v1.1.3',
-      envExists: fs.existsSync(TELBOT_ENV),
-      configured,
-      hasToken,
-      hasAdmin,
-      tokenMasked: hasToken ? maskToken(env.TELKOMSEL_BOT_TOKEN) : '',
-      adminId: env.TELEGRAM_ADMIN_ID || '',
-      webhookPort: env.OTP_WEBHOOK_PORT || '',
-      webhookSecret: env.OTP_WEBHOOK_SECRET ? '••••' + String(env.OTP_WEBHOOK_SECRET).slice(-4) : '',
-      webhookSecretSet: !!env.OTP_WEBHOOK_SECRET,
-      dataDir: TELBOT_DIR,
-      dataFiles,
-      service: { active, sub, enabled, autoBoot, pid: info && info.MainPID && info.MainPID !== '0' ? Number(info.MainPID) : null, memory: info ? fmtBytes(info.MemoryCurrent) : null },
-      logs: logs,
-      logsDropped,
-      logsTotal,
-      logsFiltered: logsDropped > 0
-    });
-  } catch(e){
-    res.status(500).json({ error: String(e.message || e) });
+    const out = {
+      fetchedAt: new Date().toISOString(),
+      msisdn: (prof.json && prof.json.data && prof.json.data.identifier) || auth.msisdn || null,
+      profile: prof.json, profileStatus: prof.status,
+      bonuses: bon.json, bonusesStatus: bon.status,
+    };
+    try { fs.writeFileSync(TSEL_CACHE_FILE, JSON.stringify(out)); } catch(e) {}
+    return res.json({ ok: true, cached: false, fetchedAt: out.fetchedAt, data: out });
+  } catch(e) {
+    const msg = (e && e.name === 'AbortError') ? 'Upstream timeout (20s)' : String((e && e.message) || e);
+    return res.status(502).json({ ok: false, error: msg });
   }
 });
-app.post('/api/telbot/config', async (req, res) => {
-  if (!isAuthenticated(req)) return res.status(401).json({ error: 'Unauthorized' });
-  try {
-    const { token, adminId, webhookPort, webhookSecret } = req.body || {};
-    const cur = parseTelbotEnv();
-    let newToken = (token || '').toString().trim();
-    let newAdmin = (adminId || '').toString().trim();
-    let newPort = (webhookPort || '').toString().trim();
-    let newSecret = (webhookSecret || '').toString().trim();
-    // keep existing if empty token/admin and already configured (allow partial update)
-    if (!newToken && cur.TELKOMSEL_BOT_TOKEN && cur.TELKOMSEL_BOT_TOKEN !== 'your_bot_token_here') newToken = cur.TELKOMSEL_BOT_TOKEN;
-    if (!newAdmin && cur.TELEGRAM_ADMIN_ID) newAdmin = String(cur.TELEGRAM_ADMIN_ID);
-    if (!newToken) return res.status(400).json({ error: 'TELKOMSEL_BOT_TOKEN wajib diisi (dari @BotFather)' });
-    if (!newAdmin) return res.status(400).json({ error: 'TELEGRAM_ADMIN_ID wajib diisi (angka, dari @userinfobot)' });
-    if (!/^\d+$/.test(newAdmin)) return res.status(400).json({ error: 'TELEGRAM_ADMIN_ID harus angka (contoh 123456789)' });
-    if (newPort && !/^\d+$/.test(newPort)) return res.status(400).json({ error: 'OTP_WEBHOOK_PORT harus angka port' });
-    // ensure dir
-    try { fs.mkdirSync(TELBOT_DIR, { recursive: true }); } catch(e){}
-    const lines = [];
-    lines.push('# Telbot env - managed via Iskan Portal Kuota tab');
-    lines.push('# Generated ' + new Date().toISOString());
-    lines.push('TELKOMSEL_BOT_TOKEN=' + newToken);
-    lines.push('TELEGRAM_ADMIN_ID=' + newAdmin);
-    if (newPort) lines.push('OTP_WEBHOOK_PORT=' + newPort);
-    if (newSecret) lines.push('OTP_WEBHOOK_SECRET=' + newSecret);
-    else if (cur.OTP_WEBHOOK_SECRET && !newSecret) {
-      // keep existing secret if not provided and port kept? only keep if user didn't clear port
-      if (newPort && cur.OTP_WEBHOOK_SECRET) lines.push('OTP_WEBHOOK_SECRET=' + cur.OTP_WEBHOOK_SECRET);
+
+// ---- tri bimatri proxy (bimaplus-api.ioh.co.id; header x-imi-* computed per-request, secret di server) ----
+const TRI_DIR = path.join(__dirname, 'data', 'tri');
+try { fs.mkdirSync(TRI_DIR, { recursive: true }); } catch(e) {}
+const TRI_AUTH_FILE = path.join(TRI_DIR, 'auth.json');
+const TRI_CACHE_FILE = path.join(TRI_DIR, 'cache.json');
+const TRI_SESSION_FILE = path.join(TRI_DIR, 'session.json');
+const TRI_PENDING_FILE = path.join(TRI_DIR, 'otp_pending.json');
+function triAuth(){ try{ return JSON.parse(fs.readFileSync(TRI_AUTH_FILE,'utf8')); }catch(e){ return null; } }
+function triLoadSession(){ try{ return JSON.parse(fs.readFileSync(TRI_SESSION_FILE,'utf8')); }catch(e){ return null; } }
+function triSaveSession(obj){ try{ fs.writeFileSync(TRI_SESSION_FILE, JSON.stringify(obj,null,2), {mode:0o600}); try{fs.chmodSync(TRI_SESSION_FILE,0o600);}catch(e){} }catch(e){} }
+function triLoadPending(){ try{ return JSON.parse(fs.readFileSync(TRI_PENDING_FILE,'utf8')); }catch(e){ return null; } }
+function triSavePending(obj){ try{ fs.writeFileSync(TRI_PENDING_FILE, JSON.stringify(obj,null,2), {mode:0o600}); try{fs.chmodSync(TRI_PENDING_FILE,0o600);}catch(e){} }catch(e){} }
+function triClearPending(){ try{ fs.unlinkSync(TRI_PENDING_FILE);}catch(e){} }
+function triNormalizePhone(input){
+  let clean=String(input||'').replace(/[^0-9]/g,'');
+  if(clean.startsWith('62')) clean=clean.substring(2);
+  else if(clean.startsWith('0')) clean=clean.substring(1);
+  const isValid = clean.startsWith('8') && clean.length>=9 && clean.length<=13;
+  return { clean, national:'0'+clean, international:'62'+clean, isValid };
+}
+function triOdd(s){ let o=''; for(let i=0;i<s.length;i+=2) o+=s[i]; return o; }
+function triBuildHeaders(auth, bodyStr){
+  const cryptoMod = require('crypto');
+  auth = auth || {};
+  const os = auth.imiAppOs || 'BROWSER';
+  const appVersion = auth.imiAppVersion || auth.imiVersion || '5.2.0';
+  const channel = auth.imiChannel || 'PORTAL';
+  const language = auth.imiLanguage || 'ID';
+  const authorization = auth.authorization || '642d1cc69d90666962726e';
+  const deviceId = auth.deviceId || '56826f1045584651bc499d268febea91';
+  const deviceName = auth.deviceName || 'EnQuota Terminal (Linux)';
+  const serviceKey = auth.imiServiceKey || 'FPi7ZP3Jy8Uv3KBd4QeG';
+  const cookies = auth.cookie || 'TS01503f77=01334ce802d3fdb350e5f70de0216dd87e89b5b0b42039fa21a80610a6e9f41e405fae3d8d67f4e517f73cf985e5160a259dbf777e; BUI=56826f10-4558-4651-bc49-9d268febea91';
+  const token = auth.imiTokenId || auth.tokenId || auth.authToken || '';
+  const uid = (function(){ const d=new Date(); const pad=(n,l)=>String(n).padStart(l,'0'); return ''+d.getFullYear()+pad(d.getMonth()+1,2)+pad(d.getDate(),2)+pad(d.getHours(),2)+pad(d.getMinutes(),2)+pad(d.getSeconds(),2)+pad(d.getMilliseconds(),3)+String(Math.floor(100+Math.random()*900)); })();
+  const oddToken = triOdd(token);
+  const oauth = cryptoMod.createHash('sha512').update('REQBODY='+bodyStr+'&SALT='+oddToken).digest('hex');
+  const parent = (auth.parent && auth.parent !== '') ? auth.parent : 'parent';
+  const hp = parent+'$'+os+'$'+appVersion+'$'+token;
+  const oddUid = triOdd(uid);
+  const hhash = cryptoMod.createHash('sha512').update(hp+'&SALT='+oddUid).digest('hex');
+  const H = {
+    'Host': 'bimaplus-api.ioh.co.id',
+    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'id,en-US;q=0.9,en;q=0.8',
+    'Content-Type': 'application/json',
+    'Origin': 'https://bimatri.ioh.co.id',
+    'Referer': auth.referer || 'https://bimatri.ioh.co.id/',
+    'Authorization': authorization,
+    'X-IMI-App-OS': os,
+    'X-IMI-APPVERSION': appVersion,
+    'X-IMI-CHANNEL': channel,
+    'X-IMI-LANGUAGE': language,
+    'x-imi-oauth': oauth,
+    'X-IMI-HASH': hhash,
+    'X-IMI-TOKENID': token,
+    'X-IMI-VERSION': appVersion,
+    'X-DEVICEID': deviceId,
+    'X-DEVICENAME': deviceName,
+    'X-IMI-SERVICEKEY': serviceKey,
+    'X-IMI-UID': uid,
+    'Cookie': cookies,
+  };
+  return H;
+}
+function triBuildHeadersWithToken(tokenId, bodyStr){
+  const a = triAuth() || {};
+  const sess = triLoadSession();
+  const base = Object.assign({}, a);
+  if(sess){
+    if(sess.deviceId) base.deviceId = sess.deviceId;
+    if(sess.cookies) base.cookie = sess.cookies;
+    if(sess.faiId) base.faiId = sess.faiId;
+  }
+  base.imiTokenId = tokenId;
+  return triBuildHeaders(base, bodyStr);
+}
+function triUpdateCookies(cur, arr){
+  const m = {};
+  String(cur||'').split(';').forEach(c=>{ const s=c.trim(); const i=s.indexOf('='); if(i>0) m[s.slice(0,i).trim()]=s.slice(i+1); });
+  (arr||[]).forEach(ch=>{ const main=String(ch).split(';')[0].trim(); const i=main.indexOf('='); if(i>0) m[main.slice(0,i).trim()]=main.slice(i+1); });
+  return Object.entries(m).map(([k,v])=>k+'='+v).join('; ');
+}
+async function triRequest(endpoint, bodyObj){
+  const bodyStr = JSON.stringify(bodyObj||{});
+  const sess = triLoadSession();
+  const auth = triAuth();
+  let tokenId = (sess && sess.authToken) || (auth && (auth.imiTokenId||auth.tokenId)) || (Date.now().toString()+'1');
+  // for guest init we may not have token yet, use dummy
+  const H = triBuildHeadersWithToken(tokenId, bodyStr);
+  const ctrl = new AbortController(); const t=setTimeout(()=>{try{ctrl.abort();}catch(e){}},20000);
+  try{
+    const r = await fetch('https://bimaplus-api.ioh.co.id/api/v2'+endpoint, {method:'POST', headers:H, body:bodyStr, signal:ctrl.signal});
+    const text = await r.text();
+    let j=null; try{ j=JSON.parse(text);}catch(e){ j=null; }
+    // capture set-cookie (Enquota updateCookies style: merge per-name, overwrite)
+    try{
+      let scArr = [];
+      if(r.headers && typeof r.headers.getSetCookie==='function') scArr = r.headers.getSetCookie()||[];
+      else { const sc = r.headers.get('set-cookie'); if(sc) scArr = [sc]; }
+      if(scArr.length){
+        const cur = (sess && sess.cookies) || (auth && auth.cookie) || '';
+        const merged = triUpdateCookies(cur, scArr);
+        if(merged && merged!==cur){
+          if(sess) { sess.cookies = merged; triSaveSession(sess); }
+          else if(auth){ auth.cookie = merged; try{fs.writeFileSync(TRI_AUTH_FILE, JSON.stringify(auth,null,2));}catch(e){} }
+        }
+      }
+    }catch(e){}
+    return { statusCode:r.status, headers:r.headers, body:j, raw:j?null:text };
+  } finally { clearTimeout(t); }
+}
+async function triEnsureGuest(){
+  let sess = triLoadSession();
+  if(sess && sess.authToken) return sess.authToken;
+  const auth = triAuth();
+  if(auth && auth.imiTokenId) {
+    // create session from existing auth if not exists
+    const s = { phone:'', msisdn:'', provider:'TRI', brand:'bima+', authToken: auth.imiTokenId, userType:'SUBSCRIBER', deviceId: auth.deviceId||'56826f1045584651bc499d268febea91', cookies: auth.cookie||'', faiId: auth.faiId||'eiU4ebGnX1jcwEKM0OoDD-', updatedAt:new Date().toISOString() };
+    triSaveSession(s);
+    return s.authToken;
+  }
+  // init guest via token/guest with dummy token
+  const res = await triRequest('/token/guest', {});
+  if(res.body && res.body.status==='0' && res.body.data && (res.body.data.tokenid||res.body.data.token)){
+    const token = res.body.data.tokenid||res.body.data.token;
+    const s = { phone:'', msisdn:'', provider:'TRI', brand:'bima+', authToken: token, userType:'GUEST', deviceId: (triAuth()&&triAuth().deviceId)||'56826f1045584651bc499d268febea91', cookies: (triAuth()&&triAuth().cookie)||'TS01503f77=01334ce802d3fdb350e5f70de0216dd87e89b5b0b42039fa21a80610a6e9f41e405fae3d8d67f4e517f73cf985e5160a259dbf777e; BUI=56826f10-4558-4651-bc49-9d268febea91', faiId: (triAuth()&&triAuth().faiId)||'eiU4ebGnX1jcwEKM0OoDD-', updatedAt:new Date().toISOString() };
+    triSaveSession(s);
+    // also update auth.json cookie/token for compat
+    try{
+      const a = triAuth()||{};
+      a.imiTokenId = token;
+      a.deviceId = s.deviceId;
+      a.cookie = s.cookies;
+      a.faiId = s.faiId;
+      a.imiVersion = a.imiVersion||'5.2.0';
+      a.imiAppVersion = a.imiAppVersion||'5.2.0';
+      a.authorization = a.authorization||'642d1cc69d90666962726e';
+      fs.writeFileSync(TRI_AUTH_FILE, JSON.stringify(a,null,2)); try{fs.chmodSync(TRI_AUTH_FILE,0o600);}catch(e){}
+    }catch(e){}
+    return token;
+  }
+  throw new Error('Gagal init guest Tri: '+(JSON.stringify(res.body)||res.raw||'unknown'));
+}
+
+app.get('/api/tri/cache', (req,res)=>{
+  if(!isAuthenticated(req)) return res.status(401).json({error:'Unauthorized'});
+  try{
+    if(!fs.existsSync(TRI_CACHE_FILE)) return res.status(404).json({ok:false,cached:false,error:'Belum ada data Tri tersimpan, klik Refresh'});
+    const raw=JSON.parse(fs.readFileSync(TRI_CACHE_FILE,'utf8'));
+    // Normalisasi bentuk lama: file bisa berisi {fetchedAt, data} atau out lengkap {fetchedAt,httpStatus,data,raw}
+    let out=raw;
+    if(out && typeof out==='object' && !out.fetchedAt && !out.httpStatus && (out.status!==undefined || out.data!==undefined)){
+      out={fetchedAt:null, httpStatus:200, data:out, raw:null};
     }
-    fs.writeFileSync(TELBOT_ENV, lines.join('\n') + '\n', { mode: 0o600 });
-    try { fs.chmodSync(TELBOT_ENV, 0o600); } catch(e){}
-    res.json({ ok: true, message: 'Config tersimpan ke ' + TELBOT_ENV, maskedToken: maskToken(newToken) });
-  } catch(e){
-    res.status(500).json({ error: String(e.message || e) });
+    // Derivasi Enquota-like fields: items + totalRemainingFormatted via triParse logic (sama dgn frontend)
+    let items=[]; let totalRemainingMB=0;
+    try{
+      const maybeJ = out && out.data;
+      const dash = (maybeJ && maybeJ.data) ? maybeJ.data : maybeJ;
+      const pkgs = (dash && dash.packdata && Array.isArray(dash.packdata.packageslist)) ? dash.packdata.packageslist : [];
+      pkgs.forEach(function(pkg){
+        const qs=pkg.Quotas||[]; if(!Array.isArray(qs)) return;
+        qs.forEach(function(q){
+          const rem=q.remainingQuota!=null?Number(q.remainingQuota):Number(q.rawRemainingQuota||0);
+          let tot=q.quota!=null?Number(String(q.quota).replace(/[^0-9.]/g,'')):rem; if(isNaN(tot)||tot<=0) tot=Number(q.initialQuota||q.rawInitialQuota||rem)||0;
+          const unit=String(q.quotaUnit||'').toUpperCase(); const benefit=String(q.benefitType||'').toUpperCase();
+          const name=((q.name||q.description||'')+' '+(pkg.PackageName||pkg.ServiceName||'')).toLowerCase();
+          let cat='internet';
+          if(unit==='SMS') cat='sms';
+          else if(unit==='MIN' || benefit==='VOICE' || name.indexOf('menit')>=0 || name.indexOf('voice')>=0 || name.indexOf('telepon')>=0 || name.indexOf('telp')>=0) cat='telepon';
+          else if(benefit==='DATA' || unit==='MB' || unit==='GB'){
+            if(name.indexOf('youtube')>=0 || name.indexOf('tiktok')>=0 || name.indexOf('sosmed')>=0 || name.indexOf('aplikasi')>=0 || name.indexOf('apps')>=0 || name.indexOf('chat')>=0 || name.indexOf('unlimited app')>=0) cat='aplikasi';
+            else cat='internet';
+          }
+          if(rem>0||tot>0){
+            items.push({name:(pkg.PackageName||pkg.ServiceName||'Paket')+' ('+(q.name||q.description||'')+')', category:cat, remainingQuota:rem, quota:tot, quotaUnit:unit, benefitType:benefit, exhausted:!(rem>0), validUntil:pkg.EndDate||pkg.expMsg||'-'});
+            if(cat==='internet'||cat==='aplikasi') totalRemainingMB+=rem;
+          }
+        });
+      });
+    }catch(e){}
+    const totalRemainingFormatted=(function(mb){ const n=Number(mb)||0; if(n>=1024) return (n/1024).toFixed(2)+' GB'; return Math.round(n)+' MB'; })(totalRemainingMB);
+    let authFail=null; try{ const j=out&&out.data; if(j && (j.code==='10001' || String(j.message||'').toLowerCase().indexOf('authentication failed')>=0)) authFail={code:j.code,message:j.message}; }catch(e){}
+    return res.json({ok:true,cached:true,fetchedAt:out.fetchedAt||null,data:out,items,totalRemainingMB,totalRemainingFormatted,raw:out.raw||null,authFail});
+  }catch(e){ return res.status(500).json({ok:false,error:'Gagal baca cache Tri: '+String((e&&e.message)||e)}); }
+});
+app.get('/api/tri/cek', async (req,res)=>{
+  if(!isAuthenticated(req)) return res.status(401).json({error:'Unauthorized'});
+  const auth=triAuth();
+  const sess=triLoadSession();
+  const hasToken = (sess && sess.authToken) || (auth && auth.imiTokenId);
+  if(!hasToken) return res.status(500).json({ok:false,error:'auth Tri belum ada — login dulu via OTP'});
+  try{
+    const data = await triRequest('/dashboard/get/v4', {});
+    const j = data.body;
+    const fetchedAt = new Date().toISOString();
+    const isAuthFail = j && (j.code==='10001' || String(j.message||'').toLowerCase().includes('authentication failed'));
+    if(isAuthFail){
+      return res.json({ok:false, provider:'TRI', cached:false, fetchedAt, authFail:{code:j.code,message:j.message}, raw:(j&&j.data)||null});
+    }
+    if(!j){
+      const rawTxt = data.raw ? String(data.raw).slice(0,600) : '';
+      return res.status(data.statusCode||502).json({ok:false, provider:'TRI', error:'Upstream bukan JSON', raw:rawTxt});
+    }
+    if(j.status!=='0'){
+      return res.json({ok:false, provider:'TRI', cached:false, fetchedAt, error:j.message||('Tri status '+j.status), raw:j.data||null});
+    }
+    const out={fetchedAt, httpStatus:data.statusCode, data:j, raw:data.raw||null};
+    try{ fs.writeFileSync(TRI_CACHE_FILE, JSON.stringify(out)); }catch(e){}
+    const dash=(j.data)||{};
+    const packages=(dash.packdata && Array.isArray(dash.packdata.packageslist)) ? dash.packdata.packageslist : [];
+    const phone=(sess&&(sess.phone||sess.msisdn))||dash.msisdn||dash.identifier||dash.phone||'';
+    const items=[]; let totalMB=0;
+    packages.forEach(function(pkg){
+      const qs=pkg.Quotas||[]; if(!Array.isArray(qs)) return;
+      qs.forEach(function(q){
+        const rem=(q.remainingQuota!=null&&q.remainingQuota!=='')?Number(q.remainingQuota):Number(q.rawRemainingQuota||0);
+        let tot=q.quota!=null?Number(String(q.quota).replace(/[^0-9.]/g,'')):rem; if(isNaN(tot)||tot<=0) tot=Number(q.initialQuota||q.rawInitialQuota||rem)||0;
+        if(!(rem>0||tot>0)) return;
+        const unit=String(q.quotaUnit||'').toUpperCase();
+        const benefit=String(q.benefitType||'').toUpperCase();
+        let remStr;
+        if(unit==='SMS'||benefit==='SMS') remStr=Math.round(rem)+' SMS';
+        else if(unit==='MIN'||benefit==='VOICE') remStr=Math.round(rem)+' min';
+        else if(rem>=1024) remStr=(rem/1024).toFixed(2)+' GB';
+        else remStr=Math.round(rem)+' MB';
+        const _nm=((q.name||q.description||'')+' '+(pkg.PackageName||pkg.ServiceName||'')).toLowerCase();
+        let _cat='internet';
+        if(unit==='SMS'||benefit==='SMS') _cat='sms';
+        else if(unit==='MIN'||benefit==='VOICE'||_nm.indexOf('menit')>=0||_nm.indexOf('telepon')>=0||_nm.indexOf('telp')>=0||_nm.indexOf('voice')>=0) _cat='telepon';
+        else if(benefit==='DATA'||unit==='MB'||unit==='GB'){ if(_nm.indexOf('youtube')>=0||_nm.indexOf('tiktok')>=0||_nm.indexOf('sosmed')>=0||_nm.indexOf('aplikasi')>=0||_nm.indexOf('apps')>=0||_nm.indexOf('chat')>=0) _cat='aplikasi'; }
+        items.push({name:(pkg.PackageName||pkg.ServiceName||'Paket')+' ('+(q.name||q.description||'')+')', type:q.benefitType||'', category:_cat, remainingQuota:rem, quota:tot, quotaUnit:unit, benefitType:benefit, remainingFormatted:remStr+(rem<=0?' (habis)':''), exhausted:!(rem>0), validUntil:pkg.EndDate||pkg.expMsg||'-'});
+        if(!(unit==='SMS'||benefit==='SMS')) totalMB+=rem;
+      });
+    });
+    const totalRemainingFormatted=totalMB>=1024 ? (totalMB/1024).toFixed(2)+' GB' : Math.round(totalMB)+' MB';
+    return res.json({ok:true, provider:'TRI', phone, totalRemainingFormatted, items, raw:dash});
+  }catch(e){
+    const msg=(e&&e.name==='AbortError')?'Upstream timeout (20s)':String((e&&e.message)||e);
+    return res.status(502).json({ok:false, provider:'TRI', error:msg});
   }
 });
-app.post('/api/telbot/action', async (req, res) => {
-  if (!isAuthenticated(req)) return res.status(401).json({ error: 'Unauthorized' });
-  const act = (req.body && req.body.action || '').toString().trim();
-  if (!['start','stop','restart','enable','disable'].includes(act)) return res.status(400).json({ error: 'action harus start|stop|restart|enable|disable' });
-  try {
-    let cmd = act;
-    // systemctl enable/disable vs start/stop/restart
-    const out = await run('systemctl', [cmd, 'telbot.service'], 8000);
-    // run returns null on err, but we want journal
-    await new Promise(r => setTimeout(r, 800));
-    const info = await systemctlShow('telbot.service', false);
-    const rawLogs = await run('journalctl', ['-u', 'telbot.service', '-n', '30', '--no-pager'], 4000);
-    let _actF = { filtered: rawLogs ? String(rawLogs).trim().split('\n').slice(-30).join('\n') : '', dropped: 0, total: rawLogs ? String(rawLogs).trim().split('\n').length : 0 };
-    try { const full = rawLogs ? String(rawLogs).trim() : ''; const ff = filterTelbotLogs(full); _actF = { filtered: String(ff.filtered).split('\n').slice(-30).join('\n'), dropped: ff.dropped, total: ff.total }; } catch(e) {}
-    res.json({ ok: true, action: act, active: info ? info.ActiveState : 'unknown', sub: info ? info.SubState : 'unknown', logs: _actF.filtered, logsDropped: _actF.dropped, logsTotal: _actF.total, logsFiltered: _actF.dropped > 0 });
-  } catch(e){
-    res.status(500).json({ error: String(e.message || e) });
+app.get('/api/tri/status', (req,res)=>{
+  if(!isAuthenticated(req)) return res.status(401).json({error:'Unauthorized'});
+  const sess=triLoadSession();
+  const auth=triAuth();
+  const hasCache = fs.existsSync(TRI_CACHE_FILE);
+  const pending=triLoadPending();
+  return res.json({ok:true, session: sess ? {phone:sess.phone, msisdn:sess.msisdn, userType:sess.userType, updatedAt:sess.updatedAt} : null, hasToken: !!(sess?.authToken||auth?.imiTokenId), hasCache, pending: pending ? {msisdn:pending.msisdn, transId:pending.transId, createdAt:pending.createdAt} : null});
+});
+app.post('/api/tri/login', async (req,res)=>{
+  if(!isAuthenticated(req)) return res.status(401).json({error:'Unauthorized'});
+  const phoneRaw = String((req.body&&req.body.phone)||'').trim();
+  const norm = triNormalizePhone(phoneRaw);
+  if(!norm.isValid) return res.status(400).json({ok:false, error:'Nomor Tri tidak valid (contoh 0895xxxxxxx)'});
+  try{
+    await triEnsureGuest();
+    const sendRes = await triRequest('/otp/send/v1', {msisdn: norm.international, action:'register'});
+    if(!sendRes.body || sendRes.body.status!=='0'){
+      const isInvalidNumber = String(sendRes.body?.code||'')==='10005' || String(sendRes.body?.status||'')==='10005' || /Mobile Number is not valid/i.test(String(sendRes.body?.message||''));
+      if(isInvalidNumber){
+        return res.status(400).json({ok:false, error:'Nomor Tri tidak valid (Mobile Number is not valid) — pastikan nomor Tri aktif dan format 08xxxxxxxxxx', raw: sendRes.body});
+      }
+      return res.status(400).json({ok:false, error: sendRes.body?.message || 'Gagal kirim OTP Tri ('+sendRes.statusCode+')', raw: sendRes.body});
+    }
+    const transId = sendRes.body.transid || sendRes.body.data?.transid || '';
+    triSavePending({msisdn: norm.international, phone:norm.national, transId, createdAt:new Date().toISOString()});
+    // update session phone for next verify
+    const sess=triLoadSession(); if(sess){ sess.phone=norm.national; sess.msisdn=norm.international; sess.updatedAt=new Date().toISOString(); triSaveSession(sess); }
+    return res.json({ok:true, message:'OTP terkirim ke '+norm.national+' via SMS', transId, msisdn: norm.international});
+  }catch(e){
+    return res.status(502).json({ok:false, error:String((e&&e.message)||e)});
   }
 });
-app.get('/api/telbot/logs', async (req, res) => {
-  if (!isAuthenticated(req)) return res.status(401).json({ error: 'Unauthorized' });
-  const n = Math.min(500, Math.max(10, parseInt(req.query.n || '120', 10) || 120));
-  const raw = await run('journalctl', ['-u', 'telbot.service', '-n', String(n), '--no-pager'], 5000);
-  const rawStr = raw ? String(raw).trim() : '(no logs yet)';
-  if (req.query.raw === '1') return res.json({ ok: true, logs: rawStr, raw: true, dropped: 0, total: rawStr.split('\n').length });
-  let f = { filtered: rawStr, dropped: 0, total: rawStr.split('\n').length };
-  try { f = filterTelbotLogs(rawStr); } catch(e) {}
-  res.json({ ok: true, logs: f.filtered, dropped: f.dropped, total: f.total, filtered: f.dropped > 0, rawAvailable: true });
+app.post('/api/tri/verify', async (req,res)=>{
+  if(!isAuthenticated(req)) return res.status(401).json({error:'Unauthorized'});
+  const otp = String((req.body&&req.body.otp)||'').trim();
+  let transId = String((req.body&&req.body.transId)||'').trim();
+  let phone = String((req.body&&req.body.phone)||'').trim();
+  if(!/^[0-9]{4,8}$/.test(otp)) return res.status(400).json({ok:false, error:'OTP harus 4-6 digit angka'});
+  const pending=triLoadPending();
+  if(!transId) transId = pending?.transId || '';
+  if(!phone) phone = pending?.phone || pending?.msisdn || '';
+  try{
+    const valRes = await triRequest('/otp/validate/v1', {transid: transId, otp});
+    if(valRes.body && valRes.body.status==='0' && valRes.body.data){
+      const token = valRes.body.data.tokenid || valRes.body.data.token;
+      const norm = triNormalizePhone(phone);
+      const sess = triLoadSession() || {};
+      const newSess = {
+        phone: norm.national || sess.phone || phone,
+        msisdn: norm.international || sess.msisdn || phone,
+        provider:'TRI', brand:'bima+',
+        authToken: token, userType:'SUBSCRIBER',
+        deviceId: sess.deviceId || (triAuth()&&triAuth().deviceId) || '56826f1045584651bc499d268febea91',
+        cookies: sess.cookies || (triAuth()&&triAuth().cookie) || '',
+        faiId: sess.faiId || (triAuth()&&triAuth().faiId) || 'eiU4ebGnX1jcwEKM0OoDD-',
+        updatedAt: new Date().toISOString()
+      };
+      triSaveSession(newSess);
+      // sync to auth.json for compat with old cek
+      try{
+        const a = triAuth()||{};
+        a.imiTokenId = token;
+        a.deviceId = newSess.deviceId;
+        a.cookie = newSess.cookies;
+        a.faiId = newSess.faiId;
+        a.imiVersion = a.imiVersion||'5.2.0';
+        a.imiAppVersion = a.imiAppVersion||'5.2.0';
+        a.authorization = a.authorization||'642d1cc69d90666962726e';
+        fs.writeFileSync(TRI_AUTH_FILE, JSON.stringify(a,null,2)); try{fs.chmodSync(TRI_AUTH_FILE,0o600);}catch(e){}
+      }catch(e){}
+      triClearPending();
+      // auto fetch dashboard to prime cache
+      try{
+        const bodyStr='{}';
+        const H=triBuildHeaders({imiTokenId:token, deviceId:newSess.deviceId, cookie:newSess.cookies, faiId:newSess.faiId, imiAppOs:'BROWSER', imiVersion:'5.2.0', imiAppVersion:'5.2.0', authorization:'642d1cc69d90666962726e'}, bodyStr);
+        const r=await fetch('https://bimaplus-api.ioh.co.id/api/v2/dashboard/get/v4', {method:'POST', headers:H, body:bodyStr});
+        const t=await r.text(); let j=null; try{j=JSON.parse(t);}catch(e){} ;
+        if(j && j.status==='0'){
+          const out={fetchedAt:new Date().toISOString(), httpStatus:r.status, data:j, raw:null};
+          try{ fs.writeFileSync(TRI_CACHE_FILE, JSON.stringify(out)); }catch(e){}
+        }
+      }catch(e){}
+      return res.json({ok:true, message:'Login Tri berhasil ('+(norm.national||phone)+')', session:newSess, data: valRes.body.data});
+    }
+    return res.status(400).json({ok:false, error: valRes.body?.message || 'OTP salah / kadaluarsa', raw: valRes.body});
+  }catch(e){
+    return res.status(502).json({ok:false, error:String((e&&e.message)||e)});
+  }
 });
+app.post('/api/tri/logout', (req,res)=>{
+  if(!isAuthenticated(req)) return res.status(401).json({error:'Unauthorized'});
+  try{ triClearPending(); }catch(e){}
+  try{ if(fs.existsSync(TRI_SESSION_FILE)) fs.unlinkSync(TRI_SESSION_FILE); }catch(e){}
+  return res.json({ok:true, message:'Session Tri dihapus, silakan login lagi'});
+});
+
 
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders(res, filePath) {
