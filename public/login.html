@@ -2,7 +2,7 @@
 <html lang="id" class="h-full">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#09090b">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -16,14 +16,32 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{colors:{base:'#09090b',surface:'#18181b',border:'#27272a',muted:'#a1a1aa',text:'#f4f4f5',accent:'#14b8a6',error:'#f43f5e',warn:'#f59e0b'}}}}</script>
-<style>html{-webkit-text-size-adjust:100%}*:focus-visible{outline:2px solid #14b8a6;outline-offset:2px} body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}</style>
+<style>html{-webkit-text-size-adjust:100%}*:focus-visible{outline:2px solid #14b8a6;outline-offset:2px} body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  @media (prefers-reduced-motion: reduce) { .portal-bg i { animation: none !important; } }
+  .portal-bg{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;background:#09090b}
+  .portal-bg i{position:absolute;display:block;border-radius:9999px;filter:blur(60px);opacity:.75;will-change:transform}
+  .portal-bg i:nth-child(1){width:46vmax;height:46vmax;left:-10vmax;top:-12vmax;background:radial-gradient(circle at 30% 30%,rgba(20,184,166,.9),transparent 62%);animation:portal-drift-a 6s ease-in-out infinite alternate}
+  .portal-bg i:nth-child(2){width:40vmax;height:40vmax;right:-8vmax;top:6vh;background:radial-gradient(circle at 60% 40%,rgba(14,165,233,.8),transparent 62%);animation:portal-drift-b 7s ease-in-out infinite alternate}
+  .portal-bg i:nth-child(3){width:38vmax;height:38vmax;left:20vw;bottom:-14vmax;background:radial-gradient(circle at 50% 50%,rgba(244,63,94,.65),transparent 62%);animation:portal-drift-c 8s ease-in-out infinite alternate}
+  @keyframes portal-drift-a{from{transform:translate(-4vmax,-2vmax) scale(1)}to{transform:translate(30vmax,24vmax) scale(1.3)}}
+  @keyframes portal-drift-b{from{transform:translate(4vmax,0) scale(1.15)}to{transform:translate(-28vmax,26vmax) scale(1)}}
+  @keyframes portal-drift-c{from{transform:translate(0,4vmax) scale(1)}to{transform:translate(24vmax,-28vmax) scale(1.28)}}
+  #btn-login.btn-grad{ background: linear-gradient(90deg, #14b8a6 0%, #0ea5e9 30%, #6366f1 50%, #0ea5e9 70%, #14b8a6 100%); background-size: 300% 100%; animation: login-grad 1.2s linear infinite; color: #fff; border: 0; text-shadow: 0 1px 2px rgba(0,0,0,.35); }
+  @keyframes login-grad{ 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+  @media (prefers-reduced-motion: reduce){ #btn-login.btn-grad{ animation: none; } }
+  #btn-login.btn-grad:hover{ filter: brightness(1.06); }
+  #btn-login.btn-grad:active{ filter: brightness(0.94); }
+  #btn-login.btn-grad:disabled{ opacity: .7; animation: none; }
+  /* alasan R-01: gradasi hanya di CTA primer login agar jadi 1 focal per layar, warna dari palet portal (teal/sky/cyan) bukan default rainbow, gerak lambat 3.2s untuk energi tanpa ganggu kontras */
+</style>
 </head>
 <body class="min-h-screen bg-base text-text font-sans antialiased flex items-center justify-center px-4 py-8 overflow-x-hidden">
-  <div class="w-full max-w-sm">
+<div class="portal-bg" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="w-full max-w-sm relative z-[1]">
     <div class="text-center mb-6 sm:mb-7">
       <div class="inline-flex h-10 w-10 items-center justify-center rounded bg-surface border border-border mb-3 text-sm">⚡</div>
       <h1 class="text-xl font-semibold tracking-tight">Iskan System Portal</h1>
-      <p class="text-sm text-muted mt-1">Masuk untuk akses dashboard</p>
+      
     </div>
     <form id="login-form" class="rounded border border-border bg-surface/40 p-4 sm:p-5 space-y-4" autocomplete="off" novalidate>
       <div>
@@ -37,16 +55,16 @@
             <svg id="icon-eye-off" class="hidden h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3 21 21"/><path d="M10.6 10.6A3.5 3.5 0 0 0 13.4 13.4"/><path d="M9.5 7.1A10.9 10.9 0 0 1 12 5C19 5 23 12 23 12a17.4 17.4 0 0 1-3.6 4.8"/><path d="M12 19C5 19 1 12 1 12a17.4 17.4 0 0 1 5.2-5.9"/></svg>
           </button>
         </div>
-        <p class="text-[11px] text-muted mt-1.5 leading-relaxed">Default: <code class="bg-base px-1 py-0.5 rounded border border-border/40 font-mono">iskan2026</code> · ganti setelah login via <span class="text-text/80">Ganti Password</span>.</p>
+        
       </div>
       <div id="error" class="hidden rounded bg-error/10 border border-error/20 text-error text-sm px-3 py-2 break-words" role="alert"></div>
-      <button id="btn-login" type="submit" class="w-full h-11 rounded bg-text text-base font-medium text-base hover:bg-white active:bg-zinc-200 transition flex items-center justify-center gap-2">
+      <button id="btn-login" type="submit" class="w-full h-11 rounded btn-grad font-medium flex items-center justify-center gap-2 transition">
         <span id="btn-label">Masuk</span>
         <svg id="btn-spinner" class="hidden h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
       </button>
-      <p class="text-center text-[11px] text-muted">Enter untuk masuk · Esc untuk kosongkan</p>
+      
     </form>
-    <p class="text-center text-xs text-muted mt-4">Protected · portal.nendi.web.id · Cloudflare Tunnel 204640e4</p>
+    
   </div>
 <script>
 (function(){
@@ -66,7 +84,6 @@
     if(show){ eye.classList.add('hidden'); eyeOff.classList.remove('hidden'); } else { eye.classList.remove('hidden'); eyeOff.classList.add('hidden'); }
   }
   toggle.addEventListener('click', function(){ setEye(inp.type === 'password'); inp.focus(); });
-  toggle.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); setEye(inp.type==='password'); }});
   // if already authed, redirect
   fetch('/api/auth/check',{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){ if(d.authenticated) location.href='/'; }).catch(function(){});
   function showErr(msg){ err.textContent=msg; err.classList.remove('hidden'); }
@@ -94,5 +111,5 @@
 <script>
 if('serviceWorker' in navigator){ window.addEventListener('load', function(){ navigator.serviceWorker.register('/sw.js'); }); }
 </script>
-</body>
+<script>/* anti-zoom */(function(){try{document.addEventListener("touchmove",function(e){if(e.touches&&e.touches.length>1) e.preventDefault()},{passive:false});document.addEventListener("gesturestart",function(e){e.preventDefault()});let last=0;document.addEventListener("touchend",function(e){let now=Date.now();if(now-last<350){let tg=e.target; if(tg&&(tg.closest("input,textarea,select")||tg.isContentEditable)) return; e.preventDefault()} last=now},{passive:false});}catch(e){}})();</script></body>
 </html>

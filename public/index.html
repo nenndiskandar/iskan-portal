@@ -2,7 +2,7 @@
 <html lang="id" class="h-full">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#09090b">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -38,7 +38,7 @@ tailwind.config = {
 <style>
   html { -webkit-text-size-adjust: 100%; }
   body { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
-  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  @media (prefers-reduced-motion: reduce) { .portal-bg i { animation-duration: 12s !important; } }
   *:focus-visible { outline: 2px solid #14b8a6; outline-offset: 2px; }
   /* tiny scrollbar for charts row */
   .no-scrollbar::-webkit-scrollbar{ display:none; }
@@ -50,27 +50,131 @@ tailwind.config = {
   /* compact service card in simple: tighten gap */
   [data-view="simple"] [id="groups"] li { gap: 0.5rem; }
 
+  /* portal sidebar: antislop DURING, collapsible 240->64, 44px tap, keyboard, accent only at active */
+  #portal-sidebar { width: 240px; min-width: 240px; transition: width 0.28s ease, transform 0.28s ease; }
+  #portal-sidebar[data-collapsed="true"] { width: 64px; min-width: 64px; }
+  #portal-sidebar[data-collapsed="true"] .sidebar-label { display: none !important; }
+  #portal-sidebar[data-collapsed="true"] .sidebar-count { display: none !important; }
+  #portal-sidebar[data-collapsed="true"] #sidebar-brand-text { display: none !important; }
+  #portal-sidebar[data-collapsed="true"] .sidebar-nav-btn { justify-content: center; padding-left: 0.5rem; padding-right: 0.5rem; }
+  #portal-sidebar[data-collapsed="true"] #btn-sidebar-toggle svg { transform: rotate(180deg); }
+  @media (max-width: 1023px) {
+    #portal-sidebar { position: fixed; inset-y: 0; left: 0; z-index: 45; transform: translateX(-100%); width: 280px; min-width: 280px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+    #portal-sidebar.is-open { transform: translateX(0); }
+    #portal-sidebar[data-collapsed="true"] { width: 280px; min-width: 280px; }
+    #portal-sidebar[data-collapsed="true"] .sidebar-label { display: inline !important; }
+    #portal-sidebar[data-collapsed="true"] .sidebar-count { display: inline !important; }
+    #portal-sidebar[data-collapsed="true"] #sidebar-brand-text { display: flex !important; }
+    #portal-sidebar[data-collapsed="true"] .sidebar-nav-btn { justify-content: flex-start; padding-left: 0.75rem; padding-right: 0.75rem; }
+  }
+  #sidebar-overlay { transition: opacity 0.2s ease; }
+
+  /* animated aurora background, reason: portal infra padat tabel butuh energi di belakang; hanya pakai warna palet (accent teal + sky + error rose) opacity rendah agar kontras teks tetap AA */
+  .portal-bg { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: #09090b; }
+  .portal-bg i { position: absolute; display: block; border-radius: 9999px; filter: blur(60px); opacity: .75; will-change: transform; }
+  .portal-bg i:nth-child(1) { width: 46vmax; height: 46vmax; left: -10vmax; top: -12vmax; background: radial-gradient(circle at 30% 30%, rgba(20,184,166,.9), transparent 62%); animation: portal-drift-a 6s ease-in-out infinite alternate; }
+  .portal-bg i:nth-child(2) { width: 40vmax; height: 40vmax; right: -8vmax; top: 6vh; background: radial-gradient(circle at 60% 40%, rgba(14,165,233,.8), transparent 62%); animation: portal-drift-b 7s ease-in-out infinite alternate; }
+  .portal-bg i:nth-child(3) { width: 38vmax; height: 38vmax; left: 20vw; bottom: -14vmax; background: radial-gradient(circle at 50% 50%, rgba(244,63,94,.65), transparent 62%); animation: portal-drift-c 8s ease-in-out infinite alternate; }
+  @keyframes portal-drift-a { from { transform: translate(-4vmax,-2vmax) scale(1); } to { transform: translate(30vmax,24vmax) scale(1.3); } }
+  @keyframes portal-drift-b { from { transform: translate(4vmax,0) scale(1.15); } to { transform: translate(-28vmax,26vmax) scale(1); } }
+  @keyframes portal-drift-c { from { transform: translate(0,4vmax) scale(1); } to { transform: translate(24vmax,-28vmax) scale(1.28); } }
+  #portal-main { position: relative; z-index: 1; }
+
 </style>
 </head>
-<body class="min-h-full bg-base text-text font-sans antialiased overflow-x-hidden">
+<body class="min-h-screen bg-base text-text font-sans antialiased overflow-x-hidden flex">
+<div class="portal-bg" aria-hidden="true"><i></i><i></i><i></i></div>
 <!-- net-banner: offline indicator (hidden by default) -->
 <div id="net-banner" class="hidden fixed top-0 inset-x-0 z-[60] items-center justify-between gap-3 px-4 py-2.5 bg-zinc-900 border-b border-zinc-700 text-xs" role="alert" aria-live="polite" style="display:none">
   <span class="flex items-center gap-2 text-amber-300 font-medium"><span class="h-2 w-2 rounded-full bg-amber-400"></span> Kamu offline - data live dijeda</span>
   <button id="net-retry" type="button" class="shrink-0 inline-flex h-7 items-center px-3 rounded bg-accent text-base text-xs font-semibold hover:bg-teal-500 active:bg-teal-600">Coba lagi</button>
 </div>
-<main class="w-full min-w-0 px-4 py-4 sm:px-6 sm:py-6">
+<div id="sidebar-overlay" class="hidden fixed inset-0 z-40 bg-base/60 backdrop-blur-sm lg:hidden" aria-hidden="true"></div>
+<aside id="portal-sidebar" class="hidden lg:flex flex-col border-r border-border bg-surface/80 backdrop-blur supports-[backdrop-filter]:bg-surface/60 shrink-0 sticky top-0 h-screen overflow-hidden" data-collapsed="false" aria-label="Portal navigation">
+  <div class="flex h-[57px] items-center justify-between gap-2 px-3 border-b border-border/60 shrink-0">
+    <div id="sidebar-brand" class="flex items-center gap-2.5 min-w-0">
+      <span class="h-8 w-8 rounded-md bg-accent flex items-center justify-center text-base font-bold leading-none shrink-0">I</span>
+      <div id="sidebar-brand-text" class="flex flex-col leading-none min-w-0">
+        <span class="text-sm font-semibold tracking-tight truncate">Iskan Portal</span>
+      </div>
+    </div>
+    <button id="btn-sidebar-toggle" type="button" aria-label="Toggle sidebar" aria-expanded="true" class="hidden lg:inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-base text-muted hover:text-text hover:bg-border shrink-0">
+      <svg class="h-4 w-4 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <button id="btn-sidebar-close" type="button" aria-label="Tutup menu" class="lg:hidden inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-base text-muted hover:text-text">
+      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <nav class="flex-1 overflow-y-auto p-2 space-y-0.5" role="tablist" aria-label="Pilih tampilan" aria-orientation="vertical">
+    <button data-view-tab="overview" role="tab" aria-selected="true" class="sidebar-nav-btn flex w-full items-center gap-2.5 min-h-[44px] lg:min-h-[40px] px-3 rounded-md text-sm font-medium bg-text text-base border border-text shadow-sm text-left">
+      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      <span class="sidebar-label flex-1 text-left">Overview</span>
+    </button>
+    <button data-view-tab="tasks" role="tab" aria-selected="false" class="sidebar-nav-btn flex w-full items-center gap-2.5 min-h-[44px] lg:min-h-[40px] px-3 rounded-md text-sm font-medium text-muted hover:text-text hover:bg-base border border-transparent text-left">
+      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg>
+      <span class="sidebar-label flex-1 text-left">Task Manager</span>
+      <span data-tasks-count class="sidebar-count hidden text-[11px] font-mono opacity-60"></span>
+    </button>
+    <button data-view-tab="services" role="tab" aria-selected="false" class="sidebar-nav-btn flex w-full items-center gap-2.5 min-h-[44px] lg:min-h-[40px] px-3 rounded-md text-sm font-medium text-muted hover:text-text hover:bg-base border border-transparent text-left">
+      <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 16 16"><path d="M0 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6zm2-1a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H2z"/></svg>
+      <span class="sidebar-label flex-1 text-left">Services</span>
+      <span data-services-count class="sidebar-count text-[11px] font-mono opacity-60">-</span>
+    </button>
+    <div class="my-2 border-t border-border/40"></div>
+    <button data-view-tab="terminal" role="tab" aria-selected="false" class="sidebar-nav-btn flex w-full items-center gap-2.5 min-h-[44px] lg:min-h-[40px] px-3 rounded-md text-sm font-medium text-muted hover:text-text hover:bg-base border border-transparent text-left">
+      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8l3 3-3 3"/><path d="M11 16h5"/></svg>
+      <span class="sidebar-label flex-1 text-left">Terminal</span>
+      <span class="hidden lg:inline text-[10px] font-mono text-muted ml-auto sidebar-label">SSH</span>
+    </button>
+    <button data-view-tab="kuota" role="tab" aria-selected="false" class="sidebar-nav-btn flex w-full items-center gap-2.5 min-h-[44px] lg:min-h-[40px] px-3 rounded-md text-sm font-medium text-muted hover:text-text hover:bg-base border border-transparent text-left">
+      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="11" rx="2"/><path d="M7 11h4M7 14h7"/><path d="M7 7V5.5A1.5 1.5 0 0 1 8.5 4h7A1.5 1.5 0 0 1 17 5.5V7"/></svg>
+      <span class="sidebar-label flex-1 text-left">Kuota</span>
+      <span class="sidebar-label hidden lg:inline text-[10px] font-mono text-muted ml-auto">XL·Ax·Ts·Tri</span>
+    </button>
+    <button data-view-tab="9r" role="tab" aria-selected="false" class="sidebar-nav-btn flex w-full items-center gap-2.5 min-h-[44px] lg:min-h-[40px] px-3 rounded-md text-sm font-medium text-muted hover:text-text hover:bg-base border border-transparent text-left">
+      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M4 4h8v8H4z"/><path d="M12 12h8v8h-8z"/><path d="M4 16h4"/><path d="M16 8h4"/></svg>
+      <span class="sidebar-label flex-1 text-left">9Router</span>
+      <span class="sidebar-label hidden lg:inline text-[10px] font-mono text-muted ml-auto">:20127</span>
+    </button>
+    <button data-view-tab="cf" role="tab" aria-selected="false" class="sidebar-nav-btn flex w-full items-center gap-2.5 min-h-[44px] lg:min-h-[40px] px-3 rounded-md text-sm font-medium text-muted hover:text-text hover:bg-base border border-transparent text-left">
+      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z"/><path d="M7 12a5 5 0 0 1 5-5"/><path d="M12 12l2.2 2.2"/></svg>
+      <span class="sidebar-label flex-1 text-left">CF Manager</span>
+      <span class="sidebar-label hidden lg:inline text-[10px] font-mono text-muted ml-auto">:3010</span>
+    </button>
+    <button data-view-tab="metacubex" role="tab" aria-selected="false" class="sidebar-nav-btn flex w-full items-center gap-2.5 min-h-[44px] lg:min-h-[40px] px-3 rounded-md text-sm font-medium text-muted hover:text-text hover:bg-base border border-transparent text-left">
+      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 12h10M12 7v10"/><circle cx="12" cy="12" r="2.5"/></svg>
+      <span class="sidebar-label flex-1 text-left">MetaCubeXD</span>
+    </button>
+    <button data-view-tab="andromodem" role="tab" aria-selected="false" class="sidebar-nav-btn flex w-full items-center gap-2.5 min-h-[44px] lg:min-h-[40px] px-3 rounded-md text-sm font-medium text-muted hover:text-text hover:bg-base border border-transparent text-left">
+      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="13" width="18" height="7" rx="1.5"/><path d="M7 13V10"/><path d="M12 13V9"/><path d="M17 13V10"/></svg>
+      <span class="sidebar-label flex-1 text-left">Andromodem</span>
+    </button>
+  </nav>
+</aside>
+<script>try{(function(){var s=document.getElementById('portal-sidebar'); if(!s) return; if(window.innerWidth>=1024){ s.classList.remove('hidden'); s.classList.add('flex'); }})()}catch(e){}</script>
+
+<main id="portal-main" class="flex-1 min-w-0 w-full px-2 py-2 sm:px-3 sm:py-2 overflow-x-hidden">
 
   <!-- Header -->
-  <header class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-4">
-    <div>
-      <h1 class="text-2xl font-semibold tracking-tight text-text">System Portal</h1>
-      <p class="mt-1 text-sm text-muted">Infrastructure · Task Manager <span class="opacity-50 mx-1">&bull;</span> <code class="font-mono text-xs opacity-75 break-all">portal.nendi.web.id</code> <span class="opacity-50 mx-1">&bull;</span> <span id="hdr-live" class="inline-flex items-center gap-1.5 text-xs"><span class="h-2 w-2 rounded-full bg-accent animate-pulse"></span> LIVE</span></p>
+  <header class="mb-2 flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-2">
+    <div class="flex items-center gap-3">
+      <button id="btn-sidebar-open" type="button" aria-label="Buka menu" class="lg:hidden inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-surface text-text hover:bg-border shrink-0">
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div>
+      <h1 class="text-lg font-semibold tracking-tight text-text">System Portal</h1>
+      <p class="mt-0.5 text-xs text-muted">Infrastructure · Task Manager</p>
+    </div>
     </div>
     <div class="flex items-center gap-2">
       <span id="hdr-uptime" class="hidden sm:inline text-xs font-mono text-muted"></span>
       <div class="flex flex-wrap items-center gap-2 justify-end">
-      <button id="btn-change-pwd" type="button" class="inline-flex h-10 sm:h-9 items-center justify-center gap-1.5 rounded bg-surface px-3 text-xs font-medium text-muted border border-border hover:text-text hover:bg-border">Ganti Password</button>
-      <button id="btn-logout" type="button" class="inline-flex h-10 sm:h-9 items-center justify-center gap-1.5 rounded bg-surface px-3 text-xs font-medium text-muted border border-border hover:text-text hover:bg-border">Keluar</button>
+      <div class="flex items-center rounded bg-surface border border-border p-0.5" role="group" aria-label="View mode">
+        <button id="btn-view-simple" type="button" class="h-7 px-3 rounded text-xs font-medium bg-base text-text border border-border shadow-sm">Simple</button>
+        <button id="btn-view-detail" type="button" class="h-7 px-3 rounded text-xs font-medium text-muted hover:text-text">Detail</button>
+      </div>
+      <button id="btn-change-pwd" type="button" class="inline-flex h-7 min-h-[32px] items-center justify-center gap-1.5 rounded bg-surface px-2.5 text-xs font-medium text-muted border border-border hover:text-text hover:bg-border">Ganti Password</button>
+      <button id="btn-logout" type="button" class="inline-flex h-7 min-h-[32px] items-center justify-center gap-1.5 rounded bg-surface px-2.5 text-xs font-medium text-muted border border-border hover:text-text hover:bg-border">Keluar</button>
       <button id="btn-install" type="button" class="hidden h-10 sm:h-9 items-center justify-center gap-1.5 rounded bg-accent text-base text-xs font-semibold hover:bg-teal-500 active:bg-teal-600">
         <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v13"/><path d="M7 12l5 5 5-5"/><path d="M3 21h18"/></svg>
         Install
@@ -81,7 +185,7 @@ tailwind.config = {
   <!-- change password modal · mobile: bottom sheet feel, eye toggle, 44px tap -->
   <div id="pwd-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
     <div id="pwd-backdrop" class="absolute inset-0 bg-base/80 backdrop-blur-sm"></div>
-    <div class="relative w-full max-w-sm max-h-[90vh] overflow-auto overscroll-contain rounded border border-border bg-surface p-4 sm:p-5 space-y-4 shadow-xl">
+    <div class="relative w-full max-w-sm max-h-[90vh] overflow-auto overscroll-contain rounded border border-border bg-surface p-3 space-y-2 shadow-xl">
       <div class="flex items-center justify-between">
         <h3 class="text-sm font-semibold">Ganti Password</h3>
         <button id="pwd-close-x" type="button" aria-label="Tutup" class="h-9 w-9 inline-flex items-center justify-center rounded text-muted hover:text-text hover:bg-base">✕</button>
@@ -116,40 +220,22 @@ tailwind.config = {
   </div>
 
 
-  <!-- ===== View mode (Simple/Detail) - tanpa poll label ===== -->
-  <div class="mb-3 flex items-center justify-end">
-    <div class="flex items-center rounded bg-base border border-border p-0.5" role="group" aria-label="View mode">
-      <button id="btn-view-simple" type="button" class="h-7 px-3 rounded text-xs font-medium bg-surface text-text border border-border shadow-sm">Simple</button>
-      <button id="btn-view-detail" type="button" class="h-7 px-3 rounded text-xs font-medium text-muted hover:text-text">Detail</button>
-    </div>
-  </div>
+
 
   <!-- ===== Portal Tabs: Task Manager | Services (di atas Task Manager) ===== -->
-  <div id="portal-view-tabs" class="flex flex-wrap w-full gap-1.5 p-1 rounded-lg bg-surface border border-border mb-3" role="tablist" aria-label="Pilih tampilan">
-    <button data-view-tab="overview" role="tab" aria-selected="true" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium bg-text text-base border border-text whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> Overview</button>
-    <button data-view-tab="tasks" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg> Task Manager <span data-tasks-count class="opacity-60 font-mono text-[11px] hidden"></span></button>
-    <button data-view-tab="services" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16"><path d="M0 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6zm2-1a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H2z"/></svg> Services <span data-services-count class="opacity-60 font-mono text-[11px]">-</span></button>
-    <button data-view-tab="terminal" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg> Terminal</button>
-    <button data-view-tab="kuota" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 10 7 10s7-5 7-10a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg> Kuota</button>
-    <button data-view-tab="9r" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M4 4h8v8H4z"/><path d="M12 12h8v8h-8z"/><path d="M4 16h4"/><path d="M16 8h4"/></svg> 9R</button>
-    <button data-view-tab="cf" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z"/><path d="M7 12a5 5 0 0 1 5-5"/><path d="M12 12l2.2 2.2"/></svg> CF</button>
-    <button data-view-tab="metacubex" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 12h10M12 7v10"/><circle cx="12" cy="12" r="2.5"/></svg> MetaCubeXD</button>
-    <button data-view-tab="andromodem" role="tab" aria-selected="false" class="shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="13" width="18" height="7" rx="1.5"/><path d="M7 13V10"/><path d="M12 13V9"/><path d="M17 13V10"/><circle cx="7" cy="16.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="12" cy="16.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="17" cy="16.5" r="0.9" fill="currentColor" stroke="none"/></svg> Andromodem</button>
-  </div>
-
   <!-- ===== OVERVIEW (default, OpenWrt-style adapt VPS 192.168.1.111) ===== -->
-  <section id="overview-section" class="mb-5 space-y-3">
+  <section id="overview-section" class="mb-2 space-y-1">
     <div class="flex items-center gap-2">
       <h2 class="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-2">
         <svg class="w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
         Overview · VPS 192.168.1.111
       </h2>
-      <span class="ml-auto text-[11px] font-mono text-muted flex items-center gap-1.5"><span id="overview-live-dot" class="h-2 w-2 rounded-full bg-accent animate-pulse"></span><span id="overview-live-text" class="hidden sm:inline">LIVE</span><span id="overview-localtime" class="tabular-nums">-</span></span>
+      <span class="ml-auto text-[11px] font-mono text-muted flex items-center gap-1.5"><span id="overview-localtime" class="tabular-nums">-</span></span>
     </div>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-[13px]">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1 text-xs">
       <!-- Basic System Info -->
-      <div class="rounded border border-border bg-surface/40 p-2.5 flex flex-col gap-1 min-w-0">
-        <div class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted border-b border-border/40 pb-1.5 mb-1">
+      <div class="rounded border border-border bg-surface/40 p-1.5 flex flex-col gap-0.5 min-w-0">
+        <div class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted border-b border-border/40 pb-1 mb-0.5">
           <span class="h-2 w-2 rounded-full bg-accent"></span> Basic System Info
         </div>
         <div class="flex flex-col gap-1 font-mono text-xs">
@@ -162,8 +248,8 @@ tailwind.config = {
         </div>
       </div>
       <!-- Sensor & Uptime -->
-      <div class="rounded border border-border bg-surface/40 p-2.5 flex flex-col gap-1 min-w-0">
-        <div class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted border-b border-border/40 pb-1.5 mb-1">
+      <div class="rounded border border-border bg-surface/40 p-1.5 flex flex-col gap-0.5 min-w-0">
+        <div class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted border-b border-border/40 pb-1 mb-0.5">
           <span class="h-2 w-2 rounded-full bg-amber-400"></span> Sensor &amp; Uptime
         </div>
         <div class="flex flex-col gap-1 font-mono text-xs">
@@ -176,8 +262,8 @@ tailwind.config = {
         </div>
       </div>
       <!-- System Resources -->
-      <div class="rounded border border-border bg-surface/40 p-2.5 flex flex-col gap-1 min-w-0">
-        <div class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted border-b border-border/40 pb-1.5 mb-1">
+      <div class="rounded border border-border bg-surface/40 p-1.5 flex flex-col gap-0.5 min-w-0">
+        <div class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted border-b border-border/40 pb-1 mb-0.5">
           <span class="h-2 w-2 rounded-full bg-sky-400"></span> System Resources
         </div>
         <div class="flex flex-col gap-1 font-mono text-xs">
@@ -189,32 +275,32 @@ tailwind.config = {
             <span class="text-muted">Buffered</span><span id="overview-mem-buffered" class="text-text text-right tabular-nums">-</span>
             <span class="text-muted">Cached</span><span id="overview-mem-cached" class="text-text text-right tabular-nums">-</span>
           </div>
-          <div class="h-1.5 w-full bg-base rounded overflow-hidden border border-border/40"><div id="overview-mem-bar" class="h-full bg-sky-400 transition-all duration-700" style="width:0%"></div></div>
+          <div class="h-1 w-full bg-base rounded overflow-hidden border border-border/40"><div id="overview-mem-bar" class="h-full bg-sky-400 transition-all duration-700" style="width:0%"></div></div>
           <div class="text-[10px] uppercase tracking-wider text-muted opacity-70 mt-1">Storage</div>
           <div class="flex justify-between gap-2"><span class="text-muted">Disk /</span><span id="overview-disk" class="text-text text-right tabular-nums">-</span></div>
-          <div class="h-1.5 w-full bg-base rounded overflow-hidden border border-border/40"><div id="overview-disk-bar" class="h-full bg-amber-400 transition-all duration-700" style="width:0%"></div></div>
+          <div class="h-1 w-full bg-base rounded overflow-hidden border border-border/40"><div id="overview-disk-bar" class="h-full bg-amber-400 transition-all duration-700" style="width:0%"></div></div>
           <div class="flex justify-between gap-2"><span class="text-muted">Temp /tmp</span><span id="overview-tmp" class="text-text text-right tabular-nums">-</span></div>
           <div class="flex justify-between gap-2"><span class="text-muted">Tmpfs /dev/shm</span><span id="overview-tmpfs" class="text-text text-right tabular-nums">-</span></div>
         </div>
       </div>
       <!-- Network Dashboard -->
-      <div class="rounded border border-border bg-surface/40 p-2.5 flex flex-col gap-1 min-w-0">
-        <div class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted border-b border-border/40 pb-1.5 mb-1">
+      <div class="rounded border border-border bg-surface/40 p-1.5 flex flex-col gap-0.5 min-w-0">
+        <div class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted border-b border-border/40 pb-1 mb-0.5">
           <span class="h-2 w-2 rounded-full bg-violet-400"></span> Network Dashboard
         </div>
         <div class="flex flex-col gap-1.5 font-mono text-xs">
-          <div class="rounded bg-base border border-border/40 p-2">
+          <div class="rounded bg-base border border-border/40 p-1.5">
             <div class="flex justify-between items-center gap-2"><span class="text-muted">Ethernet enp2s0</span><span id="overview-net-enp2s0-status" class="text-accent text-[11px] font-medium whitespace-nowrap">100M · Connected</span></div>
             <div class="flex gap-3 mt-1 text-[11px]"><span class="text-muted">↓ RX <span id="overview-net-enp2s0-rx" class="text-text tabular-nums">-</span></span><span class="text-muted">↑ TX <span id="overview-net-enp2s0-tx" class="text-text tabular-nums">-</span></span></div>
             <div class="flex justify-between gap-2 mt-1 text-[11px]"><span class="text-muted">IP</span><span id="overview-net-enp2s0-ip" class="text-text">192.168.1.111</span></div>
           </div>
-          <div class="rounded bg-base border border-border/40 p-2 flex justify-between items-center gap-2"><span class="text-muted">eth1</span><span id="overview-net-eth1-status" class="text-muted text-[11px]">No link</span></div>
-          <div class="rounded bg-base border border-border/40 p-2 flex justify-between items-center gap-2"><span class="text-muted">wwan0</span><span id="overview-net-wwan0-status" class="text-muted text-[11px]">No link</span></div>
+          <div class="rounded bg-base border border-border/40 p-1.5 flex justify-between items-center gap-2"><span class="text-muted">eth1</span><span id="overview-net-eth1-status" class="text-muted text-[11px]">No link</span></div>
+          <div class="rounded bg-base border border-border/40 p-1.5 flex justify-between items-center gap-2"><span class="text-muted">wwan0</span><span id="overview-net-wwan0-status" class="text-muted text-[11px]">No link</span></div>
         </div>
       </div>
       <!-- Network Status -->
-      <div class="rounded border border-border bg-surface/40 p-2.5 flex flex-col gap-1 min-w-0">
-        <div class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted border-b border-border/40 pb-1.5 mb-1">
+      <div class="rounded border border-border bg-surface/40 p-1.5 flex flex-col gap-0.5 min-w-0">
+        <div class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted border-b border-border/40 pb-1 mb-0.5">
           <span class="h-2 w-2 rounded-full bg-emerald-400"></span> Network Status
         </div>
         <div class="flex flex-col gap-1 font-mono text-xs">
@@ -228,8 +314,8 @@ tailwind.config = {
         </div>
       </div>
       <!-- Node Summary -->
-      <div class="rounded border border-border bg-surface/40 p-2.5 flex flex-col gap-1 min-w-0">
-        <div class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted border-b border-border/40 pb-1.5 mb-1">
+      <div class="rounded border border-border bg-surface/40 p-1.5 flex flex-col gap-0.5 min-w-0">
+        <div class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted border-b border-border/40 pb-1 mb-0.5">
           <span class="h-2 w-2 rounded-full bg-zinc-500"></span> Node Summary
         </div>
         <div class="flex flex-col gap-1 font-mono text-xs">
@@ -241,10 +327,9 @@ tailwind.config = {
       </div>
     </div>
   </section>
-
-    <!-- ===== TASK MANAGER ===== -->
-  <section id="tm-section" data-view="simple" class="mb-5">
-    <div class="flex items-center gap-2 mb-2.5">
+  <!-- ===== TASK MANAGER ===== -->
+  <section id="tm-section" data-view="simple" class="mb-2">
+    <div class="flex items-center gap-2 mb-1">
       <h2 class="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-2">
         <svg class="w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg>
         Task Manager · Live
@@ -253,11 +338,11 @@ tailwind.config = {
     </div>
 
     <!-- Grid 2x3 on desktop, 1 col mobile -->
-    <div id="tm-detail-grid" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+    <div id="tm-detail-grid" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
 
       <!-- CPU -->
       <div class="rounded border border-border bg-surface/40 overflow-hidden min-w-0">
-        <div class="px-3 py-2 flex items-center justify-between border-b border-border/60">
+        <div class="px-2 py-1 flex items-center justify-between border-b border-border/60">
           <div class="flex items-center gap-2">
             <span class="h-2 w-2 rounded-full bg-accent"></span>
             <span class="text-sm font-medium">CPU</span>
@@ -265,10 +350,10 @@ tailwind.config = {
           </div>
           <span class="text-lg font-semibold tabular-nums" id="tm-cpu-pct">-%</span>
         </div>
-        <div class="p-2.5">
+        <div class="p-1.5">
           <div class="h-[110px] sm:h-[120px]"><canvas id="chart-cpu"></canvas></div>
-          <div class="mt-2 grid grid-cols-4 gap-1" id="tm-cpu-cores"></div>
-          <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-mono text-muted">
+          <div class="mt-1 grid grid-cols-4 gap-1" id="tm-cpu-cores"></div>
+          <div class="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] font-mono text-muted">
             <span>Load <span id="tm-cpu-load">- - -</span></span>
             <span id="tm-cpu-up">up -</span>
           </div>
@@ -277,7 +362,7 @@ tailwind.config = {
 
       <!-- RAM -->
       <div class="rounded border border-border bg-surface/40 overflow-hidden min-w-0">
-        <div class="px-3 py-2 flex items-center justify-between border-b border-border/60">
+        <div class="px-2 py-1 flex items-center justify-between border-b border-border/60">
           <div class="flex items-center gap-2">
             <span class="h-2 w-2 rounded-full bg-sky-400"></span>
             <span class="text-sm font-medium">Memory</span>
@@ -285,14 +370,14 @@ tailwind.config = {
           </div>
           <span class="text-lg font-semibold tabular-nums" id="tm-ram-pct">-%</span>
         </div>
-        <div class="p-2.5">
+        <div class="p-1.5">
           <div class="h-[110px] sm:h-[120px]"><canvas id="chart-ram"></canvas></div>
           <div class="mt-2">
             <div class="flex justify-between text-xs mb-1.5">
               <span class="text-muted" id="tm-ram-used">- / -</span>
               <span class="font-mono text-muted" id="tm-ram-free">free -</span>
             </div>
-            <div class="h-1.5 w-full bg-base rounded overflow-hidden border border-border/40">
+            <div class="h-1 w-full bg-base rounded overflow-hidden border border-border/40">
               <div id="bar-ram-tm" class="h-full bg-sky-400 transition-all duration-700" style="width:0%"></div>
             </div>
           </div>
@@ -301,7 +386,7 @@ tailwind.config = {
 
       <!-- DISK -->
       <div class="rounded border border-border bg-surface/40 overflow-hidden min-w-0">
-        <div class="px-3 py-2 flex items-center justify-between border-b border-border/60">
+        <div class="px-2 py-1 flex items-center justify-between border-b border-border/60">
           <div class="flex items-center gap-2">
             <span class="h-2 w-2 rounded-full bg-amber-400"></span>
             <span class="text-sm font-medium">Disk</span>
@@ -310,13 +395,13 @@ tailwind.config = {
           </div>
           <span class="text-xs font-mono text-muted" id="tm-disk-pct">-</span>
         </div>
-        <div class="p-2.5">
+        <div class="p-1.5">
           <div class="h-[110px] sm:h-[120px]"><canvas id="chart-disk"></canvas></div>
-          <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-mono">
+          <div class="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] font-mono">
             <span class="text-muted">Read <span id="tm-disk-read" class="text-text">- </span></span>
             <span class="text-muted">Write <span id="tm-disk-write" class="text-text">- </span></span>
           </div>
-          <div class="mt-2 flex justify-between text-xs">
+          <div class="mt-1 flex justify-between text-xs">
             <span class="text-muted font-mono" id="tm-disk-used">- / -</span>
             <span class="text-muted font-mono" id="tm-disk-bar-pct">0%</span>
           </div>
@@ -328,7 +413,7 @@ tailwind.config = {
 
       <!-- NETWORK -->
       <div class="rounded border border-border bg-surface/40 overflow-hidden min-w-0">
-        <div class="px-3 py-2 flex items-center justify-between border-b border-border/60">
+        <div class="px-2 py-1 flex items-center justify-between border-b border-border/60">
           <div class="flex items-center gap-2">
             <span class="h-2 w-2 rounded-full bg-violet-400"></span>
             <span class="text-sm font-medium">Network</span>
@@ -336,9 +421,9 @@ tailwind.config = {
           </div>
           <span class="text-xs font-mono text-muted" id="tm-net-total">-</span>
         </div>
-        <div class="p-2.5">
+        <div class="p-1.5">
           <div class="h-[110px] sm:h-[120px]"><canvas id="chart-net"></canvas></div>
-          <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-mono">
+          <div class="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] font-mono">
             <span class="text-muted">↓ RX <span id="tm-net-rx" class="text-text">- </span></span>
             <span class="text-muted">↑ TX <span id="tm-net-tx" class="text-text">- </span></span>
           </div>
@@ -348,7 +433,7 @@ tailwind.config = {
 
       <!-- POWER -->
       <div class="rounded border border-border bg-surface/40 overflow-hidden min-w-0">
-        <div class="px-3 py-2 flex items-center justify-between border-b border-border/60">
+        <div class="px-2 py-1 flex items-center justify-between border-b border-border/60">
           <div class="flex items-center gap-2">
             <span class="h-2 w-2 rounded-full bg-amber-400"></span>
             <span class="text-sm font-medium">Power</span>
@@ -356,14 +441,14 @@ tailwind.config = {
           </div>
           <span class="text-lg font-semibold tabular-nums" id="tm-power-pkg">- W</span>
         </div>
-        <div class="p-2.5">
+        <div class="p-1.5">
           <div class="h-[110px] sm:h-[120px]"><canvas id="chart-power"></canvas></div>
-          <div class="mt-3 grid grid-cols-3 gap-2 text-center text-[11px]">
+          <div class="mt-1 grid grid-cols-3 gap-1 text-center text-[11px]">
             <div class="rounded bg-base border border-border/40 py-1.5"><div class="text-muted">Package</div><div class="font-mono font-medium text-amber-300 tabular-nums" id="tm-power-pkg-detail">- W</div></div>
             <div class="rounded bg-base border border-border/40 py-1.5"><div class="text-muted">Cores</div><div class="font-mono font-medium tabular-nums" id="tm-power-core">- W</div></div>
             <div class="rounded bg-base border border-border/40 py-1.5"><div class="text-muted">Uncore</div><div class="font-mono font-medium tabular-nums" id="tm-power-uncore">- W</div></div>
           </div>
-          <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-mono text-muted">
+          <div class="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] font-mono text-muted">
             <span>Est total <span id="tm-power-total" class="text-text font-medium">- W</span></span>
             <span>·</span>
             <span id="tm-power-kwh">- kWh/day</span>
@@ -376,39 +461,39 @@ tailwind.config = {
 
     </div>
     <!-- Simple view: only percentages / key numbers -->
-    <div id="tm-simple-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-2">
-      <div class="rounded border border-border bg-surface/40 p-3">
+    <div id="tm-simple-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-1">
+      <div class="rounded border border-border bg-surface/40 p-1.5">
         <div class="flex items-center gap-1.5 text-xs text-muted"><span class="h-2 w-2 rounded-full bg-accent"></span>CPU</div>
-        <div class="mt-1 text-xl font-semibold tabular-nums" id="s-cpu">-%</div>
+        <div class="mt-0.5 text-lg font-semibold tabular-nums" id="s-cpu">-%</div>
         <div class="text-[11px] font-mono text-muted truncate" id="s-cpu-sub">-</div>
       </div>
-      <div class="rounded border border-border bg-surface/40 p-3">
+      <div class="rounded border border-border bg-surface/40 p-1.5">
         <div class="flex items-center gap-1.5 text-xs text-muted"><span class="h-2 w-2 rounded-full bg-sky-400"></span>Memory</div>
-        <div class="mt-1 text-xl font-semibold tabular-nums" id="s-ram">-%</div>
+        <div class="mt-0.5 text-lg font-semibold tabular-nums" id="s-ram">-%</div>
         <div class="text-[11px] font-mono text-muted truncate" id="s-ram-sub">- / -</div>
       </div>
-      <div class="rounded border border-border bg-surface/40 p-3">
+      <div class="rounded border border-border bg-surface/40 p-1.5">
         <div class="flex items-center gap-1.5 text-xs text-muted"><span class="h-2 w-2 rounded-full bg-amber-400"></span>Disk</div>
-        <div class="mt-1 text-xl font-semibold tabular-nums" id="s-disk">-</div>
+        <div class="mt-0.5 text-lg font-semibold tabular-nums" id="s-disk">-</div>
         <div class="text-[11px] font-mono text-muted truncate" id="s-disk-sub">- / -</div>
       </div>
-      <div class="rounded border border-border bg-surface/40 p-3">
+      <div class="rounded border border-border bg-surface/40 p-1.5">
         <div class="flex items-center gap-1.5 text-xs text-muted"><span class="h-2 w-2 rounded-full bg-violet-400"></span>Network</div>
-        <div class="mt-1 text-sm font-semibold tabular-nums leading-tight break-all" id="s-net">-</div>
+        <div class="mt-0.5 text-sm font-semibold tabular-nums leading-tight break-all" id="s-net">-</div>
         <div class="text-[11px] font-mono text-muted truncate" id="s-net-sub">enp2s0</div>
       </div>
-      <div class="rounded border border-border bg-surface/40 p-3">
+      <div class="rounded border border-border bg-surface/40 p-1.5">
         <div class="flex items-center gap-1.5 text-xs text-muted"><span class="h-2 w-2 rounded-full bg-amber-400"></span>Power</div>
-        <div class="mt-1 text-xl font-semibold tabular-nums" id="s-power">- W</div>
+        <div class="mt-0.5 text-lg font-semibold tabular-nums" id="s-power">- W</div>
         <div class="text-[11px] font-mono text-muted truncate" id="s-power-sub">- kWh/d</div>
       </div>
     </div>
   </section>
 
   <!-- Legacy Hardware summary (kept compact) -->
-  <section class="mb-10 hidden" id="legacy-hw">
-    <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">Hardware Node (legacy)</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8 text-sm rounded border border-border bg-surface/20 p-4">
+  <section class="mb-2 hidden" id="legacy-hw">
+    <h2 class="mb-1 text-xs font-semibold uppercase tracking-wider text-muted">Hardware Node (legacy)</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-y-1 gap-x-4 text-sm rounded border border-border bg-surface/20 p-1.5">
       <div class="md:col-span-2">
         <div class="flex justify-between text-xs mb-1.5">
           <span class="text-muted">CPU</span><span class="text-xs font-mono text-muted" id="srv-cpu-load">Load: -</span>
@@ -424,7 +509,7 @@ tailwind.config = {
         <div class="flex justify-between text-xs mb-1.5"><span class="text-muted">Disk (/)</span><span class="text-xs font-mono" id="srv-disk-txt">- </span></div>
         <div class="h-1.5 w-full bg-base rounded overflow-hidden"><div id="bar-disk" class="h-full bg-accent" style="width:0%"></div></div>
       </div>
-      <div class="md:col-span-2 flex gap-8 pt-2">
+      <div class="md:col-span-2 flex gap-4 pt-1">
         <div><div class="text-muted text-xs mb-1">Server Uptime</div><div id="srv-up" class="font-medium tabular-nums">-</div></div>
         <div><div class="text-muted text-xs mb-1">Running Services</div><div class="font-medium"><span id="sum-up" class="text-accent">-</span> up / <span id="sum-total">-</span> total</div></div>
       </div>
@@ -434,21 +519,21 @@ tailwind.config = {
   <div class="hidden"><span id="sum-up2"></span><span id="sum-total2"></span></div>
 
   <!-- Services (header + list) - refresh ada di dalam Services -->
-  <div id="services-panel" class="space-y-3">
-    <div id="services-header" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded border border-border bg-surface/30 px-3 py-2">
+  <div id="services-panel" class="space-y-1">
+    <div id="services-header" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 rounded border border-border bg-surface/30 px-2 py-1">
       <div class="flex items-center gap-2">
         <span class="h-2 w-2 rounded-full bg-accent"></span>
         <span class="text-xs font-semibold uppercase tracking-wide text-muted">Services</span>
         <span id="services-count" data-services-count class="text-xs font-mono text-muted">-</span>
         <span class="text-[11px] text-muted hidden sm:inline">- <span id="services-sum-up"></span> up / <span id="services-sum-total"></span> total</span>
       </div>
-      <button id="refresh" type="button" class="inline-flex h-8 min-h-[44px] items-center justify-center gap-2 rounded bg-base px-3 text-xs font-medium text-text border border-border hover:bg-border active:bg-zinc-700 shrink-0">
+      <button id="refresh" type="button" class="inline-flex h-6 min-h-[32px] items-center justify-center gap-1 rounded bg-base px-2 text-[10px] font-medium text-text border border-border hover:bg-border active:bg-zinc-700 shrink-0">
         <svg id="refresh-icon" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
         Refresh
       </button>
     </div>
-    <div id="groups" class="space-y-4">
-    <div id="initial-loader" class="py-12 flex flex-col items-center justify-center text-muted animate-pulse">
+    <div id="groups" class="space-y-1">
+    <div id="initial-loader" class="py-4 flex flex-col items-center justify-center text-muted animate-pulse">
       <svg class="h-6 w-6 mb-3 animate-spin text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
       <span class="text-sm">Syncing infrastructure state...</span>
     </div>
@@ -456,9 +541,9 @@ tailwind.config = {
   </div>
 
   <!-- SSH - ttyd iframe (mobile-friendly) -->
-  <section id="terminal-section" class="hidden space-y-3">
-    <div class="rounded border border-border bg-surface/30 overflow-hidden">
-      <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 border-b border-border/60 bg-surface/20">
+  <section id="terminal-section" class="hidden space-y-1">
+    <div class="rounded border border-border bg-surface/30 overflow-hidden flex flex-col">
+      <div class="flex flex-wrap items-center justify-between gap-1.5 px-2 py-1 border-b border-border/60 bg-surface/20">
         <div class="flex items-center gap-2 min-w-0">
           <span class="h-2 w-2 rounded-full bg-accent"></span>
           <span class="text-xs font-semibold uppercase tracking-wider text-muted">Web Terminal</span>
@@ -466,9 +551,9 @@ tailwind.config = {
           <span id="terminal-status" class="text-[11px] font-mono text-muted hidden">loading...</span>
         </div>
         <div class="flex items-center gap-1.5 shrink-0">
-          <a href="https://ssh.nendi.web.id" target="_blank" rel="noopener" class="inline-flex h-7 items-center gap-1 px-2.5 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text">Open ↗</a>
-          <button id="terminal-fullscreen" type="button" class="inline-flex h-7 min-h-[44px] min-w-[44px] items-center justify-center gap-1 px-2.5 rounded bg-base border border-border text-[11px] font-medium text-text hover:bg-border">Fullscreen</button>
-          <button id="terminal-reload" type="button" class="inline-flex h-7 min-h-[44px] min-w-[44px] items-center justify-center w-7 rounded bg-base border border-border text-muted hover:text-text" title="Reload">
+          <a href="https://ssh.nendi.web.id" target="_blank" rel="noopener" class="inline-flex h-6 items-center gap-1 px-2 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text">Open ↗</a>
+          <button id="terminal-fullscreen" type="button" class="inline-flex h-6 min-h-[32px] min-w-[32px] items-center justify-center gap-1 px-2 rounded bg-base border border-border text-[10px] font-medium text-text hover:bg-border">Fullscreen</button>
+          <button id="terminal-reload" type="button" class="inline-flex h-6 min-h-[32px] min-w-[32px] items-center justify-center w-6 rounded bg-base border border-border text-muted hover:text-text" title="Reload">
             <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
           </button>
         </div>
@@ -481,99 +566,650 @@ tailwind.config = {
           <button id="terminal-load-btn" type="button" class="mt-3 h-7 px-3 rounded bg-accent text-base text-xs font-semibold hover:bg-teal-500">Muat terminal</button>
         </div>
       </div>
-      <div class="px-3 py-2 flex flex-wrap gap-1.5 text-[11px]">
+      <div class="px-2 py-1 flex flex-wrap gap-1 text-[11px]">
         <span class="px-1.5 py-0.5 rounded bg-base border border-border/40 text-muted font-mono">login: root + password</span>
         <span class="px-1.5 py-0.5 rounded bg-base border border-border/40 text-muted hidden sm:inline">Tip: putar HP landscape untuk keyboard luas</span>
       </div>
     </div>
   </section>
 
-  <!-- Kuota - 0xtbug/telbot (support webui) -->
-  <section id="kuota-section" class="hidden space-y-3">
-    <div class="rounded border border-border bg-surface/30 overflow-hidden">
-      <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 border-b border-border/60 bg-surface/20">
+
+  <!-- Kuota - cek kuota XL/Axis via apigw (proxy server, key di server). Dua nomor preset cache-first. -->
+  <section id="kuota-section" class="hidden space-y-1">
+  <div class="grid grid-cols-1 gap-1.5 items-stretch">
+    <div class="rounded border border-border bg-surface/30 overflow-hidden flex flex-col">
+      <div class="flex flex-wrap items-center justify-between gap-1.5 px-2 py-1 border-b border-border/60 bg-surface/20">
         <div class="flex items-center gap-2 min-w-0">
-          <span class="h-2 w-2 rounded-full bg-accent"></span>
+          <span class="h-2 w-2 rounded-full bg-[#ef4444]"></span>
           <span class="text-xs font-semibold uppercase tracking-wider text-muted">Kuota</span>
-          <span class="hidden sm:inline text-[11px] font-mono text-muted">0xtbug/telbot · Telkomsel via Telegram/CLI/MCP</span>
+          <span class="hidden sm:inline text-[11px] font-mono text-muted">XL · Axis · Tsel · Tri</span>
           <span id="kuota-status" class="text-[11px] font-mono text-muted hidden">loading...</span>
         </div>
-        <div class="flex items-center gap-1.5 shrink-0 flex-wrap">
-          <span class="hidden sm:inline-flex h-6 items-center px-2 rounded bg-surface border border-border text-[10px] font-mono text-muted">v1.1.3 · Go 1.26</span>
-          <button id="kuota-help" type="button" class="inline-flex h-7 items-center gap-1 px-2.5 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text" title="Bantuan"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 2-2.5 2.5-2.5 4"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/></svg> Help</button>
-        </div>
+        <button id="kuota-refresh-all" type="button" class="inline-flex h-6 min-h-[32px] min-w-[32px] items-center justify-center gap-1 px-2 rounded bg-base border border-border text-[10px] font-medium text-text hover:bg-border">Refresh</button>
       </div>
-
-      <!-- Telbot Control (0xtbug/telbot v1.1.3) -->
-      <div id="telbot-panel" class="p-3 border-b border-border/40 bg-base/20 space-y-3">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <div class="flex items-center gap-2 min-w-0 flex-wrap">
-            <span class="text-xs font-semibold text-text flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-accent" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 2l2.4 4.2 4.8.7-3.5 3.4.8 4.7L12 12.5l-4.5 2.5.8-4.7L4.8 6.9l4.8-.7z"/></svg> Telbot Control <span class="hidden sm:inline-flex px-1.5 py-0.5 rounded bg-accent/15 border border-accent/30 text-[10px] font-mono text-accent">v1.1.3 bot</span></span>
-            <span id="telbot-dot" class="h-2 w-2 rounded-full bg-zinc-600"></span>
-            <span id="telbot-state" class="text-[11px] font-mono text-muted">memuat...</span>
-            <span id="telbot-config-badge" class="hidden px-1.5 py-0.5 rounded border text-[10px] font-medium leading-none"></span>
+      <div class="p-1.5 space-y-1 flex-1">
+        <div id="kuota-list" class="grid grid-cols-1 sm:grid-cols-2 gap-1 items-start" aria-live="polite">
+          <div class="rounded border border-border/40 bg-base/20 overflow-hidden" data-kq-card="6287873153598">
+          <div class="p-1.5" data-kq-bodybox="6287873153598"><p class="text-xs text-muted">Memuat data tersimpan...</p></div>
           </div>
-          <div class="flex items-center gap-1.5 shrink-0 flex-wrap">
-            <button id="telbot-btn-start" type="button" class="h-7 px-2.5 rounded bg-accent text-base text-xs font-semibold hover:bg-teal-500">Start</button>
-            <button id="telbot-btn-stop" type="button" class="h-7 px-2.5 rounded bg-surface border border-border text-xs font-medium text-muted hover:text-text">Stop</button>
-            <button id="telbot-btn-restart" type="button" class="h-7 px-2.5 rounded bg-surface border border-border text-xs font-medium text-muted hover:text-text">Restart</button>
-            <button id="telbot-btn-logs" type="button" class="h-7 px-2.5 rounded bg-surface border border-border text-xs font-mono text-muted hover:text-text">Logs</button>
+          <div class="rounded border border-border/40 bg-base/20 overflow-hidden" data-kq-card="6287772816696">
+          <div class="p-1.5" data-kq-bodybox="6287772816696"><p class="text-xs text-muted">Memuat data tersimpan...</p></div>
           </div>
         </div>
-
-        <div id="telbot-info-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <div class="rounded bg-surface border border-border/40 px-2 py-1.5"><div class="text-[10px] uppercase tracking-wider text-muted opacity-70">Service</div><div id="telbot-info-service" class="text-xs font-mono text-text mt-0.5">-</div></div>
-          <div class="rounded bg-surface border border-border/40 px-2 py-1.5"><div class="text-[10px] uppercase tracking-wider text-muted opacity-70">Auto-boot</div><div id="telbot-info-autoboot" class="text-xs font-mono text-text mt-0.5">-</div></div>
-          <div class="rounded bg-surface border border-border/40 px-2 py-1.5"><div class="text-[10px] uppercase tracking-wider text-muted opacity-70">Token</div><div id="telbot-info-token" class="text-xs font-mono text-text mt-0.5 truncate">-</div></div>
-          <div class="rounded bg-surface border border-border/40 px-2 py-1.5"><div class="text-[10px] uppercase tracking-wider text-muted opacity-70">Admin ID</div><div id="telbot-info-admin" class="text-xs font-mono text-text mt-0.5 truncate">-</div></div>
-        </div>
-        <div class="text-[11px] leading-relaxed text-muted">Butuh <a href="https://t.me/BotFather" target="_blank" rel="noopener" class="text-accent hover:underline">@BotFather</a> buat token + <a href="https://t.me/userinfobot" target="_blank" rel="noopener" class="text-accent hover:underline">@userinfobot</a> buat Admin ID. Simpan di sini, lalu Start. Env tersimpan di <code class="px-1 py-0.5 rounded bg-surface border border-border text-[11px] font-mono">/root/telbot-data/.env</code> mode 600.</div>
-
-        <form id="telbot-config-form" class="space-y-2 rounded border border-border/40 bg-surface/40 p-3">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <label class="flex flex-col gap-1 min-w-0"><span class="text-[11px] font-medium text-muted">TELKOMSEL_BOT_TOKEN *</span><input id="telbot-token" type="password" autocomplete="off" placeholder="1234567890:AAH..." class="h-8 px-2.5 rounded bg-base border border-border text-xs font-mono text-text placeholder:text-muted focus:outline-none focus:border-accent"><span class="text-[10px] text-muted">Kosongkan jika tidak mau ubah token tersimpan.</span></label>
-            <label class="flex flex-col gap-1 min-w-0"><span class="text-[11px] font-medium text-muted">TELEGRAM_ADMIN_ID *</span><input id="telbot-admin" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="123456789" class="h-8 px-2.5 rounded bg-base border border-border text-xs font-mono text-text placeholder:text-muted focus:outline-none focus:border-accent"></label>
+        <form id="kuota-form" class="flex flex-col sm:flex-row gap-1.5" autocomplete="off">
+          <div class="flex-1 min-w-0">
+            <label for="kuota-nomor" class="block text-[11px] font-medium text-muted mb-1">Nomor lain</label>
+            <input id="kuota-nomor" type="tel" inputmode="numeric" placeholder="0878xxx" class="w-full h-7 px-2 rounded bg-base border border-border text-sm font-mono text-text placeholder:text-muted focus:outline-none focus:border-accent" />
           </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <label class="flex flex-col gap-1 min-w-0"><span class="text-[11px] font-medium text-muted">OTP_WEBHOOK_PORT <span class="font-normal opacity-60">(opsional)</span></span><input id="telbot-port" type="text" inputmode="numeric" placeholder="8081" class="h-8 px-2.5 rounded bg-base border border-border text-xs font-mono text-text placeholder:text-muted focus:outline-none focus:border-accent"></label>
-            <label class="flex flex-col gap-1 min-w-0"><span class="text-[11px] font-medium text-muted">OTP_WEBHOOK_SECRET <span class="font-normal opacity-60">(opsional)</span></span><input id="telbot-secret" type="password" autocomplete="off" placeholder="•••• (kosongkan jika tidak ubah)" class="h-8 px-2.5 rounded bg-base border border-border text-xs font-mono text-text placeholder:text-muted focus:outline-none focus:border-accent"></label>
-          </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <button id="telbot-save" type="submit" class="h-8 px-4 rounded bg-text text-base text-xs font-semibold hover:bg-zinc-200">Simpan Config</button>
-            <button id="telbot-enable" type="button" class="h-8 px-3 rounded bg-surface border border-border text-xs font-medium text-muted hover:text-text">Enable auto-boot</button>
-            <button id="telbot-disable" type="button" class="h-8 px-3 rounded bg-surface border border-border text-xs font-medium text-muted hover:text-text">Disable</button>
-            <span id="telbot-save-msg" class="text-xs font-mono"></span>
+          <div class="flex items-end">
+            <button id="kuota-btn" type="submit" class="h-7 px-3 rounded bg-accent text-base text-sm font-semibold hover:bg-teal-500 active:bg-teal-600 whitespace-nowrap">Cek</button>
           </div>
         </form>
-
-        <div id="telbot-log-wrap" class="hidden space-y-1.5">
-          <div class="flex flex-wrap items-center justify-between gap-2"><span class="text-[11px] font-mono text-muted">journalctl -u telbot -n 150 <span id="telbot-log-filter-info" class="hidden ml-1 text-[10px] font-mono text-amber-400"></span></span><div class="flex items-center gap-1.5 shrink-0"><label class="inline-flex items-center gap-1 text-[11px] text-muted cursor-pointer select-none" title="Tampilkan baris spam jaringan (context deadline)"><input id="telbot-log-raw-toggle" type="checkbox" class="h-3 w-3 rounded border-border bg-base"> raw</label><button id="telbot-log-refresh" type="button" class="h-6 px-2 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text">Refresh</button></div></div>
-          <pre id="telbot-log" class="max-h-[320px] overflow-auto rounded bg-black border border-border p-2 text-[11px] font-mono text-zinc-300 whitespace-pre-wrap break-words leading-relaxed"></pre>
-          <div id="telbot-log-filter-note" class="hidden text-[10px] font-mono text-muted bg-amber-500/10 border border-amber-500/20 rounded px-2 py-1 leading-relaxed"></div>
-        </div>
-      </div>
-
-
-
-      <!-- Info lokal (ganti README GitHub) -->
-      <div id="kuota-help-box" class="hidden p-3 sm:p-4 border-t border-border/40 bg-base/20">
-        <div class="text-xs font-semibold text-text mb-1">Cara pakai Telbot</div>
-        <ol class="list-decimal list-inside space-y-1 text-[11px] leading-relaxed text-muted">
-          <li>Buat bot di <span class="text-accent">@BotFather</span> → copy token.</li>
-          <li>Cek ID di <span class="text-accent">@userinfobot</span>.</li>
-          <li>Isi token + Admin ID di atas → <b>Simpan Config</b> → <b>Start</b>.</li>
-          <li>Buka Telegram → /start → Login → kirim <code class="px-1 py-0.5 rounded bg-surface border border-border text-[11px] font-mono">812xxxx</code> → OTP.</li>
-          <li>Atau pakai WebUI bawah untuk login & cek kuota tanpa Telegram.</li>
-        </ol>
-        <div class="mt-2 text-[11px] text-muted">Repo asli <span class="font-mono">0xtbug/telbot</span> - portal ini clone & webui milik sendiri, bukan iframe GitHub.</div>
+        <p id="kuota-form-err" class="hidden text-xs text-error"></p>
+        
       </div>
     </div>
-  </section>
+    <div class="rounded border border-border bg-surface/30 overflow-hidden flex flex-col">
+      <div class="flex flex-wrap items-center justify-between gap-1.5 px-2 py-1 border-b border-border/60 bg-surface/20">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="h-2 w-2 rounded-full bg-accent"></span>
+          <span class="text-xs font-semibold uppercase tracking-wider text-muted">Telkomsel</span>
+          <span class="hidden sm:inline text-[11px] font-mono text-muted">Halo</span>
+          <span id="tsel-status" class="text-[11px] font-mono text-muted hidden">loading...</span>
+        </div>
+        <button id="tsel-refresh" type="button" class="inline-flex h-6 min-h-[32px] min-w-[32px] items-center justify-center gap-1 px-2 rounded bg-base border border-border text-[10px] font-medium text-text hover:bg-border">Refresh</button>
+      </div>
+      <div class="p-1.5 space-y-1 flex-1 flex flex-col">
+        <div id="tsel-body" aria-live="polite"><p class="text-xs text-muted">Memuat data tersimpan...</p></div>
+        
+      </div>
+    </div>
+    <div class="rounded border border-border bg-surface/30 overflow-hidden flex flex-col">
+      <div class="flex flex-wrap items-center justify-between gap-1.5 px-2 py-1 border-b border-border/60 bg-surface/20">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="h-2 w-2 rounded-full bg-[#3b82f6]"></span>
+          <span class="text-xs font-semibold uppercase tracking-wider text-muted">Tri</span>
+          <span class="hidden sm:inline text-[11px] font-mono text-muted">bimatri · dashboard</span>
+          <span id="tri-status" class="text-[11px] font-mono text-muted hidden">loading...</span>
+        </div>
+        <button id="tri-refresh" type="button" class="inline-flex h-6 min-h-[32px] min-w-[32px] items-center justify-center gap-1 px-2 rounded bg-base border border-border text-[10px] font-medium text-text hover:bg-border">Refresh</button>
+      </div>
+      <div class="p-1.5 space-y-1 flex-1 flex flex-col">
+        <div class="rounded border border-border/40 bg-base/20 p-1.5 space-y-1">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-muted">Login Tri (OTP SMS)</p>
+          <div class="flex flex-wrap gap-2">
+            <input id="tri-phone" inputmode="numeric" placeholder="0895xxxxxxx" class="flex-1 min-w-[140px] h-7 rounded bg-base border border-border px-2 text-xs font-mono text-text placeholder:text-muted/60 focus:outline-none focus:ring-1 focus:ring-accent" autocomplete="tel" />
+            <button id="tri-send-otp" type="button" class="inline-flex h-7 items-center justify-center px-3 rounded bg-accent text-base text-xs font-semibold hover:bg-teal-500 shrink-0">Kirim OTP</button>
+          </div>
+          <div id="tri-verify-row" class="hidden flex flex-wrap gap-2">
+            <input id="tri-otp" inputmode="numeric" maxlength="6" placeholder="Kode OTP 6 digit" class="flex-1 min-w-[120px] h-7 rounded bg-base border border-border px-2 text-xs font-mono text-text placeholder:text-muted/60 focus:outline-none focus:ring-1 focus:ring-accent" />
+            <button id="tri-verify-otp" type="button" class="inline-flex h-7 items-center justify-center px-3 rounded bg-accent text-base text-xs font-semibold hover:bg-teal-500 shrink-0">Verifikasi</button>
+            <button id="tri-cancel-otp" type="button" class="inline-flex h-9 items-center justify-center px-3 rounded bg-base border border-border text-xs text-muted hover:text-text shrink-0">Batal</button>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 text-[11px]">
+            <span id="tri-login-status" class="font-mono text-muted"></span>
+            <span id="tri-session-info" class="font-mono text-muted hidden"></span>
+            <button id="tri-logout" type="button" class="hidden ml-auto text-[11px] text-error hover:underline">Logout Tri</button>
+          </div>
+          <p class="text-[11px] text-muted">OTP dikirim via SMS ke nomor Tri. Setelah verifikasi, token disimpan di server &amp; kuota auto ke-cache, tidak perlu copy fetch lagi.</p>
+        </div>
+        <div id="tri-body" aria-live="polite"><p class="text-xs text-muted">Memuat data tersimpan...</p></div>
+        
+      </div>
+    </div>
+    </div>
+</section>
+<script>
+// Kuota (XL/Axis): buka tab tampil cache, Refresh fetch baru via /api/sidompul/* (proxy, key di server).
+(function(){
+  var list=document.getElementById('kuota-list');
+  var form=document.getElementById('kuota-form');
+  if(!list) return;
+  var st=document.getElementById('kuota-status');
+  function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
+  function setSt(t,show){ if(!st) return; st.textContent=t; st.classList.toggle('hidden',!show); }
+  function normalize(num){ num=String(num||"").replace(/\D/g,""); if(num.charAt(0)==="0") num="62"+num.slice(1); return num; }
+  function display(msisdn){ return String(msisdn||"").replace(/^62/,"0"); }
+  function pick(o,paths){ for(var i=0;i<paths.length;i++){ var cur=o,ks=paths[i].split("."),ok=true; for(var j=0;j<ks.length;j++){ if(cur&&Object.prototype.hasOwnProperty.call(cur,ks[j])) cur=cur[ks[j]]; else {ok=false;break;} } if(ok&&cur!=null&&cur!=="") return cur; } return null; }
+  function scanAge(d){ try{ var ks=Object.keys(d||{}); for(var i=0;i<ks.length;i++){ var s=ks[i].toLowerCase(); if(s.indexOf("umur")>=0||s.indexOf("age")>=0||s.indexOf("masa_pakai")>=0||s.indexOf("masa pakai")>=0){ var v=d[ks[i]]; return (v&&typeof v==="object"&&"value" in v)?v.value:v; } } }catch(e){} return null; }
+  function num(x){ if(x==null) return 0; var n=parseFloat(String(x).replace(/\s/g,"").replace(/,/g,".").replace(/[^\d.]/g,"")); return isNaN(n)?0:n; }
+  function pct(rem,tot){ if(tot>0) return Math.max(0,Math.min(100,(rem/tot)*100)); return rem>0?100:0; }
+  var xlPalette=['#ef4444','#3b82f6','#22c55e','#f59e0b','#a855f7','#06b6d4','#f43f5e','#14b8a6'];
+  function xlColor(name){ var n=String(name||'').toLowerCase(); if(n.indexOf('internet')>=0||n.indexOf('utama')>=0||n.indexOf('kuota utama')>=0) return '#ef4444'; if(n.indexOf('aplikasi')>=0||n.indexOf('apps')>=0||n.indexOf('youtube')>=0||n.indexOf('tiktok')>=0||n.indexOf('sosmed')>=0) return '#3b82f6'; if(n.indexOf('telepon')>=0||n.indexOf('voice')>=0||n.indexOf('telp')>=0) return '#22c55e'; if(n.indexOf('sms')>=0) return '#d97706'; if(n.indexOf('roaming')>=0) return '#a855f7'; if(n.indexOf('malam')>=0||n.indexOf('midnight')>=0) return '#06b6d4'; return '#14b8a6'; }
+  function xlColorByIdx(i){ return xlPalette[i % xlPalette.length]; }
+  function xlBar(p,color){ p=Math.max(0,Math.min(100,Number(p)||0)); var c=color||'#14b8a6'; return '<div class="h-1 rounded bg-base border border-border/40 overflow-hidden"><div class="h-full" style="width:'+p+'%;background:'+c+'"></div></div>'; }
+  function xlDonut(pkgs){
+    var raw=[];
+    (pkgs||[]).forEach(function(pkg){ (pkg.benefits||[]).forEach(function(b){ raw.push({name:String(b.bname||'Kuota').trim()||'Kuota', rem:num(b.remaining), tot:num(b.quota), rawRem:String(b.remaining||'0'), rawQuota:String(b.quota||'0')}); }); });
+    if(!raw.length) return '<div class="flex flex-col items-center gap-1.5"><svg viewBox="0 0 100 100" class="w-[110px] h-[110px] -rotate-90"><circle cx="50" cy="50" r="36" fill="none" stroke="#27272a" stroke-width="4"/></svg></div>';
+    var show=raw.slice(0,4);
+    var radii=[36,27,18,11];
+    var svg='<svg viewBox="0 0 100 100" class="w-[110px] h-[110px] -rotate-90">';
+    radii.slice(0,show.length).forEach(function(r){ svg+='<circle cx="50" cy="50" r="'+r+'" fill="none" stroke="#27272a" stroke-width="4"/>'; });
+    show.forEach(function(it,i){
+      var r=radii[i];
+      var pc=it.tot>0?Math.max(0,Math.min(100,(it.rem/it.tot)*100)):(it.rem>0?100:0);
+      var circ=2*Math.PI*r, len=circ*(pc/100);
+      var col=xlColorByIdx(i);
+      svg+='<circle cx="50" cy="50" r="'+r+'" fill="none" stroke="'+col+'" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="'+len.toFixed(2)+' '+(circ-len).toFixed(2)+'" opacity="1"/>';
+    });
+    svg+='</svg>';
+    return '<div class="flex flex-col items-center gap-1.5">'+svg+'</div>';
+  }
+  function dateOnly(v){ if(!v) return ""; var s=String(v).trim(),m=s.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) return m[3]+"-"+m[2]+"-"+m[1]; var d=s.match(/(\d{2})[\/-](\d{2})[\/-](\d{4})/); if(d) return d[1]+"-"+d[2]+"-"+d[3]; return s; }
+  function row(k,v,state){ var cls="text-text"; if(state===true) cls="text-accent font-semibold"; else if(state===false) cls="text-error"; return '<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">'+esc(k)+'</span><span class="'+cls+' font-mono text-right break-all">'+esc(v)+'</span></div>'; }
+  function cardInner(json,msisdn){
+    if(!json||!json.status||!json.data||!json.data.data_sp) return '<div class="rounded border border-error/20 bg-error/10 px-2 py-1.5 text-xs text-error">'+esc((json&&(json.message||json.error))||"Gagal ambil data")+'</div>';
+    var d=json.data.data_sp, h='';
+    var ms=(json.data&&json.data.msisdn)||msisdn;
+    h+='<div class="rounded border border-border/40 bg-base/20 p-1.5 space-y-0.5">';
+    h+=row("MSISDN",ms)+row("Tipe Kartu",(d.prefix&&d.prefix.value)||"-")+row("Jaringan",(d.status_4g&&d.status_4g.value)||"-")+row("Verifikasi ID",(d.dukcapil&&d.dukcapil.value)||"-");
+    h+=row("Umur Kartu",pick(d,["card_age.value","umur_kartu.value","active_card.value","masa_pakai.value","card_age","umur_kartu"])||scanAge(d)||"-");
+    h+=row("Masa Aktif",dateOnly(d.active_period&&d.active_period.value)||"-")+row("Masa Tenggang",dateOnly((d.grace_period&&d.grace_period.value)||(d.masa_tenggang&&d.masa_tenggang.value))||"-");
+    h+='</div>';
+    var groups=(d.quotas&&d.quotas.value)||[], pkgs=[];
+    if(Object.prototype.toString.call(groups)==="[object Array]") groups.forEach(function(g){ (g||[]).forEach(function(p){ pkgs.push(p); }); });
+    if(!pkgs.length){ h+='<div class="rounded border border-border/40 bg-base/20 px-2.5 py-2 text-xs text-muted">Tidak ada data paket.</div>'; }
+    else {
+      h+='<div class="space-y-1">';
+      pkgs.forEach(function(pkg,i){
+        var nm=(pkg.packages&&pkg.packages.name)||"Paket", ex=dateOnly(pkg.packages&&pkg.packages.expDate);
+        var hdr=esc(ex?ex+" | "+nm:nm);
+        if(i>0 && pkgs[i-1] && ((pkgs[i-1].packages&&pkgs[i-1].packages.name)||"Paket")===nm && dateOnly(pkgs[i-1].packages&&pkgs[i-1].packages.expDate)===ex) hdr='';
+        h+='<div class="rounded border border-border/40 bg-base/20 overflow-hidden">'+(hdr?'<div class="px-2.5 py-1.5 bg-surface/30 border-b border-border/30 text-[11px] font-semibold text-muted leading-tight">'+hdr+'</div>':'')+'<div data-kq-body="'+i+'" class="px-2 py-1.5 space-y-1.5">';
+        var bens=pkg.benefits||[];
+        if(!bens.length) h+='<p class="text-[11px] text-muted">Tidak ada detail kuota.</p>';
+        bens.forEach(function(b,bi){
+          var t=num(b.quota), r=num(b.remaining);
+          var col=xlColorByIdx(bi);
+          var isZero=String(b.remaining||'0').trim()==='0' || String(b.remaining||'0').trim().toLowerCase()==='0 gb' || String(b.remaining||'0').trim().toLowerCase()==='0 mb';
+          var _pct=t>0?Math.max(0,Math.min(100,(r/t)*100)):(r>0?100:0);
+          h+='<div class="rounded border p-1.5 space-y-0.5" style="border-color:'+col+'22;background:linear-gradient(135deg,'+col+'12,transparent 65%)">';
+          h+='<div class="flex justify-between gap-1.5 text-[11px] mb-0.5"><span class="flex items-center gap-1.5 font-medium truncate"><span class="h-2 w-2 rounded-full shrink-0" style="background:'+col+'"></span>'+esc(b.bname||"Kuota")+'</span><span class="font-mono '+(isZero?'text-muted':'text-text')+' shrink-0 text-[11px]">'+esc(b.remaining||"0")+" / "+esc(b.quota||"0")+'</span></div>'+xlBar(_pct,col)+'</div>';
+        });
+        h+='</div></div>';
+      });
+      h+='</div>';
+    }
+    return h;
+  }
+  function wireAcc(box){
+    box.querySelectorAll('[data-kq-head]').forEach(function(bh){
+      if(bh._wired) return; bh._wired=true;
+      bh.addEventListener('click',function(){
+        var bd=box.querySelector('[data-kq-body="'+bh.getAttribute('data-kq-head')+'"]');
+        if(!bd) return;
+        var isHidden=bd.classList.toggle('hidden');
+        bh.setAttribute('aria-expanded', isHidden?'false':'true');
+      });
+    });
+  }
+  function ensureCard(msisdn){
+    var card=list.querySelector('[data-kq-card="'+msisdn+'"]');
+    if(card) return card;
+    card=document.createElement('div');
+    card.className='rounded border border-border/40 bg-base/20 overflow-hidden';
+    card.setAttribute('data-kq-card',msisdn);
+    card.innerHTML='<div class="p-1.5" data-kq-bodybox="'+esc(msisdn)+'"><p class="text-xs text-muted">Memuat data tersimpan...</p></div>';
+    list.insertBefore(card,list.firstChild);
+    return card;
+  }
+  function fmtTs(iso){ if(!iso) return ''; try{ var d=new Date(iso); if(isNaN(d.getTime())) return String(iso); var p=function(n){ return (n<10?'0':'')+n; }; return p(d.getDate())+'-'+p(d.getMonth()+1)+'-'+d.getFullYear()+' '+p(d.getHours())+':'+p(d.getMinutes()); }catch(e){ return String(iso||''); } }
+  function tsLine(ts,fresh){ var t=fmtTs(ts||new Date().toISOString()); return '<p class="text-[10px] text-muted pt-0.5">'+(fresh?'Diperbarui ':'Data tersimpan ')+esc(t)+(fresh?'':' &middot; klik Refresh untuk data baru')+'</p>'; }
+  function paintUpstream(box,body,msisdn,fresh,ts){ box.innerHTML=cardInner(body,msisdn)+tsLine(ts,fresh); wireAcc(box); }
+  function showCache(msisdn){
+    ensureCard(msisdn);
+    var box=list.querySelector('[data-kq-bodybox="'+msisdn+'"]');
+    if(!box) return Promise.resolve();
+    return fetch('/api/sidompul/cache?msisdn='+encodeURIComponent(msisdn),{cache:'no-store'})
+      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,st:r.status,body:j}; }); })
+      .then(function(res){
+        if(res.ok&&(res.body&&(res.body.data||res.body.status))){ var up=res.body.data||res.body; paintUpstream(box,up,msisdn,false,res.body.fetchedAt); }
+        else if(res.st===404) box.innerHTML='<div class="rounded border border-border/40 bg-base/20 px-2 py-1.5 text-xs text-muted">Belum ada data tersimpan, klik Refresh.</div>';
+        else box.innerHTML='<div class="rounded border border-error/20 bg-error/10 px-2 py-1.5 text-xs text-error">'+esc((res.body&&(res.body.error||res.body.message))||('HTTP '+res.st))+'</div>';
+      })
+      .catch(function(err){ box.innerHTML='<div class="rounded border border-error/20 bg-error/10 px-2 py-1.5 text-xs text-error">Koneksi gagal: '+esc((err&&err.message)||err)+'</div>'; });
+  }
+  function loadCard(msisdn){
+    ensureCard(msisdn);
+    var box=list.querySelector('[data-kq-bodybox="'+msisdn+'"]');
+    if(!box) return Promise.resolve();
+    box.innerHTML='<p class="text-xs text-muted">Memproses...</p>';
+    return fetch('/api/sidompul/cek?msisdn='+encodeURIComponent(msisdn),{cache:'no-store'})
+      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,st:r.status,body:j}; }); })
+      .then(function(res){
+        if(res.ok){ paintUpstream(box,res.body,msisdn,true); }
+        else box.innerHTML='<div class="rounded border border-error/20 bg-error/10 px-2 py-1.5 text-xs text-error">'+esc((res.body&&(res.body.error||res.body.message))||('HTTP '+res.st))+'</div>';
+      })
+      .catch(function(err){ box.innerHTML='<div class="rounded border border-error/20 bg-error/10 px-2 py-1.5 text-xs text-error">Koneksi gagal: '+esc((err&&err.message)||err)+'</div>'; });
+  }
+  function showAllCache(){
+    var nodes=list.querySelectorAll('[data-kq-card]'), ids=[], i;
+    for(i=0;i<nodes.length;i++) ids.push(nodes[i].getAttribute('data-kq-card'));
+    Promise.all(ids.map(showCache));
+  }
+  function loadAll(){
+    var nodes=list.querySelectorAll('[data-kq-card]'), ids=[], i;
+    for(i=0;i<nodes.length;i++) ids.push(nodes[i].getAttribute('data-kq-card'));
+    setSt('loading '+ids.length+' nomor...',true);
+    Promise.all(ids.map(loadCard)).then(function(){ setSt('',false); });
+  }
+  list.addEventListener('click',function(e){
+    var b=(e.target&&e.target.closest)?e.target.closest('[data-kq-refresh]'):null;
+    if(!b) return;
+    setSt('loading...',true);
+    loadCard(b.getAttribute('data-kq-refresh')).then(function(){ setSt('',false); });
+  });
+  var btnAll=document.getElementById('kuota-refresh-all');
+  if(btnAll) btnAll.addEventListener('click',loadAll);
+  if(form) form.addEventListener('submit',function(e){
+    e.preventDefault();
+    var inp=document.getElementById('kuota-nomor');
+    var errEl=document.getElementById('kuota-form-err');
+    var msisdn=normalize(inp?inp.value:'');
+    if(errEl) errEl.classList.add('hidden');
+    if(!/^62\d{8,14}$/.test(msisdn)){ if(errEl){ errEl.textContent='Nomor tidak valid (contoh 0878xxx).'; errEl.classList.remove('hidden'); } if(inp) inp.focus(); return; }
+    setSt('loading...',true);
+    loadCard(msisdn).then(function(){ setSt('',false); });
+  });
+  window.kuotaAuto=function(){ showAllCache(); };
+})();
+</script>
+
+<script>
+// Telkomsel Halo: buka tab tampil cache, Refresh fetch baru via /api/telkomsel/* (proxy, secret di server).
+(function(){
+  var box=document.getElementById('tsel-body');
+  if(!box) return;
+  var st=document.getElementById('tsel-status');
+  var btn=document.getElementById('tsel-refresh');
+  function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
+  function setSt(t,show){ if(!st) return; st.textContent=t; st.classList.toggle('hidden',!show); }
+  function fmtRp(n){ try{ n=Number(n); if(isNaN(n)) return "-"; return "Rp"+n.toLocaleString('id-ID'); }catch(e){ return String(n); } }
+  function fmtDate(v){ if(!v) return "-"; var s=String(v).trim(),m=s.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) return m[3]+"-"+m[2]+"-"+m[1]; return s; }
+  var tselColors={internet:'#ef4444',application:'#3b82f6',voice:'#22c55e',sms:'#d97706'};
+  var tselLabels={internet:'Internet',application:'Aplikasi',voice:'Telepon',sms:'SMS'};
+  function bar(p,color){ p=Math.max(0,Math.min(100,Number(p)||0)); var c=color||'#14b8a6'; return '<div class="h-1 rounded bg-base border border-border/40 overflow-hidden"><div class="h-full" style="width:'+p+'%;background:'+c+'"></div></div>'; }
+  function tselDonut(bon){
+    function pctOf(k){ var v=bon&&bon[k]; if(!v) return 0; var n=Number(String(v.percentage).replace(/[^0-9.]/g,'')); return isNaN(n)?0:Math.max(0,Math.min(100,n)); }
+    var items=[{k:'internet',pct:pctOf('internet'),r:36},{k:'application',pct:pctOf('application'),r:27},{k:'voice',pct:pctOf('voice'),r:18},{k:'sms',pct:pctOf('sms'),r:11}];
+    var svg='<svg viewBox="0 0 100 100" class="w-[110px] h-[110px] -rotate-90"><circle cx="50" cy="50" r="36" fill="none" stroke="#27272a" stroke-width="4"/><circle cx="50" cy="50" r="27" fill="none" stroke="#27272a" stroke-width="4"/><circle cx="50" cy="50" r="18" fill="none" stroke="#27272a" stroke-width="4"/><circle cx="50" cy="50" r="11" fill="none" stroke="#27272a" stroke-width="4"/>';
+    items.forEach(function(it){
+      var circ=2*Math.PI*it.r;
+      var len=circ*(it.pct/100);
+      var col=tselColors[it.k]||'#14b8a6';
+      var op=it.pct>0?'1':'0.35';
+      svg+='<circle cx="50" cy="50" r="'+it.r+'" fill="none" stroke="'+col+'" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="'+len.toFixed(2)+' '+(circ-len).toFixed(2)+'" opacity="'+op+'"/>';
+    });
+    svg+='</svg>';
+    return '<div class="flex flex-col items-center gap-1.5">'+svg+'</div>';
+  }
+  function row(k,v){ return '<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">'+esc(k)+'</span><span class="text-text font-mono text-right break-all">'+esc(v)+'</span></div>'; }
+  function tsLine(ts,fresh){ var t=""; try{ var d=new Date(ts); if(!isNaN(d.getTime())){ var p=function(n){ return (n<10?'0':'')+n; }; t=p(d.getDate())+'-'+p(d.getMonth()+1)+'-'+d.getFullYear()+' '+p(d.getHours())+':'+p(d.getMinutes()); } else t=String(ts||''); }catch(e){ t=String(ts||''); } return '<p class="text-[10px] text-muted pt-0.5">'+(fresh?'Diperbarui ':'Data tersimpan ')+esc(t)+(fresh?'':' &middot; klik Refresh untuk data baru')+'</p>'; }
+  function render(out,fresh){
+    if(!out) return '<div class="rounded border border-error/20 bg-error/10 px-2 py-1.5 text-xs text-error">Belum ada data.</div>';
+    var h='';
+    var prof=(out.profile&&out.profile.data)||null;
+    var bon=(out.bonuses&&out.bonuses.data&&out.bonuses.data.activeBonuses)||null;
+    h+='<div class="rounded border border-border/40 bg-base/20 p-1.5 space-y-0.5">';
+    h+='<p class="text-[11px] font-semibold uppercase tracking-wider text-muted">Profil</p>';
+    h+=row("MSISDN", prof?(prof.identifier||out.msisdn||"-"):(out.msisdn||"-"));
+    h+=row("Layanan", prof?(prof.serviceType||"-"):"-");
+    if(prof&&prof.billCycle) h+=row("Periode", fmtDate(prof.billCycle.startDate)+" s/d "+fmtDate(prof.billCycle.endDate));
+    if(prof&&prof.bill){ h+=row("Tagihan", fmtRp(prof.bill.amount)); h+=row("Jatuh tempo", fmtDate(prof.bill.dueDate)); }
+    if(prof&&prof.usage&&prof.usage.domestic) h+=row("Pemakaian domestik", fmtRp(prof.usage.domestic.amount));
+    h+='</div>';
+    if(bon){
+      h+='<div class="grid grid-cols-1 sm:grid-cols-2 gap-1 content-start">';
+      [["internet","Internet"],["application","Aplikasi"],["voice","Telepon"],["sms","SMS"]].forEach(function(k){
+        var b=bon[k[0]]; if(!b) return;
+        var col=tselColors[k[0]]||'#14b8a6';
+        var isZero=String(b.remaining||'0').trim()==='0' || String(b.remaining||'0').trim()==='0 min' || String(b.remaining||'0').trim()==='0 SMS';
+        var pct=Number(String(b.percentage||'').replace(/[^0-9.]/g,'')); if(!(pct>0)){ var _r=Number(String(b.remaining||'').replace(/[^0-9.]/g,'')); var _t=Number(String(b.total||'').replace(/[^0-9.]/g,'')); pct=_t>0?Math.max(0,Math.min(100,(_r/_t)*100)):(_r>0?100:0); }
+        h+='<div class="rounded border bg-base/20 p-1.5 space-y-0.5" style="border-color:'+col+'30;background:linear-gradient(135deg, '+col+'14, transparent 62%)">';
+        h+='<div class="flex items-center gap-1.5 text-xs"><span class="h-2 w-2 rounded-full shrink-0" style="background:'+col+'"></span><span class="font-semibold" style="color:'+col+'">'+esc(k[1])+'</span><span class="ml-auto font-mono text-[11px] '+(isZero?'text-muted':'text-text')+'">'+esc(b.remaining||"0")+" / "+esc(b.total||"0")+'</span></div>'+bar(pct,col)+'</div>';
+      });
+      h+='</div>';
+    } else {
+      h+='<div class="rounded border border-border/40 bg-base/20 px-2 py-1.5 text-xs text-muted">Tidak ada data kuota.</div>';
+    }
+    h+=tsLine(out.fetchedAt,fresh);
+    return h;
+  }
+  function showCache(){
+    setSt('loading...',true);
+    return fetch('/api/telkomsel/cache',{cache:'no-store'})
+      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,st:r.status,body:j}; }); })
+      .then(function(res){
+        if(res.ok){ var d=res.body.data||res.body; box.innerHTML=render(d,false); }
+        else if(res.st===404) box.innerHTML='<div class="rounded border border-border/40 bg-base/20 px-2 py-1.5 text-xs text-muted">Belum ada data tersimpan, klik Refresh.</div>';
+        else box.innerHTML='<div class="rounded border border-error/20 bg-error/10 px-2 py-1.5 text-xs text-error">'+esc((res.body&&(res.body.error||res.body.message))||('HTTP '+res.st))+'</div>';
+      })
+      .catch(function(err){ box.innerHTML='<div class="rounded border border-error/20 bg-error/10 px-2 py-1.5 text-xs text-error">Koneksi gagal: '+esc((err&&err.message)||err)+'</div>'; })
+      .then(function(){ setSt('',false); });
+  }
+  function refresh(){
+    setSt('loading...',true);
+    box.innerHTML='<p class="text-xs text-muted">Memproses...</p>';
+    return fetch('/api/telkomsel/cek',{cache:'no-store'})
+      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,st:r.status,body:j}; }); })
+      .then(function(res){
+        if(res.ok){ var d=res.body.data||res.body; box.innerHTML=render(d,true); }
+        else box.innerHTML='<div class="rounded border border-error/20 bg-error/10 px-2 py-1.5 text-xs text-error">'+esc((res.body&&(res.body.error||res.body.message))||('HTTP '+res.st))+'</div>';
+      })
+      .catch(function(err){ box.innerHTML='<div class="rounded border border-error/20 bg-error/10 px-2 py-1.5 text-xs text-error">Koneksi gagal: '+esc((err&&err.message)||err)+'</div>'; })
+      .then(function(){ setSt('',false); });
+  }
+  if(btn) btn.addEventListener('click',refresh);
+  window.tselAuto=function(){ showCache(); };
+})();
+</script>
+<script>
+// Tri bimatri: buka tab tampil cache, Refresh fetch baru via /api/tri/* (proxy, secret di server).
+(function(){
+  var box=document.getElementById('tri-body');
+  if(!box) return;
+  var st=document.getElementById('tri-status');
+  var btn=document.getElementById('tri-refresh');
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
+  function setSt(t,show){ if(!st) return; st.textContent=t; st.classList.toggle('hidden',!show); }
+  function tsLine(ts,fresh){ var t=''; try{ var d=new Date(ts); if(!isNaN(d.getTime())){ var p=function(n){return (n<10?'0':'')+n;}; t=p(d.getDate())+'-'+p(d.getMonth()+1)+'-'+d.getFullYear()+' '+p(d.getHours())+':'+p(d.getMinutes()); } else t=String(ts||''); }catch(e){ t=String(ts||''); } return '<p class="text-[10px] text-muted pt-0.5">'+(fresh?'Diperbarui ':'Data tersimpan ')+esc(t)+(fresh?'':' &middot; klik Refresh untuk data baru')+'</p>'; }
+  var triColors={internet:'#ef4444',aplikasi:'#3b82f6',telepon:'#22c55e',sms:'#d97706'};
+  var triLabels={internet:'Internet',aplikasi:'Aplikasi',telepon:'Telepon',sms:'SMS'};
+  function triBar(p,color){ p=Math.max(0,Math.min(100,Number(p)||0)); var cc=color||'#14b8a6'; return '<div class="h-1 rounded bg-base border border-border/40 overflow-hidden"><div class="h-full" style="width:'+p+'%;background:'+cc+'"></div></div>'; }
+  function triFmtMB(mb){ var n=Number(mb)||0; if(n>=1024) return (n/1024).toFixed(2)+' GB'; return Math.round(n)+' MB'; }
+  function triParseDashboard(dash){
+    var pkgs=(dash&&(dash.packdata&&dash.packdata.packageslist))||[];
+    var acc={internet:{rem:0,tot:0,items:[]},aplikasi:{rem:0,tot:0,items:[]},telepon:{rem:0,tot:0,items:[]},sms:{rem:0,tot:0,items:[]}};
+    if(!Array.isArray(pkgs)) return acc;
+    pkgs.forEach(function(pkg){
+      var qs=pkg.Quotas||[];
+      if(!Array.isArray(qs)) return;
+      qs.forEach(function(q){
+        var rem=q.remainingQuota!=null?Number(q.remainingQuota):Number(q.rawRemainingQuota||0);
+        var tot=q.quota!=null?Number(String(q.quota).replace(/[^0-9.]/g,'')):rem;
+        if(isNaN(tot)||tot<=0) tot=Number(q.initialQuota||q.rawInitialQuota||rem)||0;
+        if(!(rem>0||tot>0)) return;
+        var unit=String(q.quotaUnit||'').toUpperCase();
+        var benefit=String(q.benefitType||'').toUpperCase();
+        var name=((q.name||q.description||'')+' '+(pkg.PackageName||pkg.ServiceName||'')).toLowerCase();
+        var cat='internet';
+        if(unit==='SMS') cat='sms';
+        else if(unit==='MIN'||benefit==='VOICE'||name.indexOf('menit')>=0||name.indexOf('voice')>=0||name.indexOf('telepon')>=0||name.indexOf('telp')>=0) cat='telepon';
+        else if(benefit==='DATA'||unit==='MB'||unit==='GB'){
+          if(name.indexOf('youtube')>=0||name.indexOf('tiktok')>=0||name.indexOf('sosmed')>=0||name.indexOf('aplikasi')>=0||name.indexOf('apps')>=0||name.indexOf('chat')>=0||name.indexOf('unlimited app')>=0) cat='aplikasi';
+          else cat='internet';
+        }
+        acc[cat].rem+=rem; acc[cat].tot+=tot; acc[cat].items.push({name:(pkg.PackageName||pkg.ServiceName||'Paket')+' ('+(q.name||q.description||'')+')',rem:rem,tot:tot,unit:unit,validUntil:pkg.EndDate||pkg.expMsg||'-'});
+      });
+    });
+    return acc;
+  }
+  function triDonut(acc){
+    var cats=[{k:'internet',r:36},{k:'aplikasi',r:27},{k:'telepon',r:18},{k:'sms',r:11}];
+    var svg='<svg viewBox="0 0 100 100" class="w-[110px] h-[110px] -rotate-90">';
+    cats.forEach(function(cat){ svg+='<circle cx="50" cy="50" r="'+cat.r+'" fill="none" stroke="#27272a" stroke-width="4"/>'; });
+    cats.forEach(function(cat){
+      var rem=acc[cat.k]&&acc[cat.k].rem||0;
+      var tot=acc[cat.k]&&acc[cat.k].tot||0;
+      var has=rem>0||tot>0;
+      var circ=2*Math.PI*cat.r;
+      var pct=tot>0?Math.max(0,Math.min(100,(rem/tot)*100)):(has?100:0);
+      var len=circ*(pct/100);
+      var col=triColors[cat.k];
+      svg+='<circle cx="50" cy="50" r="'+cat.r+'" fill="none" stroke="'+col+'" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="'+len.toFixed(2)+' '+(circ-len).toFixed(2)+'" opacity="'+(has?'1':'0.30')+'"/>';
+    });
+    svg+='</svg>';
+    return '<div class="flex flex-col items-center gap-1.5">'+svg+'</div>';
+  }
+  function triEnqCat(it){
+    var c=String((it&&(it.category||it.type||it.kind))||'').toLowerCase();
+    if(c==='sms') return 'sms';
+    if(c==='telepon'||c==='voice'||c==='min'||c==='telp') return 'telepon';
+    if(c==='aplikasi'||c==='application'||c==='app'||c==='apps') return 'aplikasi';
+    return 'internet';
+  }
+  function triEnqRem(it){
+    if(it.exhausted) {
+      if(it.remainingFormatted!=null&&String(it.remainingFormatted)!=='') return String(it.remainingFormatted).indexOf('habis')>=0? String(it.remainingFormatted): String(it.remainingFormatted)+' (habis)';
+      var _u=String(it.quotaUnit||it.unit||'').toUpperCase(); var _r=Number(it.remainingQuota!=null?it.remainingQuota:it.rem)||0;
+      if(_u==='MIN') return Math.round(_r)+' min (habis)'; if(_u==='SMS') return Math.round(_r)+' SMS (habis)'; return '0 MB (habis)';
+    }
+    if(it.remainingFormatted!=null&&String(it.remainingFormatted)!=='') return String(it.remainingFormatted);
+    var unit=String(it.quotaUnit||it.unit||'').toUpperCase();
+    var rem=Number(it.remainingQuota!=null?it.remainingQuota:it.rem)||0;
+    if(unit==='MIN') return Math.round(rem)+' min';
+    if(unit==='SMS') return Math.round(rem)+' SMS';
+    if(unit==='GB') return triFmtMB(rem*1024);
+    if(unit==='MB'||unit==='KB'||unit==='B'||unit==='') return triFmtMB(rem);
+    return Math.round(rem)+' '+unit;
+  }
+  function renderTri(out,fresh){
+    if(!out) return '<div class="rounded border border-error/20 bg-error/10 px-2 py-1.5 text-xs text-error">Belum ada data Tri.</div>';
+    var h='';
+    var data = out.data||null;
+    var raw = out.raw||null;
+    var afCode=String((out.authFail&&out.authFail.code)||(data&&data.code)||'');
+    var afMsg=String((out.authFail&&out.authFail.message)||(data&&data.message)||'');
+    if(out.authFail||afCode==='10001'||afCode==='10005'||afMsg.indexOf('Authentication failed')>=0||afMsg.toLowerCase().indexOf('not valid')>=0){
+      var msg=afMsg||'Token Tri kadaluarsa';
+      h+='<div class="rounded border border-amber-500/20 bg-amber-500/10 px-3 py-2.5 text-xs text-amber-300">Token Tri kadaluarsa: '+esc(msg)+'<br/>Login ulang via form OTP di atas, masukkan nomor Tri &gt; Kirim OTP &gt; Verifikasi. Tidak perlu copy fetch lagi.</div>';
+      // JSON disembunyikan
+      h+=tsLine(out.fetchedAt,fresh);
+      return h;
+    }
+    if(out.items&&Array.isArray(out.items)&&out.items.length){
+      var dash2=(out.raw&&out.raw.data)||(out.raw)||(data&&data.data)||data||{};
+      var prepaid2=(dash2&&dash2.prepaidinfo)||null;
+      var pack2=(dash2&&dash2.packdata)||null;
+      var nameDash2=(dash2&&dash2.bonstriDetails)||null;
+      var balNum2=(prepaid2&&prepaid2.balance!=null)?Number(prepaid2.balance):(pack2&&pack2.lastbalance!=null?Number(pack2.lastbalance):0);
+      var activeUntil2=(prepaid2&&prepaid2.cardactiveuntil)||(pack2&&pack2.expireddate)||'-';
+      var msisdn2=(dash2&&dash2.msisdn)||out.phone||'-';
+      h+='<div class="rounded border border-border/40 bg-base/20 p-1.5 space-y-0.5">';
+      h+='<p class="text-[10px] font-semibold uppercase tracking-wider text-muted">Profil</p>';
+      h+='<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">Nomor</span><span class="text-text font-mono text-right break-all">'+esc(msisdn2)+'</span></div>';
+      h+='<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">Pulsa</span><span class="text-text font-mono text-right break-all">Rp '+(isNaN(balNum2)?'-':balNum2.toLocaleString('id-ID'))+'</span></div>';
+      h+='<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">Masa aktif</span><span class="text-text font-mono text-right break-all">'+esc(activeUntil2)+'</span></div>';
+      if(nameDash2) h+='<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">BonsTri</span><span class="text-text font-mono text-right break-all">'+esc(String(nameDash2.totalPoints!=null?nameDash2.totalPoints:(nameDash2.value||'')))+' &middot; '+esc(nameDash2.tierName||'')+'</span></div>';
+      h+='</div>';
+      h+='<div class="grid grid-cols-1 sm:grid-cols-2 gap-1 content-start">';
+      out.items.forEach(function(it){
+        var cat=triEnqCat(it);
+        var col=triColors[cat]||'#14b8a6';
+        var isEx=!!it.exhausted || Number(it.remainingQuota||0)<=0;
+        var _r=Number(it.remainingQuota!=null?it.remainingQuota:it.rem)||0;
+        var _t=Number(it.quota!=null?it.quota:it.total)||0; if(!(_t>0)) _t=Number(it.initialQuota||_r)||0;
+        var _pct=_t>0?Math.max(0,Math.min(100,(_r/_t)*100)):(_r>0?100:0);
+        h+='<div class="rounded border bg-base/20 p-1.5 space-y-0.5 '+(isEx?'opacity-60':'')+'" style="border-color:'+col+(isEx?'18':'30')+';background:linear-gradient(135deg,'+col+(isEx?'08':'14')+',transparent 62%)'+(isEx?';filter:grayscale(0.35)':'')+'">';
+        h+='<div class="flex items-center gap-1.5 text-xs"><span class="h-2 w-2 rounded-full shrink-0" style="background:'+col+'"></span><span class="font-semibold" style="color:'+col+'">'+esc(triLabels[cat]||cat)+'</span><span class="ml-auto font-mono text-[11px] text-text">'+esc(triEnqRem(it))+'</span></div>';
+        h+='<p class="text-[11px] text-muted truncate" title="'+esc(it.name||it.title||'Paket')+'">'+esc(it.name||it.title||'Paket')+'</p>';
+        h+='<p class="text-[10px] font-mono text-muted">Berlaku s/d '+esc(it.validUntil||it.expired||it.expMsg||'-')+'</p>';
+        h+=triBar(_pct,col);
+        h+='</div>';
+      });
+      h+='</div>';
+      h+=tsLine(out.fetchedAt,fresh);
+      return h;
+    }
+    if(data && typeof data==='object'){
+      var dash=(data&&data.data)||data;
+      var prepaid=(dash&&dash.prepaidinfo)||null;
+      var pack=(dash&&dash.packdata)||null;
+      var nameDash=(dash&&dash.bonstriDetails)||null;
+      var accDash=triParseDashboard(dash);
+      var balNum=(prepaid&&prepaid.balance!=null)?Number(prepaid.balance):(pack&&pack.lastbalance!=null?Number(pack.lastbalance):0);
+      var activeUntil=(prepaid&&prepaid.cardactiveuntil)||(pack&&pack.expireddate)||'-';
+      h+='<div class="rounded border border-border/40 bg-base/20 p-1.5 space-y-0.5">';
+      h+='<p class="text-[10px] font-semibold uppercase tracking-wider text-muted">Profil</p>';
+      h+='<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">Nomor</span><span class="text-text font-mono text-right break-all">'+esc((dash&&dash.msisdn)||(data&&data.msisdn)||'-')+'</span></div>';
+      h+='<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">Pulsa</span><span class="text-text font-mono text-right break-all">Rp '+(isNaN(balNum)?'-':balNum.toLocaleString('id-ID'))+'</span></div>';
+      h+='<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">Masa aktif</span><span class="text-text font-mono text-right break-all">'+esc(activeUntil)+'</span></div>';
+      if(nameDash) h+='<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">BonsTri</span><span class="text-text font-mono text-right break-all">'+esc(String(nameDash.totalPoints!=null?nameDash.totalPoints:(nameDash.value||'')))+' &middot; '+esc(nameDash.tierName||'')+'</span></div>';
+      h+='</div>';
+      h+='<div class="grid grid-cols-1 sm:grid-cols-2 gap-1 content-start">';
+      [{k:'internet',label:'Internet'},{k:'aplikasi',label:'Aplikasi'},{k:'telepon',label:'Telepon'},{k:'sms',label:'SMS'}].forEach(function(it){
+        var cat=accDash[it.k]; if(!cat) return;
+        var col=triColors[it.k];
+        var rem=cat.rem; var tot=cat.tot||0; if(!(tot>0)) tot=rem;
+        var _pct=tot>0?Math.max(0,Math.min(100,(rem/tot)*100)):(rem>0?100:0);
+        var txt=(it.k==='internet'||it.k==='aplikasi')?triFmtMB(rem):(it.k==='telepon'?Math.round(rem)+' min':Math.round(rem)+' SMS');
+        var totTxt=(it.k==='internet'||it.k==='aplikasi')?triFmtMB(tot):txt;
+        var isZero=!(rem>0);
+        h+='<div class="rounded border bg-base/20 p-1.5 space-y-0.5" style="border-color:'+col+'30;background:linear-gradient(135deg,'+col+'14,transparent 62%)">';
+        h+='<div class="flex items-center gap-1.5 text-xs"><span class="h-2 w-2 rounded-full shrink-0" style="background:'+col+'"></span><span class="font-semibold" style="color:'+col+'">'+esc(it.label)+'</span><span class="ml-auto font-mono text-[11px] '+(isZero?'text-muted':'text-text')+'">'+esc(txt)+' / '+esc(totTxt)+'</span></div>'+triBar(_pct,col)+'</div>';
+      });
+      h+='</div>';
+      var packList=(dash&&dash.packdata&&dash.packdata.packageslist)||[];
+      if(Array.isArray(packList)&&packList.length){
+        h+='<p class="text-[11px] font-semibold uppercase tracking-wider text-muted pt-1">Paket info</p>';
+        h+='<div class="grid grid-cols-1 sm:grid-cols-2 gap-1 content-start">';
+        packList.forEach(function(pkg,pi){
+          var qn=pkg.PackageName||pkg.ServiceName||'Paket';
+          var ed=pkg.EndDate||pkg.expMsg||'-';
+          var col=xlPalette[pi % xlPalette.length];
+          var qs=pkg.Quotas||[]; var qtxt='';
+          if(Array.isArray(qs)&&qs.length){ var _q=qs[0]; var _r=Number(_q.remainingQuota!=null?_q.remainingQuota:_q.rawRemainingQuota)||0; var _u=String(_q.quotaUnit||''); var _b=String(_q.benefitType||'');
+            if(_u.toUpperCase()==='SMS'||_b.toUpperCase()==='SMS') qtxt=Math.round(_r)+' SMS'; else if(_u.toUpperCase()==='MIN'||_b.toUpperCase()==='VOICE') qtxt=Math.round(_r)+' min'; else qtxt=triFmtMB(_r); }
+          h+='<div class="rounded border bg-base/20 p-1.5 space-y-0.5" style="border-color:'+col+'30;background:linear-gradient(135deg,'+col+'14,transparent 62%)">';
+          h+='<div class="flex items-center gap-1.5 text-xs"><span class="h-2 w-2 rounded-full shrink-0" style="background:'+col+'"></span><span class="font-semibold truncate" style="color:'+col+'">'+esc(qn)+'</span><span class="ml-auto font-mono text-[11px] text-text shrink-0">'+esc(qtxt)+'</span></div>';
+          h+='<p class="text-[10px] font-mono text-muted">Berlaku s/d '+esc(ed)+'</p>';
+          h+='</div>';
+        });
+        h+='</div>';
+      }
+      // JSON lengkap disembunyikan
+    } else if(raw){
+      // raw JSON disembunyikan
+    } else {
+      h+='<div class="rounded border border-border/40 bg-base/20 px-2 py-1.5 text-xs text-muted">Tidak ada data.</div>';
+    }
+    h+=tsLine(out.fetchedAt,fresh);
+    return h;
+  }
+  function showCache(){
+    setSt('loading...',true);
+    return fetch('/api/tri/cache',{cache:'no-store'})
+      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,st:r.status,body:j}; }); })
+      .then(function(res){
+        if(res.ok){ var b=res.body||{}; var d=(b.items&&b.items.length)?b:(b.data||b); box.innerHTML=renderTri(d,false); }
+        else if(res.st===404) box.innerHTML='<div class="rounded border border-border/40 bg-base/20 px-2 py-1.5 text-xs text-muted">Belum ada data Tri tersimpan, klik Refresh.</div>';
+        else box.innerHTML='<div class="rounded border border-error/20 bg-error/10 px-2 py-1.5 text-xs text-error">'+esc((res.body&&(res.body.error||res.body.message))||('HTTP '+res.st))+'</div>';
+      })
+      .catch(function(err){ box.innerHTML='<div class="rounded border border-error/20 bg-error/10 px-2 py-1.5 text-xs text-error">Koneksi gagal: '+esc((err&&err.message)||err)+'</div>'; })
+      .then(function(){ setSt('',false); });
+  }
+  function refresh(){
+    setSt('loading...',true);
+    box.innerHTML='<p class="text-xs text-muted">Memproses Tri...</p>';
+    return fetch('/api/tri/cek',{cache:'no-store'})
+      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,st:r.status,body:j}; }); })
+      .then(function(res){
+        if(res.ok || (res.body && res.body.authFail)){ var d=res.body.data||res.body; box.innerHTML=renderTri(d,true); }
+        else box.innerHTML='<div class="rounded border border-error/20 bg-error/10 px-2 py-1.5 text-xs text-error">'+esc((res.body&&(res.body.error||res.body.message))||('HTTP '+res.st))+'</div>';
+      })
+      .catch(function(err){ box.innerHTML='<div class="rounded border border-error/20 bg-error/10 px-2 py-1.5 text-xs text-error">Koneksi gagal: '+esc((err&&err.message)||err)+'</div>'; })
+      .then(function(){ setSt('',false); });
+  }
+  // OTP login elements
+  var phoneEl=document.getElementById('tri-phone');
+  var sendBtn=document.getElementById('tri-send-otp');
+  var verifyRow=document.getElementById('tri-verify-row');
+  var otpEl=document.getElementById('tri-otp');
+  var verifyBtn=document.getElementById('tri-verify-otp');
+  var cancelBtn=document.getElementById('tri-cancel-otp');
+  var loginSt=document.getElementById('tri-login-status');
+  var sessInfo=document.getElementById('tri-session-info');
+  var logoutBtn=document.getElementById('tri-logout');
+  var pendingMsisdn='';
+  function setLogin(t,err){ if(!loginSt) return; loginSt.textContent=t||''; loginSt.classList.toggle('text-error',!!err); loginSt.classList.toggle('text-muted',!err); }
+  function loadStatus(){
+    fetch('/api/tri/status',{cache:'no-store'})
+      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,body:j}; }); })
+      .then(function(res){
+        if(!res.ok || !res.body) return;
+        var b=res.body;
+        if(b.session && (b.session.phone||b.session.msisdn)){
+          var label='Login: '+esc(b.session.phone||b.session.msisdn)+(b.session.userType?' ('+esc(b.session.userType)+')':'');
+          if(sessInfo){ sessInfo.textContent=label; sessInfo.classList.remove('hidden'); }
+          if(logoutBtn) logoutBtn.classList.remove('hidden');
+        } else {
+          if(sessInfo) sessInfo.classList.add('hidden');
+          if(logoutBtn) logoutBtn.classList.add('hidden');
+        }
+        if(phoneEl && b.session && b.session.phone && !phoneEl.value) phoneEl.value=b.session.phone;
+        if(b.pending && b.pending.msisdn){
+          pendingMsisdn=b.pending.msisdn;
+          if(verifyRow) verifyRow.classList.remove('hidden');
+          setLogin('OTP dikirim ke '+b.pending.msisdn+'. Masukkan kode SMS.');
+        }
+      }).catch(function(){});
+  }
+  function sendOtp(){
+    var phone=(phoneEl&&phoneEl.value||'').trim();
+    if(!phone){ setLogin('Isi nomor Tri dulu (0895xxxxxxx).',true); if(phoneEl) phoneEl.focus(); return; }
+    setLogin('Mengirim OTP...');
+    if(sendBtn) sendBtn.disabled=true;
+    fetch('/api/tri/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:phone})})
+      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,st:r.status,body:j}; }); })
+      .then(function(res){
+        if(res.ok){
+          pendingMsisdn=res.body.msisdn||'';
+          if(verifyRow) verifyRow.classList.remove('hidden');
+          setLogin('OTP terkirim ke '+(phoneEl.value||pendingMsisdn)+'. Cek SMS dan masukkan kode.');
+          if(otpEl) otpEl.focus();
+        } else {
+          setLogin((res.body&&(res.body.error||res.body.message))||('Gagal kirim OTP (HTTP '+res.st+')'),true);
+        }
+      })
+      .catch(function(err){ setLogin('Koneksi gagal: '+((err&&err.message)||err),true); })
+      .then(function(){ if(sendBtn) sendBtn.disabled=false; loadStatus(); });
+  }
+  function verifyOtp(){
+    var otp=(otpEl&&otpEl.value||'').trim();
+    if(!/^[0-9]{4,8}$/.test(otp)){ setLogin('OTP harus 4-6 digit angka.',true); if(otpEl) otpEl.focus(); return; }
+    setLogin('Memverifikasi...');
+    if(verifyBtn) verifyBtn.disabled=true;
+    fetch('/api/tri/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({otp:otp,phone:(phoneEl&&phoneEl.value||''),transId:''})})
+      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,st:r.status,body:j}; }); })
+      .then(function(res){
+        if(res.ok){
+          if(verifyRow) verifyRow.classList.add('hidden');
+          if(otpEl) otpEl.value='';
+          setLogin('Login OK, memuat kuota...');
+          loadStatus();
+          refresh();
+        } else {
+          setLogin((res.body&&(res.body.error||res.body.message))||('OTP salah (HTTP '+res.st+')'),true);
+        }
+      })
+      .catch(function(err){ setLogin('Koneksi gagal: '+((err&&err.message)||err),true); })
+      .then(function(){ if(verifyBtn) verifyBtn.disabled=false; });
+  }
+  function doLogout(){
+    fetch('/api/tri/logout',{method:'POST'}).then(function(){ return; }).catch(function(){}).then(function(){
+      if(sessInfo) sessInfo.classList.add('hidden');
+      if(logoutBtn) logoutBtn.classList.add('hidden');
+      if(verifyRow) verifyRow.classList.add('hidden');
+      setLogin('Logout OK, login lagi untuk kuota baru.');
+      showCache();
+    });
+  }
+  if(sendBtn) sendBtn.addEventListener('click',sendOtp);
+  if(verifyBtn) verifyBtn.addEventListener('click',verifyOtp);
+  if(cancelBtn) cancelBtn.addEventListener('click',function(){ if(verifyRow) verifyRow.classList.add('hidden'); setLogin(''); });
+  if(logoutBtn) logoutBtn.addEventListener('click',doLogout);
+  if(phoneEl) phoneEl.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); sendOtp(); } });
+  if(otpEl) otpEl.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); verifyOtp(); } });
+  if(btn) btn.addEventListener('click',refresh);
+  window.triAuto=function(){ showCache(); loadStatus(); };
+})();
+</script>
 
   <!-- 9R - 9router :20127 -->
-  <section id="9r-section" class="hidden space-y-3">
+  <section id="9r-section" class="hidden space-y-1">
     <div class="rounded border border-border bg-surface/30 overflow-hidden">
-      <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 border-b border-border/60 bg-surface/20">
+      <div class="flex flex-wrap items-center justify-between gap-1.5 px-2 py-1 border-b border-border/60 bg-surface/20">
         <div class="flex items-center gap-2 min-w-0">
           <span class="h-2 w-2 rounded-full bg-accent"></span>
           <span class="text-xs font-semibold uppercase tracking-wider text-muted">9Router</span>
@@ -581,9 +1217,9 @@ tailwind.config = {
           <span id="9r-status" class="text-[11px] font-mono text-muted hidden">loading...</span>
         </div>
         <div class="flex items-center gap-1.5 shrink-0">
-          <a href="https://9r.nendi.web.id" target="_blank" rel="noopener" class="inline-flex h-7 items-center gap-1 px-2.5 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text">Open ↗</a>
-          <button id="9r-fullscreen" type="button" class="inline-flex h-7 min-h-[44px] min-w-[44px] items-center justify-center gap-1 px-2.5 rounded bg-base border border-border text-[11px] font-medium text-text hover:bg-border">Fullscreen</button>
-          <button id="9r-reload" type="button" class="inline-flex h-7 min-h-[44px] min-w-[44px] items-center justify-center w-7 rounded bg-base border border-border text-muted hover:text-text" title="Reload"><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg></button>
+          <a href="https://9r.nendi.web.id" target="_blank" rel="noopener" class="inline-flex h-6 items-center gap-1 px-2 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text">Open ↗</a>
+          <button id="9r-fullscreen" type="button" class="inline-flex h-6 min-h-[32px] min-w-[32px] items-center justify-center gap-1 px-2 rounded bg-base border border-border text-[10px] font-medium text-text hover:bg-border">Fullscreen</button>
+          <button id="9r-reload" type="button" class="inline-flex h-6 min-h-[32px] min-w-[32px] items-center justify-center w-6 rounded bg-base border border-border text-muted hover:text-text" title="Reload"><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg></button>
         </div>
       </div>
       <div id="9r-frame-wrap" class="relative bg-black">
@@ -594,9 +1230,9 @@ tailwind.config = {
   </section>
 
   <!-- CF Manager :3010 -->
-  <section id="cf-section" class="hidden space-y-3">
+  <section id="cf-section" class="hidden space-y-1">
     <div class="rounded border border-border bg-surface/30 overflow-hidden">
-      <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 border-b border-border/60 bg-surface/20">
+      <div class="flex flex-wrap items-center justify-between gap-1.5 px-2 py-1 border-b border-border/60 bg-surface/20">
         <div class="flex items-center gap-2 min-w-0">
           <span class="h-2 w-2 rounded-full bg-accent"></span>
           <span class="text-xs font-semibold uppercase tracking-wider text-muted">CF Manager</span>
@@ -604,9 +1240,9 @@ tailwind.config = {
           <span id="cf-status" class="text-[11px] font-mono text-muted hidden">loading...</span>
         </div>
         <div class="flex items-center gap-1.5 shrink-0">
-          <a href="https://cf.nendi.web.id" target="_blank" rel="noopener" class="inline-flex h-7 items-center gap-1 px-2.5 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text">Open ↗</a>
-          <button id="cf-fullscreen" type="button" class="inline-flex h-7 min-h-[44px] min-w-[44px] items-center justify-center gap-1 px-2.5 rounded bg-base border border-border text-[11px] font-medium text-text hover:bg-border">Fullscreen</button>
-          <button id="cf-reload" type="button" class="inline-flex h-7 min-h-[44px] min-w-[44px] items-center justify-center w-7 rounded bg-base border border-border text-muted hover:text-text" title="Reload"><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg></button>
+          <a href="https://cf.nendi.web.id" target="_blank" rel="noopener" class="inline-flex h-6 items-center gap-1 px-2 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text">Open ↗</a>
+          <button id="cf-fullscreen" type="button" class="inline-flex h-6 min-h-[32px] min-w-[32px] items-center justify-center gap-1 px-2 rounded bg-base border border-border text-[10px] font-medium text-text hover:bg-border">Fullscreen</button>
+          <button id="cf-reload" type="button" class="inline-flex h-6 min-h-[32px] min-w-[32px] items-center justify-center w-6 rounded bg-base border border-border text-muted hover:text-text" title="Reload"><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg></button>
         </div>
       </div>
       <div id="cf-frame-wrap" class="relative bg-black">
@@ -617,9 +1253,9 @@ tailwind.config = {
   </section>
 
   <!-- MetaCubeXD - 192.168.1.1:9090 via tunnel metacubex.nendi.web.id -->
-  <section id="metacubex-section" class="hidden space-y-3">
+  <section id="metacubex-section" class="hidden space-y-1">
     <div class="rounded border border-border bg-surface/30 overflow-hidden">
-      <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 border-b border-border/60 bg-surface/20">
+      <div class="flex flex-wrap items-center justify-between gap-1.5 px-2 py-1 border-b border-border/60 bg-surface/20">
         <div class="flex items-center gap-2 min-w-0">
           <span class="h-2 w-2 rounded-full bg-accent"></span>
           <span class="text-xs font-semibold uppercase tracking-wider text-muted">MetaCubeXD</span>
@@ -627,22 +1263,22 @@ tailwind.config = {
           <span id="metacubex-status" class="text-[11px] font-mono text-muted hidden">loading...</span>
         </div>
         <div class="flex items-center gap-1.5 shrink-0">
-          <a href="https://metacubex.nendi.web.id/ui/metacubexd/#/setup?hostname=metacubex.nendi.web.id&secret=rzx" target="_blank" rel="noopener" class="inline-flex h-7 items-center gap-1 px-2.5 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text">Open ↗</a>
-          <button id="metacubex-fullscreen" type="button" class="inline-flex h-7 min-h-[44px] min-w-[44px] items-center justify-center gap-1 px-2.5 rounded bg-base border border-border text-[11px] font-medium text-text hover:bg-border">Fullscreen</button>
-          <button id="metacubex-reload" type="button" class="inline-flex h-7 min-h-[44px] min-w-[44px] items-center justify-center w-7 rounded bg-base border border-border text-muted hover:text-text" title="Reload"><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg></button>
+          <a href="https://metacubex.nendi.web.id/ui/metacubexd/#/setup?hostname=metacubex.nendi.web.id&secret=rzx" target="_blank" rel="noopener" class="inline-flex h-6 items-center gap-1 px-2 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text">Open ↗</a>
+          <button id="metacubex-fullscreen" type="button" class="inline-flex h-6 min-h-[32px] min-w-[32px] items-center justify-center gap-1 px-2 rounded bg-base border border-border text-[10px] font-medium text-text hover:bg-border">Fullscreen</button>
+          <button id="metacubex-reload" type="button" class="inline-flex h-6 min-h-[32px] min-w-[32px] items-center justify-center w-6 rounded bg-base border border-border text-muted hover:text-text" title="Reload"><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg></button>
         </div>
       </div>
       <div id="metacubex-frame-wrap" class="relative bg-black">
         <iframe id="metacubex-iframe" title="MetaCubeXD" class="w-full block bg-white" style="height: min(72vh, 680px); min-height: 420px; border:0;" allow="clipboard-read; clipboard-write; fullscreen" loading="lazy"></iframe>
         <div id="metacubex-loader" class="absolute inset-0 flex flex-col items-center justify-center bg-black/90 text-muted"><svg class="h-6 w-6 mb-3 animate-spin text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg><span class="text-xs">Memuat MetaCubeXD...</span><button id="metacubex-load-btn" type="button" class="mt-3 h-7 px-3 rounded bg-accent text-base text-xs font-semibold hover:bg-teal-500">Muat</button></div>
       </div>
-      <div class="px-3 py-2 text-[11px] text-muted">MetaCubeXD via tunnel → <code class="px-1 py-0.5 rounded bg-surface border border-border font-mono">https://metacubex.nendi.web.id/ui/metacubexd/#/setup?hostname=metacubex.nendi.web.id&amp;secret=rzx</code> · tanpa port-forward.</div>
+      <div class="px-2 py-1 text-[11px] text-muted">MetaCubeXD via tunnel → <code class="px-1 py-0.5 rounded bg-surface border border-border font-mono">https://metacubex.nendi.web.id/ui/metacubexd/#/setup?hostname=metacubex.nendi.web.id&amp;secret=rzx</code> · tanpa port-forward.</div>
     </div>
   </section>
   <!-- Andromodem - 192.168.1.1:49153 via tunnel andromodem.nendi.web.id -->
-  <section id="andromodem-section" class="hidden space-y-3">
+  <section id="andromodem-section" class="hidden space-y-1">
     <div class="rounded border border-border bg-surface/30 overflow-hidden">
-      <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 border-b border-border/60 bg-surface/20">
+      <div class="flex flex-wrap items-center justify-between gap-1.5 px-2 py-1 border-b border-border/60 bg-surface/20">
         <div class="flex items-center gap-2 min-w-0">
           <span class="h-2 w-2 rounded-full bg-accent"></span>
           <span class="text-xs font-semibold uppercase tracking-wider text-muted">Andromodem</span>
@@ -650,9 +1286,9 @@ tailwind.config = {
           <span id="andromodem-status" class="text-[11px] font-mono text-muted hidden">loading...</span>
         </div>
         <div class="flex items-center gap-1.5 shrink-0">
-          <a href="https://andromodem.nendi.web.id" target="_blank" rel="noopener" class="inline-flex h-7 items-center gap-1 px-2.5 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text">Open ↗</a>
-          <button id="andromodem-fullscreen" type="button" class="inline-flex h-7 min-h-[44px] min-w-[44px] items-center justify-center gap-1 px-2.5 rounded bg-base border border-border text-[11px] font-medium text-text hover:bg-border">Fullscreen</button>
-          <button id="andromodem-reload" type="button" class="inline-flex h-7 min-h-[44px] min-w-[44px] items-center justify-center w-7 rounded bg-base border border-border text-muted hover:text-text" title="Reload"><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg></button>
+          <a href="https://andromodem.nendi.web.id" target="_blank" rel="noopener" class="inline-flex h-6 items-center gap-1 px-2 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text">Open ↗</a>
+          <button id="andromodem-fullscreen" type="button" class="inline-flex h-6 min-h-[32px] min-w-[32px] items-center justify-center gap-1 px-2 rounded bg-base border border-border text-[10px] font-medium text-text hover:bg-border">Fullscreen</button>
+          <button id="andromodem-reload" type="button" class="inline-flex h-6 min-h-[32px] min-w-[32px] items-center justify-center w-6 rounded bg-base border border-border text-muted hover:text-text" title="Reload"><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg></button>
         </div>
       </div>
       <div id="andromodem-frame-wrap" class="relative bg-black">
@@ -662,7 +1298,7 @@ tailwind.config = {
     </div>
   </section>
 
-  <footer class="mt-6 flex flex-col gap-2 sm:gap-3 border-t border-border pt-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] text-xs text-muted sm:flex-row sm:items-center sm:justify-between w-full min-w-0">
+  <footer class="mt-2 flex flex-col gap-1 border-t border-border pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] text-xs text-muted sm:flex-row sm:items-center sm:justify-between w-full min-w-0">
     <span id="meta" class="leading-relaxed break-words min-w-0 flex-1">-</span>
     <span id="updated" class="shrink-0 whitespace-nowrap font-mono text-[11px] sm:text-xs">Last updated: -</span>
   </footer>
@@ -670,14 +1306,14 @@ tailwind.config = {
 
 <template id="group-tpl">
   <section>
-    <h2 class="mb-2 text-xs font-semibold uppercase tracking-wider text-muted" data-group-head></h2>
-    <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5" data-group-list></ul>
+    <h2 class="mb-1 text-xs font-semibold uppercase tracking-wider text-muted" data-group-head></h2>
+    <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-1" data-group-list></ul>
   </section>
 </template>
 
 <!-- R-31 compact-card: hemat ruang vertikal, hierarchy tetap - p-2.5/gap-1/text-[13px]/badge px-1 py-px/stats gap-1 & px-2 py-1 -->
 <template id="svc-tpl">
-  <li class="rounded border border-border bg-surface/40 p-2.5 flex flex-col gap-1 min-w-0 overflow-hidden hover:bg-surface/60 transition-colors group/card">
+  <li class="rounded border border-border bg-surface/40 p-1.5 flex flex-col gap-0.5 min-w-0 overflow-hidden hover:bg-surface/60 transition-colors group/card">
     <!-- top: dot + name + badges -->
     <div class="flex items-start justify-between gap-2">
       <div class="flex items-center gap-2 min-w-0">
@@ -697,7 +1333,7 @@ tailwind.config = {
     </div>
     <p class="text-xs text-muted leading-snug line-clamp-2 min-h-[2.2em] svc-detail" data-desc></p>
     <!-- stats grid 2x2 -->
-    <div class="grid grid-cols-2 gap-1 mt-1 svc-detail">
+    <div class="grid grid-cols-2 gap-1 mt-0.5 svc-detail">
       <div data-tech-wrap hidden class="rounded bg-base border border-border/40 px-2 py-1">
         <div class="text-[10px] uppercase tracking-wider text-muted opacity-70">Stack</div>
         <div class="text-xs font-mono text-text truncate leading-none mt-0.5" data-tech></div>
@@ -716,7 +1352,7 @@ tailwind.config = {
       </div>
     </div>
     <!-- unit + uptime row -->
-    <div class="flex items-center gap-2 text-[10px] font-mono text-muted mt-1 border-t border-border/30 pt-2 svc-detail">
+    <div class="flex items-center gap-2 text-[10px] font-mono text-muted mt-0.5 border-t border-border/30 pt-1 svc-detail">
       <span class="truncate opacity-80" data-unit></span>
       <span data-up-wrap hidden class="ml-auto flex items-center gap-1 shrink-0">
         <span class="opacity-60">up</span><span class="text-text tabular-nums" data-up></span>
@@ -1120,11 +1756,11 @@ tailwind.config = {
       if(simpleGrid) simpleGrid.classList.toggle('hidden', m !== 'simple');
       if(btnSimple && btnDetail){
         if(m === 'simple'){
-          btnSimple.className = 'h-7 px-3 rounded text-xs font-medium bg-surface text-text border border-border shadow-sm';
+          btnSimple.className = 'h-7 px-3 rounded text-xs font-medium bg-base text-text border border-border shadow-sm';
           btnDetail.className = 'h-7 px-3 rounded text-xs font-medium text-muted hover:text-text';
         } else {
           btnSimple.className = 'h-7 px-3 rounded text-xs font-medium text-muted hover:text-text';
-          btnDetail.className = 'h-7 px-3 rounded text-xs font-medium bg-surface text-text border border-border shadow-sm';
+          btnDetail.className = 'h-7 px-3 rounded text-xs font-medium bg-base text-text border border-border shadow-sm';
         }
       }
       try{ localStorage.setItem(STORAGE_KEY, m); }catch(e){}
@@ -1283,10 +1919,12 @@ tailwind.config = {
   pollMetrics();
   metricsTimer = setInterval(pollMetrics, 1000);
   function initPortalViewTabs(){
+    if (window._portalTabsWired) return; window._portalTabsWired = true;
     var KEY = 'portalViewTab';
     window._portalView = localStorage.getItem(KEY) || 'overview';
     if (window._portalView === 'ssh') { window._portalView = 'terminal'; try{ localStorage.setItem(KEY, 'terminal'); }catch(e){} }
     if (window._portalView === 'owrt') { window._portalView = 'metacubex'; try{ localStorage.setItem(KEY, 'metacubex'); }catch(e){} }
+    if (window._portalView === 'sidompul') { window._portalView = 'kuota'; try{ localStorage.setItem(KEY, 'kuota'); }catch(e){} }
     var overviewSection = document.getElementById('overview-section');
     var tmSection = document.getElementById('tm-section');
     var groups = document.getElementById('groups');
@@ -1294,7 +1932,8 @@ tailwind.config = {
     var terminalSection = document.getElementById('terminal-section');
     var kuotaSection = document.getElementById('kuota-section');    var rSection = document.getElementById('9r-section');    var cfSection = document.getElementById('cf-section');
     var metacubexSection = document.getElementById('metacubex-section');
-    var andromodemSection = document.getElementById('andromodem-section');    var kuotaLoaded = false;
+    var andromodemSection = document.getElementById('andromodem-section');
+
     function loadFrame(id, url, loaderId, statusId){
       var f=document.getElementById(id), l=document.getElementById(loaderId), st=document.getElementById(statusId);
       if(!f) return;
@@ -1327,114 +1966,6 @@ tailwind.config = {
       // timeout fallback hide loader after 12s even if no load event
       setTimeout(function(){ if(loader && !loader.classList.contains('hidden')) { /* keep loader but allow manual */ } }, 12000);
     }
-    function loadKuota(){
-      var status = document.getElementById('kuota-status');
-      if (status) { status.textContent = 'ready'; status.classList.remove('hidden'); setTimeout(function(){ if(status) status.classList.add('hidden'); }, 1200); }
-      try{ fetchTelbotStatus(); }catch(e){}
-    }
-    function setTelbotDot(ok){
-      var d=document.getElementById('telbot-dot');
-      if(!d) return;
-      d.className = ok ? 'h-2 w-2 rounded-full bg-accent animate-pulse' : 'h-2 w-2 rounded-full bg-error';
-      if(!ok && document.getElementById('telbot-state')){
-        // keep dot color via JS, tailwind bg-error/x exists
-      }
-    }
-    function telbotBadge(el, text, kind){
-      if(!el) return;
-      el.textContent=text;
-      el.classList.remove('hidden');
-      if(kind==='ok'){ el.className='px-1.5 py-0.5 rounded border border-accent/20 bg-accent/10 text-accent text-[10px] font-medium leading-none'; }
-      else if(kind==='warn'){ el.className='px-1.5 py-0.5 rounded border border-amber-500/20 bg-amber-500/10 text-amber-400 text-[10px] font-medium leading-none'; }
-      else { el.className='px-1.5 py-0.5 rounded border border-error/20 bg-error/10 text-error text-[10px] font-medium leading-none'; }
-    }
-    async function fetchTelbotStatus(){
-      var dot=document.getElementById('telbot-dot'), st=document.getElementById('telbot-state'), badge=document.getElementById('telbot-config-badge');
-      var svcEl=document.getElementById('telbot-info-service'), abEl=document.getElementById('telbot-info-autoboot'), tokEl=document.getElementById('telbot-info-token'), admEl=document.getElementById('telbot-info-admin');
-      var logEl=document.getElementById('telbot-log');
-      try{
-        var r=await fetch('/api/telbot/status',{credentials:'same-origin',cache:'no-store'});
-        if(r.status===401){ if(st) st.textContent='login dulu'; return; }
-        var j=await r.json();
-        if(!j.ok) throw new Error(j.error||'gagal');
-        var svc=j.service||{};
-        var isRunning = svc.active==='active';
-        if(dot) dot.className = isRunning ? 'h-2 w-2 rounded-full bg-accent' : 'h-2 w-2 rounded-full bg-zinc-600';
-        if(st) st.textContent = (svc.active||'?') + (svc.sub ? ' ('+svc.sub+')' : '') + (j.binaryOk ? ' · bin ok' : ' · bin missing');
-        if(badge){
-          if(!j.configured){ telbotBadge(badge,'belum dikonfigurasi','err'); }
-          else if(!isRunning){ telbotBadge(badge,'siap · belum running','warn'); }
-          else { telbotBadge(badge,'running','ok'); }
-        }
-        if(svcEl) svcEl.textContent = (svc.active||'?') + (svc.pid? ' · pid '+svc.pid : '') + (j.binaryVersion? ' · '+j.binaryVersion : '');
-        if(abEl) abEl.textContent = (svc.autoBoot ? 'ON ('+(svc.enabled||'enabled')+')' : 'OFF ('+(svc.enabled||'disabled')+')');
-        if(tokEl) tokEl.textContent = j.hasToken ? (j.tokenMasked||'••••') : '(kosong)';
-        if(admEl) admEl.textContent = j.adminId || '(kosong)';
-        // prefill admin/port if empty inputs
-        var admInp=document.getElementById('telbot-admin'); if(admInp && !admInp.value && j.adminId) admInp.value=j.adminId;
-        var portInp=document.getElementById('telbot-port'); if(portInp && !portInp.value && j.webhookPort) portInp.value=j.webhookPort;
-        // show logs preview if have
-        if(j.logs && logEl && document.getElementById('telbot-log-wrap') && !document.getElementById('telbot-log-wrap').classList.contains('hidden')){
-          // only update if wrap visible; else keep stale
-        }
-        // stash for enable/disable hint
-        window._telbotStatus=j;
-      }catch(e){
-        if(st) st.textContent='error: '+(e.message||e);
-        if(dot) dot.className='h-2 w-2 rounded-full bg-error';
-      }
-    }
-    async function telbotAction(act, btn){
-      var st=document.getElementById('telbot-state');
-      var orig = btn?btn.textContent:'';
-      try{
-        if(btn){ btn.disabled=true; btn.textContent='...'; }
-        if(st) st.textContent=act+'...';
-        var r=await fetch('/api/telbot/action',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({action:act})});
-        var j=await r.json();
-        if(!r.ok) throw new Error(j.error||('HTTP '+r.status));
-        if(st) st.textContent = act+' ok · '+(j.active||'?')+' ('+(j.sub||'')+')';
-        await fetchTelbotStatus();
-        // also refresh logs if open
-        var wrap=document.getElementById('telbot-log-wrap');
-        if(wrap && !wrap.classList.contains('hidden')) refreshTelbotLogs();
-        else if(j.logs){
-          var l=document.getElementById('telbot-log'); if(l) l.textContent=j.logs; if(wrap) wrap.classList.remove('hidden');
-        }
-      }catch(e){
-        if(st) st.textContent='error '+act+': '+(e.message||e);
-        alert('Gagal '+act+': '+(e.message||e));
-      }finally{
-        if(btn){ btn.disabled=false; btn.textContent=orig; }
-      }
-    }
-    async function refreshTelbotLogs(){
-      var l=document.getElementById('telbot-log'); var w=document.getElementById('telbot-log-wrap');
-      var info=document.getElementById('telbot-log-filter-info'); var note=document.getElementById('telbot-log-filter-note');
-      var rawToggle=document.getElementById('telbot-log-raw-toggle');
-      if(!l) return;
-      if(w) w.classList.remove('hidden');
-      l.textContent='memuat logs...';
-      if(info) { info.classList.add('hidden'); info.textContent=''; }
-      if(note) { note.classList.add('hidden'); note.textContent=''; }
-      var useRaw = !!(rawToggle && rawToggle.checked);
-      try{
-        var url = '/api/telbot/logs?n=150' + (useRaw ? '&raw=1' : '');
-        var r=await fetch(url,{credentials:'same-origin',cache:'no-store'});
-        var j=await r.json();
-        l.textContent=j.logs||'(kosong)';
-        l.scrollTop=l.scrollHeight;
-        if(!useRaw && j.filtered && j.dropped>0){
-          if(info){ info.textContent='• ' + j.dropped + '/' + j.total + ' spam disembunyikan'; info.classList.remove('hidden'); }
-          if(note){ note.textContent='[' + j.dropped + ' baris "context deadline exceeded / getUpdates" disembunyikan  -  flapping jaringan Telegram, bot tetap running. Centang raw untuk lihat semua]'; note.classList.remove('hidden'); }
-        } else if(useRaw && j.dropped!==undefined){
-          // raw mode: no filter note
-        } else if(j.filtered){
-          if(info){ info.textContent='• filtered'; info.classList.remove('hidden'); }
-        }
-      }catch(e){ l.textContent='gagal load logs: '+(e.message||e); }
-    }
-    (function(){ var rt=document.getElementById('telbot-log-raw-toggle'); if(rt) rt.addEventListener('change', function(){ refreshTelbotLogs(); }); })();
     function applyView(tab){
       window._portalView = tab;
       try{ localStorage.setItem(KEY, tab); }catch(e){}
@@ -1451,8 +1982,8 @@ tailwind.config = {
         var on = (b.getAttribute('data-view-tab') === tab);
         b.setAttribute('aria-selected', on ? 'true' : 'false');
         b.className = on
-          ? 'shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium bg-text text-base border border-text whitespace-nowrap'
-          : 'shrink-0 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-base border border-transparent whitespace-nowrap';
+          ? 'sidebar-nav-btn flex w-full items-center gap-2.5 min-h-[44px] lg:min-h-[40px] px-3 rounded-md text-sm font-medium bg-text text-base border border-text shadow-sm text-left'
+          : 'sidebar-nav-btn flex w-full items-center gap-2.5 min-h-[44px] lg:min-h-[40px] px-3 rounded-md text-sm font-medium text-muted hover:text-text hover:bg-base border border-transparent text-left';
       });
       if (overviewSection) overviewSection.classList.toggle('hidden', !isOverview);
       if (tmSection) tmSection.classList.toggle('hidden', !isTasks);
@@ -1463,8 +1994,10 @@ tailwind.config = {
       if (cfSection) cfSection.classList.toggle('hidden', !isCf);
       if (metacubexSection) metacubexSection.classList.toggle('hidden', !isMetacubex);
       if (andromodemSection) andromodemSection.classList.toggle('hidden', !isAndromodem);
+      if (typeof window.kuotaAuto === 'function' && isKuota) { try { window.kuotaAuto(); } catch (e) {} }
+      if (typeof window.tselAuto === 'function' && isKuota) { try { window.tselAuto(); } catch (e) {} }
+      if (typeof window.triAuto === 'function' && isKuota) { try { window.triAuto(); } catch (e) {} }
       if (isTerminal) loadTerminal();
-      if (isKuota) loadKuota();
       if (isOverview) { try{ refreshOverview(); }catch(e){} }
       if (is9r) load9r();
       if (isCf) loadCf();
@@ -1476,8 +2009,93 @@ tailwind.config = {
     }
     applyView(window._portalView);
     document.querySelectorAll('[data-view-tab]').forEach(function(b){
-      b.addEventListener('click', function(){ applyView(b.getAttribute('data-view-tab')); });
+      b.addEventListener('click', function(){
+        applyView(b.getAttribute('data-view-tab'));
+        // close mobile drawer after selection
+        if (window.innerWidth < 1024) { try{ closeSidebar(); }catch(e){} }
+      });
     });
+    // sidebar collapse/expand + mobile drawer
+    (function(){
+      var sidebar = document.getElementById('portal-sidebar');
+      var overlay = document.getElementById('sidebar-overlay');
+      var btnToggle = document.getElementById('btn-sidebar-toggle');
+      var btnOpen = document.getElementById('btn-sidebar-open');
+      var btnClose = document.getElementById('btn-sidebar-close');
+      var KEY = 'portalSidebarCollapsed';
+      function isMobile(){ return window.innerWidth < 1024; }
+      function applyCollapsed(collapsed){
+        if (!sidebar) return;
+        if (isMobile()) return; // ignore on mobile, always expanded width
+        sidebar.setAttribute('data-collapsed', collapsed ? 'true' : 'false');
+        if(btnToggle) btnToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        try{ localStorage.setItem(KEY, collapsed ? '1' : '0'); }catch(e){}
+      }
+      function openSidebar(){
+        if(!sidebar) return;
+        sidebar.classList.remove('hidden');
+        // force reflow then add is-open for transition
+        void sidebar.offsetWidth;
+        sidebar.classList.add('is-open');
+        sidebar.classList.remove('hidden');
+        sidebar.classList.add('flex');
+        if(overlay){ overlay.classList.remove('hidden'); overlay.style.display='block'; }
+        document.body.style.overflow='hidden';
+      }
+      function closeSidebar(){
+        if(!sidebar) return;
+        if(isMobile()){
+          sidebar.classList.remove('is-open');
+          setTimeout(function(){ if(!sidebar.classList.contains('is-open')) { sidebar.classList.add('hidden'); sidebar.classList.remove('flex'); } }, 280);
+          if(overlay){ overlay.classList.add('hidden'); overlay.style.display='none'; }
+          document.body.style.overflow='';
+        }
+      }
+      window.openSidebar = openSidebar;
+      window.closeSidebar = closeSidebar;
+      // init collapsed from storage (desktop only)
+      try{
+        var saved = localStorage.getItem(KEY);
+        if(saved === '1' && !isMobile()) applyCollapsed(true);
+        else if(saved === '0' && !isMobile()) applyCollapsed(false);
+      }catch(e){}
+      if(btnToggle && !btnToggle._wired){ btnToggle._wired=true; btnToggle.addEventListener('click', function(){
+        var cur = sidebar.getAttribute('data-collapsed') === 'true';
+        applyCollapsed(!cur);
+      }); }
+      if(btnOpen && !btnOpen._wired){ btnOpen._wired=true; btnOpen.addEventListener('click', openSidebar); }
+      if(btnClose && !btnClose._wired){ btnClose._wired=true; btnClose.addEventListener('click', closeSidebar); }
+      if(overlay && !overlay._wired){ overlay._wired=true; overlay.addEventListener('click', closeSidebar); }
+      document.addEventListener('keydown', function(e){
+        if(e.key === 'Escape' && isMobile() && sidebar && sidebar.classList.contains('is-open')) closeSidebar();
+      });
+      window.addEventListener('resize', function(){
+        if(!isMobile()){
+          // ensure desktop sidebar visible
+          sidebar.classList.remove('hidden');
+          sidebar.classList.add('flex');
+          sidebar.classList.remove('is-open');
+          if(overlay){ overlay.classList.add('hidden'); }
+          document.body.style.overflow='';
+          // hide mobile open button? no
+        } else {
+          // on mobile, hide sidebar by default unless open
+          if(!sidebar.classList.contains('is-open')){
+            sidebar.classList.add('hidden');
+            sidebar.classList.remove('flex');
+          }
+        }
+      });
+      // on load, set correct visibility for mobile/desktop
+      if(isMobile()){
+        sidebar.classList.add('hidden');
+        sidebar.classList.remove('flex');
+        sidebar.classList.remove('lg:flex');
+      } else {
+        sidebar.classList.remove('hidden');
+        sidebar.classList.add('flex');
+      }
+    })();
     // SSH controls
     var sshBtn = document.getElementById('terminal-load-btn');
     if (sshBtn) sshBtn.addEventListener('click', function(){ var f=document.getElementById('terminal-iframe'); if(f && !f.getAttribute('src')) { f.setAttribute('src','https://ssh.nendi.web.id'); var l=document.getElementById('terminal-loader'); if(l) l.classList.add('hidden'); }});
@@ -1506,44 +2124,6 @@ tailwind.config = {
     wireDash('cf','https://cf.nendi.web.id');
     wireDash('metacubex','https://metacubex.nendi.web.id/ui/metacubexd/#/setup?hostname=metacubex.nendi.web.id&secret=rzx');
     wireDash('andromodem','https://andromodem.nendi.web.id');
-    // Kuota help toggle (local, bukan GitHub)
-    var kuotaHelpBtn2=document.getElementById('kuota-help');
-    var kuotaHelpBox2=document.getElementById('kuota-help-box');
-    if(kuotaHelpBtn2 && kuotaHelpBox2) kuotaHelpBtn2.addEventListener('click', function(){
-      kuotaHelpBox2.classList.toggle('hidden');
-      kuotaHelpBtn2.textContent = kuotaHelpBox2.classList.contains('hidden') ? 'Help' : 'Tutup';
-    });
-    // --- Telbot wiring ---
-    var telbotForm=document.getElementById('telbot-config-form');
-    if(telbotForm) telbotForm.addEventListener('submit', async function(e){
-      e.preventDefault();
-      var tokEl=document.getElementById('telbot-token'), admEl=document.getElementById('telbot-admin'), portEl=document.getElementById('telbot-port'), secEl=document.getElementById('telbot-secret'), msgEl=document.getElementById('telbot-save-msg');
-      var token=(tokEl?tokEl.value:'').trim(), adminId=(admEl?admEl.value:'').trim(), webhookPort=(portEl?portEl.value:'').trim(), webhookSecret=(secEl?secEl.value:'').trim();
-      if(msgEl) { msgEl.textContent='menyimpan...'; msgEl.className='text-xs font-mono text-muted'; }
-      try{
-        var r=await fetch('/api/telbot/config',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({token:token,adminId:adminId,webhookPort:webhookPort,webhookSecret:webhookSecret})});
-        var j=await r.json();
-        if(!r.ok) throw new Error(j.error||('HTTP '+r.status));
-        if(msgEl){ msgEl.textContent='✓ '+ (j.message||'tersimpan') + (j.maskedToken ? ' ('+j.maskedToken+')' : ''); msgEl.className='text-xs font-mono text-accent'; }
-        if(tokEl) tokEl.value=''; if(secEl) secEl.value='';
-        await fetchTelbotStatus();
-        setTimeout(function(){ if(msgEl) msgEl.textContent=''; }, 4000);
-      }catch(err){
-        if(msgEl){ msgEl.textContent='✗ '+(err.message||err); msgEl.className='text-xs font-mono text-error'; }
-      }
-    });
-    var tbStart=document.getElementById('telbot-btn-start'), tbStop=document.getElementById('telbot-btn-stop'), tbRestart=document.getElementById('telbot-btn-restart'), tbLogs=document.getElementById('telbot-btn-logs');
-    if(tbStart) tbStart.addEventListener('click', function(){ telbotAction('start', tbStart); });
-    if(tbStop) tbStop.addEventListener('click', function(){ telbotAction('stop', tbStop); });
-    if(tbRestart) tbRestart.addEventListener('click', function(){ telbotAction('restart', tbRestart); });
-    if(tbLogs) tbLogs.addEventListener('click', function(){ refreshTelbotLogs(); });
-    var tLogRefresh=document.getElementById('telbot-log-refresh'); if(tLogRefresh) tLogRefresh.addEventListener('click', refreshTelbotLogs);
-    var tEnable=document.getElementById('telbot-enable'); if(tEnable) tEnable.addEventListener('click', function(){ telbotAction('enable', tEnable); });
-    var tDisable=document.getElementById('telbot-disable'); if(tDisable) tDisable.addEventListener('click', function(){ telbotAction('disable', tDisable); });
-    // initial fetch if kuota already active on load (deferred via applyView, but also warm)
-    setTimeout(function(){ try{ if(window._portalView==='kuota') fetchTelbotStatus(); }catch(e){} }, 700);
-
-
     var sshFs = document.getElementById('terminal-fullscreen');
     if (sshFs) sshFs.addEventListener('click', function(){
       var wrap=document.getElementById('terminal-frame-wrap'); if(!wrap) return;
@@ -1571,18 +2151,11 @@ tailwind.config = {
 (function(){
   var banner = document.getElementById('net-banner');
   var retryBtn = document.getElementById('net-retry');
-  var hdrLive = document.getElementById('hdr-live');
-  var liveOnHTML = hdrLive ? hdrLive.innerHTML : '<span class="h-2 w-2 rounded-full bg-accent animate-pulse"></span> LIVE';
-  var liveOffHTML = '<span class="h-2 w-2 rounded-full bg-zinc-500"></span> OFFLINE';
   // ensure banner hidden initially via style + class
   function isOnline(){ return typeof navigator !== 'undefined' ? navigator.onLine : true; }
   function updateNetUI(online){
     if (online === undefined) online = isOnline();
     window.__isOnline = online;
-    if (hdrLive){
-      hdrLive.innerHTML = online ? liveOnHTML : liveOffHTML;
-      hdrLive.className = online ? 'inline-flex items-center gap-1.5 text-xs' : 'inline-flex items-center gap-1.5 text-xs text-muted';
-    }
     if (banner){
       if (online){
         banner.classList.add('hidden');
@@ -1724,5 +2297,5 @@ tailwind.config = {
   })();
 
 </script>
-</body>
+<script>/* anti-zoom */(function(){try{document.addEventListener("touchmove",function(e){if(e.touches&&e.touches.length>1) e.preventDefault()},{passive:false});document.addEventListener("gesturestart",function(e){e.preventDefault()});let last=0;document.addEventListener("touchend",function(e){let now=Date.now();if(now-last<350){let tg=e.target; if(tg&&(tg.closest("input,textarea,select")||tg.isContentEditable)) return; e.preventDefault()} last=now},{passive:false});}catch(e){}})();</script></body>
 </html>
