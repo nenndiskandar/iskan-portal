@@ -580,15 +580,14 @@ tailwind.config = {
     <div class="rounded border border-border bg-surface/30 overflow-hidden flex flex-col">
       <div class="flex flex-wrap items-center justify-between gap-1.5 px-2 py-1 border-b border-border/60 bg-surface/20">
         <div class="flex items-center gap-2 min-w-0">
-          <span class="h-2 w-2 rounded-full bg-[#ef4444]"></span>
-          <span class="text-xs font-semibold uppercase tracking-wider text-muted">Kuota</span>
-          <span class="hidden sm:inline text-[11px] font-mono text-muted">XL · Axis · Tsel · Tri</span>
+          <img src="/icons/xl.svg" alt="XL" class="h-4 w-auto shrink-0" loading="lazy" />
+          <span class="hidden sm:inline text-[11px] font-mono text-muted">XL · Axis</span>
           <span id="kuota-status" class="text-[11px] font-mono text-muted hidden">loading...</span>
         </div>
         <button id="kuota-refresh-all" type="button" class="inline-flex h-6 min-h-[32px] min-w-[32px] items-center justify-center gap-1 px-2 rounded bg-base border border-border text-[10px] font-medium text-text hover:bg-border">Refresh</button>
       </div>
       <div class="p-1 space-y-1 flex-1">
-        <div id="kuota-list" class="grid grid-cols-1 sm:grid-cols-2 gap-1 items-start" aria-live="polite">
+        <div id="kuota-list" class="grid grid-cols-1 gap-1 items-start" aria-live="polite">
           <div class="rounded border border-border/40 bg-base/20 overflow-hidden" data-kq-card="6287873153598">
           <div class="p-1.5" data-kq-bodybox="6287873153598"><p class="text-xs text-muted">Memuat data tersimpan...</p></div>
           </div>
@@ -612,8 +611,7 @@ tailwind.config = {
     <div class="rounded border border-border bg-surface/30 overflow-hidden flex flex-col">
       <div class="flex flex-wrap items-center justify-between gap-1.5 px-2 py-1 border-b border-border/60 bg-surface/20">
         <div class="flex items-center gap-2 min-w-0">
-          <span class="h-2 w-2 rounded-full bg-accent"></span>
-          <span class="text-xs font-semibold uppercase tracking-wider text-muted">Telkomsel</span>
+          <img src="/icons/telkomsel.svg" alt="Telkomsel" class="h-4 w-auto shrink-0" loading="lazy" />
           <span class="hidden sm:inline text-[11px] font-mono text-muted">Halo</span>
           <span id="tsel-status" class="text-[11px] font-mono text-muted hidden">loading...</span>
         </div>
@@ -643,8 +641,7 @@ tailwind.config = {
     <div class="rounded border border-border bg-surface/30 overflow-hidden flex flex-col">
       <div class="flex flex-wrap items-center justify-between gap-1.5 px-2 py-1 border-b border-border/60 bg-surface/20">
         <div class="flex items-center gap-2 min-w-0">
-          <span class="h-2 w-2 rounded-full bg-[#3b82f6]"></span>
-          <span class="text-xs font-semibold uppercase tracking-wider text-muted">Tri</span>
+          <img src="/icons/tri.svg" alt="Tri" class="h-4 w-auto shrink-0" loading="lazy" />
           <span class="hidden sm:inline text-[11px] font-mono text-muted">bimatri · dashboard</span>
           <span id="tri-status" class="text-[11px] font-mono text-muted hidden">loading...</span>
         </div>
@@ -728,7 +725,7 @@ tailwind.config = {
     if(Object.prototype.toString.call(groups)==="[object Array]") groups.forEach(function(g){ (g||[]).forEach(function(p){ pkgs.push(p); }); });
     if(!pkgs.length){ h+='<div class="rounded border border-border/40 bg-base/20 px-2.5 py-2 text-xs text-muted">Tidak ada data paket.</div>'; }
     else {
-      h+='<div class="grid grid-cols-1 xl:grid-cols-2 gap-1 content-start">';
+      h+='<div class="grid grid-cols-1 md:grid-cols-2 gap-1 content-start">';
       pkgs.forEach(function(pkg,i){
         var nm=(pkg.packages&&pkg.packages.name)||"Paket", ex=dateOnly(pkg.packages&&pkg.packages.expDate);
         var hdr=esc(ex?ex+" | "+nm:nm);

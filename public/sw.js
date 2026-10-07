@@ -1,6 +1,6 @@
 // Iskan Portal PWA : robust offline v10
 // CACHE v9 + SHELL pre-cache + API network-first (offline queue, no stale) + CDN SWR + navigate NF -> cache -> offline + static CF + background update + SKIP_WAITING + periodic cleanup
-const CACHE = 'iskan-portal-v43';
+const CACHE = 'iskan-portal-v44';
 const OFFLINE_URL = '/offline.html';
 const SHELL = [
   '/',
@@ -10,6 +10,9 @@ const SHELL = [
   '/favicon.svg',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
+  '/icons/xl.svg',
+  '/icons/telkomsel.svg',
+  '/icons/tri.svg',
   '/apple-touch-icon.png'
 ];
 
