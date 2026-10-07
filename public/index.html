@@ -729,6 +729,9 @@ tailwind.config = {
     return '<div class="flex flex-col items-center gap-1.5">'+svg+'</div>';
   }
   function dateOnly(v){ if(!v) return ""; var s=String(v).trim(),m=s.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) return m[3]+"-"+m[2]+"-"+m[1]; var d=s.match(/(\d{2})[\/-](\d{2})[\/-](\d{4})/); if(d) return d[1]+"-"+d[2]+"-"+d[3]; return s; }
+  /* sisa masa aktif/tenggang/paket: 'berlaku 4 tahun 1 bulan 2 hari lagi' / 'berakhir ... lalu' */
+  function parseTgl(v){ if(v==null) return null; if(typeof v==='number') return new Date(v>1e12?v:v*1000); var s=String(v).trim(); if(!s||s==='-') return null; if(/^\d{10,13}$/.test(s)){ var n=+s; return new Date(s.length<=10?n*1000:n); } var m=s.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) return new Date(+m[1],+m[2]-1,+m[3]); var d=s.match(/(\d{2})[\/-](\d{2})[\/-](\d{4})/); if(d) return new Date(+d[3],+d[2]-1,+d[1]); var t2=Date.parse(s); return isNaN(t2)?null:new Date(t2); }
+  function fmtSisa(v){ var t=parseTgl(v); if(!t) return ''; var now=new Date(); now.setHours(0,0,0,0); t.setHours(0,0,0,0); var fwd=t.getTime()>=now.getTime(); var a=fwd?now:t, b=fwd?t:now; var y=b.getFullYear()-a.getFullYear(), m=b.getMonth()-a.getMonth(), dd=b.getDate()-a.getDate(); if(dd<0){ m--; dd+=new Date(b.getFullYear(),b.getMonth(),0).getDate(); } if(m<0){ y--; m+=12; } var p=[]; if(y>0) p.push(y+' tahun'); if(m>0) p.push(m+' bulan'); if(dd>0) p.push(dd+' hari'); if(!p.length) return fwd?'berlaku hari ini':'berakhir hari ini'; return (fwd?'berlaku ':'berakhir ')+p.join(' ')+(fwd?' lagi':' lalu'); }
   function row(k,v,state){ var cls="text-text"; if(state===true) cls="text-accent font-semibold"; else if(state===false) cls="text-error"; return '<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">'+esc(k)+'</span><span class="'+cls+' font-mono text-right break-all">'+esc(v)+'</span></div>'; }
   function cardInner(json,msisdn){
     if(!json||!json.status||!json.data||!json.data.data_sp) return '<div class="rounded border border-error/20 bg-error/10 px-2 py-1.5 text-xs text-error">'+esc((json&&(json.message||json.error))||"Gagal ambil data")+'</div>';
@@ -738,7 +741,9 @@ tailwind.config = {
     h+='<div class="rounded border border-border/40 bg-base/20 p-1 space-y-0.5 w-full sm:w-52 lg:w-60 sm:shrink-0">';
     h+=row("MSISDN",ms)+row("Tipe Kartu",(d.prefix&&d.prefix.value)||"-")+row("Jaringan",(d.status_4g&&d.status_4g.value)||"-")+row("Verifikasi ID",(d.dukcapil&&d.dukcapil.value)||"-");
     h+=row("Umur Kartu",pick(d,["card_age.value","umur_kartu.value","active_card.value","masa_pakai.value","card_age","umur_kartu"])||scanAge(d)||"-");
-    h+=row("Masa Aktif",dateOnly(d.active_period&&d.active_period.value)||"-")+row("Masa Tenggang",dateOnly((d.grace_period&&d.grace_period.value)||(d.masa_tenggang&&d.masa_tenggang.value))||"-");
+    var maRaw=(d.active_period&&d.active_period.value)||"", mtRaw=((d.grace_period&&d.grace_period.value)||(d.masa_tenggang&&d.masa_tenggang.value))||"";
+    var maS=fmtSisa(maRaw), mtS=fmtSisa(mtRaw);
+    h+=row("Masa Aktif",(dateOnly(maRaw)||"-")+(maS?" · "+maS:""))+row("Masa Tenggang",(dateOnly(mtRaw)||"-")+(mtS?" · "+mtS:""));
     h+='</div>';
     h+='<div class="flex-1 min-w-0 w-full space-y-0.5">';
     var groups=(d.quotas&&d.quotas.value)||[], pkgs=[];
@@ -747,8 +752,8 @@ tailwind.config = {
     else {
       h+='<div class="grid grid-cols-1 md:grid-cols-2 gap-1 content-start">';
       pkgs.forEach(function(pkg,i){
-        var nm=(pkg.packages&&pkg.packages.name)||"Paket", ex=dateOnly(pkg.packages&&pkg.packages.expDate);
-        var hdr=esc(ex?ex+" | "+nm:nm);
+        var nm=(pkg.packages&&pkg.packages.name)||"Paket", exRaw=(pkg.packages&&pkg.packages.expDate)||"", ex=dateOnly(exRaw), exS=fmtSisa(exRaw);
+        var hdr=esc(ex?((exS?ex+" · "+exS:ex)+" | "+nm):nm);
         if(i>0 && pkgs[i-1] && ((pkgs[i-1].packages&&pkgs[i-1].packages.name)||"Paket")===nm && dateOnly(pkgs[i-1].packages&&pkgs[i-1].packages.expDate)===ex) hdr='';
         h+='<div class="rounded border border-border/40 bg-base/20 overflow-hidden">'+(hdr?'<div class="px-2 py-1 bg-surface/30 border-b border-border/30 text-[11px] font-semibold text-muted leading-tight">'+hdr+'</div>':'')+'<div data-kq-body="'+i+'" class="px-1.5 py-1 grid grid-cols-1 sm:grid-cols-2 gap-1 content-start">';
         var bens=pkg.benefits||[];
@@ -862,6 +867,9 @@ tailwind.config = {
   function setSt(t,show){ if(!st) return; st.textContent=t; st.classList.toggle('hidden',!show); }
   function fmtRp(n){ try{ n=Number(n); if(isNaN(n)) return '-'; return 'Rp'+n.toLocaleString('id-ID'); }catch(e){ return String(n); } }
   function fmtDate(v){ if(!v) return '-'; var s2=String(v).trim(),m=s2.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) return m[3]+'-'+m[2]+'-'+m[1]; return s2; }
+  /* sisa masa aktif/tenggang/paket: 'berlaku 4 tahun 1 bulan 2 hari lagi' / 'berakhir ... lalu' */
+  function parseTgl(v){ if(v==null) return null; if(typeof v==='number') return new Date(v>1e12?v:v*1000); var s=String(v).trim(); if(!s||s==='-') return null; if(/^\d{10,13}$/.test(s)){ var n=+s; return new Date(s.length<=10?n*1000:n); } var m=s.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) return new Date(+m[1],+m[2]-1,+m[3]); var d=s.match(/(\d{2})[\/-](\d{2})[\/-](\d{4})/); if(d) return new Date(+d[3],+d[2]-1,+d[1]); var t2=Date.parse(s); return isNaN(t2)?null:new Date(t2); }
+  function fmtSisa(v){ var t=parseTgl(v); if(!t) return ''; var now=new Date(); now.setHours(0,0,0,0); t.setHours(0,0,0,0); var fwd=t.getTime()>=now.getTime(); var a=fwd?now:t, b=fwd?t:now; var y=b.getFullYear()-a.getFullYear(), m=b.getMonth()-a.getMonth(), dd=b.getDate()-a.getDate(); if(dd<0){ m--; dd+=new Date(b.getFullYear(),b.getMonth(),0).getDate(); } if(m<0){ y--; m+=12; } var p=[]; if(y>0) p.push(y+' tahun'); if(m>0) p.push(m+' bulan'); if(dd>0) p.push(dd+' hari'); if(!p.length) return fwd?'berlaku hari ini':'berakhir hari ini'; return (fwd?'berlaku ':'berakhir ')+p.join(' ')+(fwd?' lagi':' lalu'); }
   var tselColors={internet:'#ef4444',application:'#3b82f6',voice:'#22c55e',sms:'#d97706'};
   function bar(p,color){ p=Math.max(0,Math.min(100,Number(p)||0)); var c=color||'#14b8a6'; return '<div class="h-1 rounded bg-base border border-border/40 overflow-hidden"><div class="h-full" style="width:'+p+'%;background:'+c+'"></div></div>'; }
   function row(k,v){ return '<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">'+esc(k)+'</span><span class="text-text font-mono text-right break-all">'+esc(v)+'</span></div>'; }
@@ -890,7 +898,7 @@ tailwind.config = {
       hh+=row("MSISDN", out.msisdn||out.phone||(prof2&&prof2.identifier)||"-");
       if(prof2){ if(prof2.serviceType) hh+=row("Layanan", prof2.serviceType); if(prof2.billCycle) hh+=row("Periode", fmtDate(prof2.billCycle.startDate)+" s/d "+fmtDate(prof2.billCycle.endDate)); if(prof2.bill){ hh+=row("Tagihan", fmtRp(prof2.bill.amount)); hh+=row("Jatuh tempo", fmtDate(prof2.bill.dueDate)); } }
       try{ var loy=(out.loyalty&&out.loyalty.data&&out.loyalty.data.profiles)||null; if(loy&&(loy.loyalty_points||loy.loyalty_points_category)) hh+=row("Poin", String(loy.loyalty_points||0)+" · "+(loy.loyalty_points_category||"")); }catch(e){}
-      try{ var bal=(out.balance&&out.balance.data)||null; if(bal&&(bal.balance||bal.expiry_date)){ hh+=row("Pulsa", fmtRp(String(bal.balance||"0").replace(/[^0-9]/g,""))); hh+=row("Masa aktif", fmtDate(bal.expiry_date)); } }catch(e2){}
+      try{ var bal=(out.balance&&out.balance.data)||null; if(bal&&(bal.balance||bal.expiry_date)){ hh+=row("Pulsa", fmtRp(String(bal.balance||"0").replace(/[^0-9]/g,""))); var tselMaS=fmtSisa(bal.expiry_date); hh+=row("Masa aktif", fmtDate(bal.expiry_date)+(tselMaS?" · "+tselMaS:"")); } }catch(e2){}
       hh+='</div>';
       hh+='<div class="flex-1 min-w-0 w-full space-y-1">';
       hh+='<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-1 content-start">';
@@ -910,7 +918,7 @@ tailwind.config = {
         hh+='<div class="rounded border bg-base/20 p-1 space-y-0.5" style="border-color:'+col+'30;background:linear-gradient(135deg,'+col+'14,transparent 62%)">';
         hh+='<div class="flex items-center gap-1.5 text-xs"><span class="h-2 w-2 rounded-full shrink-0" style="background:'+col+'"></span><span class="font-semibold truncate" style="color:'+col+'">'+esc(it.name||'Paket')+'</span><span class="ml-auto font-mono text-[11px] text-text shrink-0">'+esc(txt)+'</span></div>';
         hh+=bar(pct,col);
-        hh+='<p class="text-[10px] font-mono text-muted">Berlaku s/d '+esc(xp)+'</p>';
+        var xps=fmtSisa(xp); hh+='<p class="text-[10px] font-mono text-muted">Berlaku s/d '+esc(xp)+(xps?' · '+esc(xps):'')+'</p>';
         hh+='</div>';
       });
       tselGroups.forEach(function(g){
@@ -1082,6 +1090,9 @@ tailwind.config = {
   var triLabels={internet:'Internet',aplikasi:'Aplikasi',telepon:'Telepon',sms:'SMS'};
   function triBar(p,color){ p=Math.max(0,Math.min(100,Number(p)||0)); var cc=color||'#14b8a6'; return '<div class="h-1 rounded bg-base border border-border/40 overflow-hidden"><div class="h-full" style="width:'+p+'%;background:'+cc+'"></div></div>'; }
   function triFmtMB(mb){ var n=Number(mb)||0; if(n>=1024) return (n/1024).toFixed(2)+' GB'; return Math.round(n)+' MB'; }
+  /* sisa masa aktif/tenggang/paket: 'berlaku 4 tahun 1 bulan 2 hari lagi' / 'berakhir ... lalu' */
+  function parseTgl(v){ if(v==null) return null; if(typeof v==='number') return new Date(v>1e12?v:v*1000); var s=String(v).trim(); if(!s||s==='-') return null; if(/^\d{10,13}$/.test(s)){ var n=+s; return new Date(s.length<=10?n*1000:n); } var m=s.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) return new Date(+m[1],+m[2]-1,+m[3]); var d=s.match(/(\d{2})[\/-](\d{2})[\/-](\d{4})/); if(d) return new Date(+d[3],+d[2]-1,+d[1]); var t2=Date.parse(s); return isNaN(t2)?null:new Date(t2); }
+  function fmtSisa(v){ var t=parseTgl(v); if(!t) return ''; var now=new Date(); now.setHours(0,0,0,0); t.setHours(0,0,0,0); var fwd=t.getTime()>=now.getTime(); var a=fwd?now:t, b=fwd?t:now; var y=b.getFullYear()-a.getFullYear(), m=b.getMonth()-a.getMonth(), dd=b.getDate()-a.getDate(); if(dd<0){ m--; dd+=new Date(b.getFullYear(),b.getMonth(),0).getDate(); } if(m<0){ y--; m+=12; } var p=[]; if(y>0) p.push(y+' tahun'); if(m>0) p.push(m+' bulan'); if(dd>0) p.push(dd+' hari'); if(!p.length) return fwd?'berlaku hari ini':'berakhir hari ini'; return (fwd?'berlaku ':'berakhir ')+p.join(' ')+(fwd?' lagi':' lalu'); }
   function triParseDashboard(dash){
     var pkgs=(dash&&(dash.packdata&&dash.packdata.packageslist))||[];
     var acc={internet:{rem:0,tot:0,items:[]},aplikasi:{rem:0,tot:0,items:[]},telepon:{rem:0,tot:0,items:[]},sms:{rem:0,tot:0,items:[]}};
@@ -1175,7 +1186,7 @@ tailwind.config = {
       h+='<p class="text-[10px] font-semibold uppercase tracking-wider text-muted">Profil</p>';
       h+='<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">Nomor</span><span class="text-text font-mono text-right break-all">'+esc(msisdn2)+'</span></div>';
       h+='<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">Pulsa</span><span class="text-text font-mono text-right break-all">Rp '+(isNaN(balNum2)?'-':balNum2.toLocaleString('id-ID'))+'</span></div>';
-      h+='<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">Masa aktif</span><span class="text-text font-mono text-right break-all">'+esc(activeUntil2)+'</span></div>';
+      var triMaS2=fmtSisa(activeUntil2); h+='<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">Masa aktif</span><span class="text-text font-mono text-right break-all">'+esc(activeUntil2)+(triMaS2?' · '+esc(triMaS2):'')+'</span></div>';
       if(nameDash2) h+='<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">BonsTri</span><span class="text-text font-mono text-right break-all">'+esc(String(nameDash2.totalPoints!=null?nameDash2.totalPoints:(nameDash2.value||'')))+' &middot; '+esc(nameDash2.tierName||'')+'</span></div>';
       h+='</div>';
       h+='<div class="flex-1 min-w-0 w-full space-y-1">';
@@ -1190,7 +1201,7 @@ tailwind.config = {
         h+='<div class="rounded border bg-base/20 p-1.5 space-y-0.5 '+(isEx?'opacity-60':'')+'" style="border-color:'+col+(isEx?'18':'30')+';background:linear-gradient(135deg,'+col+(isEx?'08':'14')+',transparent 62%)'+(isEx?';filter:grayscale(0.35)':'')+'">';
         h+='<div class="flex items-center gap-1.5 text-xs"><span class="h-2 w-2 rounded-full shrink-0" style="background:'+col+'"></span><span class="font-semibold" style="color:'+col+'">'+esc(triLabels[cat]||cat)+'</span><span class="ml-auto font-mono text-[11px] text-text">'+esc(triEnqRem(it))+'</span></div>';
         h+='<p class="text-[11px] text-muted truncate" title="'+esc(it.name||it.title||'Paket')+'">'+esc(it.name||it.title||'Paket')+'</p>';
-        h+='<p class="text-[10px] font-mono text-muted">Berlaku s/d '+esc(it.validUntil||it.expired||it.expMsg||'-')+'</p>';
+        var triXpS=fmtSisa(it.validUntil||it.expired||it.expMsg||''); h+='<p class="text-[10px] font-mono text-muted">Berlaku s/d '+esc(it.validUntil||it.expired||it.expMsg||'-')+(triXpS?' · '+esc(triXpS):'')+'</p>';
         h+=triBar(_pct,col);
         h+='</div>';
       });
@@ -1213,7 +1224,7 @@ tailwind.config = {
       h+='<p class="text-[10px] font-semibold uppercase tracking-wider text-muted">Profil</p>';
       h+='<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">Nomor</span><span class="text-text font-mono text-right break-all">'+esc((dash&&dash.msisdn)||(data&&data.msisdn)||'-')+'</span></div>';
       h+='<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">Pulsa</span><span class="text-text font-mono text-right break-all">Rp '+(isNaN(balNum)?'-':balNum.toLocaleString('id-ID'))+'</span></div>';
-      h+='<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">Masa aktif</span><span class="text-text font-mono text-right break-all">'+esc(activeUntil)+'</span></div>';
+      var triMaS=fmtSisa(activeUntil); h+='<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">Masa aktif</span><span class="text-text font-mono text-right break-all">'+esc(activeUntil)+(triMaS?' · '+esc(triMaS):'')+'</span></div>';
       if(nameDash) h+='<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">BonsTri</span><span class="text-text font-mono text-right break-all">'+esc(String(nameDash.totalPoints!=null?nameDash.totalPoints:(nameDash.value||'')))+' &middot; '+esc(nameDash.tierName||'')+'</span></div>';
       h+='</div>';
       h+='<div class="flex-1 min-w-0 w-full space-y-1">';
@@ -1243,7 +1254,7 @@ tailwind.config = {
             if(_u.toUpperCase()==='SMS'||_b.toUpperCase()==='SMS') qtxt=Math.round(_r)+' SMS'; else if(_u.toUpperCase()==='MIN'||_b.toUpperCase()==='VOICE') qtxt=Math.round(_r)+' min'; else qtxt=triFmtMB(_r); }
           h+='<div class="rounded border bg-base/20 p-1 space-y-0.5" style="border-color:'+col+'30;background:linear-gradient(135deg,'+col+'14,transparent 62%)">';
           h+='<div class="flex items-center gap-1.5 text-xs"><span class="h-2 w-2 rounded-full shrink-0" style="background:'+col+'"></span><span class="font-semibold truncate" style="color:'+col+'">'+esc(qn)+'</span><span class="ml-auto font-mono text-[11px] text-text shrink-0">'+esc(qtxt)+'</span></div>';
-          h+='<p class="text-[10px] font-mono text-muted">Berlaku s/d '+esc(ed)+'</p>';
+          var triEdS=fmtSisa(ed); h+='<p class="text-[10px] font-mono text-muted">Berlaku s/d '+esc(ed)+(triEdS?' · '+esc(triEdS):'')+'</p>';
           h+='</div>';
         });
         h+='</div>';
