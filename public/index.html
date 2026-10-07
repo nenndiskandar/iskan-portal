@@ -893,7 +893,7 @@ tailwind.config = {
     if(out.items&&Array.isArray(out.items)&&out.items.length){
       var prof2=(out.profile&&out.profile.data)||null;
       var hh=''; hh+='<div class="flex flex-col gap-1 lg:flex-row lg:items-start">';
-      hh+='<div class="rounded border border-border/40 bg-base/20 p-1.5 space-y-0.5 w-full lg:w-72 lg:shrink-0">';
+      hh+='<div class="rounded border border-border/40 bg-base/20 p-1.5 space-y-0.5 w-full lg:w-80 lg:shrink-0">';
       hh+='<p class="text-[11px] font-semibold uppercase tracking-wider text-muted">Profil</p>';
       hh+=row("MSISDN", out.msisdn||out.phone||(prof2&&prof2.identifier)||"-");
       if(prof2){ if(prof2.serviceType) hh+=row("Layanan", prof2.serviceType); if(prof2.billCycle) hh+=row("Periode", fmtDate(prof2.billCycle.startDate)+" s/d "+fmtDate(prof2.billCycle.endDate)); if(prof2.bill){ hh+=row("Tagihan", fmtRp(prof2.bill.amount)); hh+=row("Jatuh tempo", fmtDate(prof2.bill.dueDate)); } }
@@ -934,7 +934,7 @@ tailwind.config = {
     }
     var h=''; var prof=(out.profile&&out.profile.data)||null; var bon=(out.bonuses&&out.bonuses.data&&out.bonuses.data.activeBonuses)||null;
     h+='<div class="flex flex-col gap-1 lg:flex-row lg:items-start">';
-    h+='<div class="rounded border border-border/40 bg-base/20 p-1.5 space-y-0.5 w-full lg:w-72 lg:shrink-0">';
+    h+='<div class="rounded border border-border/40 bg-base/20 p-1.5 space-y-0.5 w-full lg:w-80 lg:shrink-0">';
     h+='<p class="text-[11px] font-semibold uppercase tracking-wider text-muted">Profil</p>';
     h+=row("MSISDN", prof?(prof.identifier||out.msisdn||"-"):(out.msisdn||"-"));
     h+=row("Layanan", prof?(prof.serviceType||"-"):"-");
@@ -1182,7 +1182,7 @@ tailwind.config = {
       var activeUntil2=(prepaid2&&prepaid2.cardactiveuntil)||(pack2&&pack2.expireddate)||'-';
       var msisdn2=(dash2&&dash2.msisdn)||out.phone||'-';
       h+='<div class="flex flex-col gap-1 lg:flex-row lg:items-start">';
-      h+='<div class="rounded border border-border/40 bg-base/20 p-1.5 space-y-0.5 w-full lg:w-72 lg:shrink-0">';
+      h+='<div class="rounded border border-border/40 bg-base/20 p-1.5 space-y-0.5 w-full lg:w-80 lg:shrink-0">';
       h+='<p class="text-[10px] font-semibold uppercase tracking-wider text-muted">Profil</p>';
       h+='<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">Nomor</span><span class="text-text font-mono text-right break-all">'+esc(msisdn2)+'</span></div>';
       h+='<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">Pulsa</span><span class="text-text font-mono text-right break-all">Rp '+(isNaN(balNum2)?'-':balNum2.toLocaleString('id-ID'))+'</span></div>';
@@ -1220,7 +1220,7 @@ tailwind.config = {
       var balNum=(prepaid&&prepaid.balance!=null)?Number(prepaid.balance):(pack&&pack.lastbalance!=null?Number(pack.lastbalance):0);
       var activeUntil=(prepaid&&prepaid.cardactiveuntil)||(pack&&pack.expireddate)||'-';
       h+='<div class="flex flex-col gap-1 lg:flex-row lg:items-start">';
-      h+='<div class="rounded border border-border/40 bg-base/20 p-1.5 space-y-0.5 w-full lg:w-72 lg:shrink-0">';
+      h+='<div class="rounded border border-border/40 bg-base/20 p-1.5 space-y-0.5 w-full lg:w-80 lg:shrink-0">';
       h+='<p class="text-[10px] font-semibold uppercase tracking-wider text-muted">Profil</p>';
       h+='<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">Nomor</span><span class="text-text font-mono text-right break-all">'+esc((dash&&dash.msisdn)||(data&&data.msisdn)||'-')+'</span></div>';
       h+='<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">Pulsa</span><span class="text-text font-mono text-right break-all">Rp '+(isNaN(balNum)?'-':balNum.toLocaleString('id-ID'))+'</span></div>';
