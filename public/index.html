@@ -69,6 +69,11 @@ tailwind.config = {
   }
   #sidebar-overlay { transition: opacity 0.2s ease; }
 
+  /* sidebar tabs: sembunyikan scrollbar + judul satu baris (no wrap) */
+  #portal-sidebar nav { -ms-overflow-style: none; scrollbar-width: none; }
+  #portal-sidebar nav::-webkit-scrollbar { display: none; }
+  .sidebar-nav-btn .sidebar-label.flex-1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+
   /* animated aurora background, reason: portal infra padat tabel butuh energi di belakang; hanya pakai warna palet (accent teal + sky + error rose) opacity rendah agar kontras teks tetap AA */
   .portal-bg { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: #09090b; }
   .portal-bg i { position: absolute; display: block; border-radius: 9999px; filter: blur(60px); opacity: .75; will-change: transform; }
@@ -105,7 +110,7 @@ tailwind.config = {
       <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
     </button>
   </div>
-  <nav class="flex-1 overflow-y-auto p-2 space-y-0.5" role="tablist" aria-label="Pilih tampilan" aria-orientation="vertical">
+  <nav class="flex-1 overflow-y-auto p-2 space-y-0.5 no-scrollbar" role="tablist" aria-label="Pilih tampilan" aria-orientation="vertical">
     <button data-view-tab="overview" role="tab" aria-selected="true" class="sidebar-nav-btn flex w-full items-center gap-2.5 min-h-[44px] lg:min-h-[40px] px-3 rounded-md text-sm font-medium bg-text text-base border border-text shadow-sm text-left">
       <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
       <span class="sidebar-label flex-1 text-left">Overview</span>
