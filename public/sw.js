@@ -1,6 +1,6 @@
 // Iskan Portal PWA : robust offline v10
-// CACHE v8 + SHELL pre-cache + API network-first (offline queue, no stale) + CDN SWR + navigate NF -> cache -> offline + static CF + background update + SKIP_WAITING + periodic cleanup
-const CACHE = 'iskan-portal-v39';
+// CACHE v9 + SHELL pre-cache + API network-first (offline queue, no stale) + CDN SWR + navigate NF -> cache -> offline + static CF + background update + SKIP_WAITING + periodic cleanup
+const CACHE = 'iskan-portal-v42';
 const OFFLINE_URL = '/offline.html';
 const SHELL = [
   '/',

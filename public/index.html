@@ -576,7 +576,7 @@ tailwind.config = {
 
   <!-- Kuota - cek kuota XL/Axis via apigw (proxy server, key di server). Dua nomor preset cache-first. -->
   <section id="kuota-section" class="hidden space-y-1">
-  <div class="grid grid-cols-1 gap-1.5 items-stretch">
+  <div class="grid grid-cols-1 gap-1 items-stretch">
     <div class="rounded border border-border bg-surface/30 overflow-hidden flex flex-col">
       <div class="flex flex-wrap items-center justify-between gap-1.5 px-2 py-1 border-b border-border/60 bg-surface/20">
         <div class="flex items-center gap-2 min-w-0">
@@ -587,7 +587,7 @@ tailwind.config = {
         </div>
         <button id="kuota-refresh-all" type="button" class="inline-flex h-6 min-h-[32px] min-w-[32px] items-center justify-center gap-1 px-2 rounded bg-base border border-border text-[10px] font-medium text-text hover:bg-border">Refresh</button>
       </div>
-      <div class="p-1.5 space-y-1 flex-1">
+      <div class="p-1 space-y-1 flex-1">
         <div id="kuota-list" class="grid grid-cols-1 sm:grid-cols-2 gap-1 items-start" aria-live="polite">
           <div class="rounded border border-border/40 bg-base/20 overflow-hidden" data-kq-card="6287873153598">
           <div class="p-1.5" data-kq-bodybox="6287873153598"><p class="text-xs text-muted">Memuat data tersimpan...</p></div>
@@ -619,9 +619,25 @@ tailwind.config = {
         </div>
         <button id="tsel-refresh" type="button" class="inline-flex h-6 min-h-[32px] min-w-[32px] items-center justify-center gap-1 px-2 rounded bg-base border border-border text-[10px] font-medium text-text hover:bg-border">Refresh</button>
       </div>
-      <div class="p-1.5 space-y-1 flex-1 flex flex-col">
+      <div class="p-1 space-y-1 flex-1 flex flex-col">
+        <div class="rounded border border-border/40 bg-base/20 p-1.5 space-y-1">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-muted">Login Telkomsel (OTP SMS)</p>
+          <div class="flex flex-wrap gap-2">
+            <input id="tsel-phone" inputmode="numeric" placeholder="0811xxxxxxx" class="flex-1 min-w-[140px] h-7 rounded bg-base border border-border px-2 text-xs font-mono text-text placeholder:text-muted/60 focus:outline-none focus:ring-1 focus:ring-accent" autocomplete="tel" />
+            <button id="tsel-send-otp" type="button" class="inline-flex h-7 items-center justify-center px-3 rounded bg-accent text-base text-xs font-semibold hover:bg-teal-500 shrink-0">Kirim OTP</button>
+          </div>
+          <div id="tsel-verify-row" class="hidden flex flex-wrap gap-2">
+            <input id="tsel-otp" inputmode="numeric" maxlength="8" placeholder="Kode OTP" class="flex-1 min-w-[120px] h-7 rounded bg-base border border-border px-2 text-xs font-mono text-text placeholder:text-muted/60 focus:outline-none focus:ring-1 focus:ring-accent" />
+            <button id="tsel-verify-otp" type="button" class="inline-flex h-7 items-center justify-center px-3 rounded bg-accent text-base text-xs font-semibold hover:bg-teal-500 shrink-0">Verifikasi</button>
+            <button id="tsel-cancel-otp" type="button" class="inline-flex h-9 items-center justify-center px-3 rounded bg-base border border-border text-xs text-muted hover:text-text shrink-0">Batal</button>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 text-[11px]">
+            <span id="tsel-login-status" class="font-mono text-muted"></span>
+            <span id="tsel-session-info" class="font-mono text-muted hidden"></span>
+            <button id="tsel-logout" type="button" class="hidden ml-auto text-[11px] text-error hover:underline">Logout Tsel</button>
+          </div>
+        </div>
         <div id="tsel-body" aria-live="polite"><p class="text-xs text-muted">Memuat data tersimpan...</p></div>
-        
       </div>
     </div>
     <div class="rounded border border-border bg-surface/30 overflow-hidden flex flex-col">
@@ -634,7 +650,7 @@ tailwind.config = {
         </div>
         <button id="tri-refresh" type="button" class="inline-flex h-6 min-h-[32px] min-w-[32px] items-center justify-center gap-1 px-2 rounded bg-base border border-border text-[10px] font-medium text-text hover:bg-border">Refresh</button>
       </div>
-      <div class="p-1.5 space-y-1 flex-1 flex flex-col">
+      <div class="p-1 space-y-1 flex-1 flex flex-col">
         <div class="rounded border border-border/40 bg-base/20 p-1.5 space-y-1">
           <p class="text-[11px] font-semibold uppercase tracking-wider text-muted">Login Tri (OTP SMS)</p>
           <div class="flex flex-wrap gap-2">
@@ -651,7 +667,6 @@ tailwind.config = {
             <span id="tri-session-info" class="font-mono text-muted hidden"></span>
             <button id="tri-logout" type="button" class="hidden ml-auto text-[11px] text-error hover:underline">Logout Tri</button>
           </div>
-          <p class="text-[11px] text-muted">OTP dikirim via SMS ke nomor Tri. Setelah verifikasi, token disimpan di server &amp; kuota auto ke-cache, tidak perlu copy fetch lagi.</p>
         </div>
         <div id="tri-body" aria-live="polite"><p class="text-xs text-muted">Memuat data tersimpan...</p></div>
         
@@ -702,21 +717,23 @@ tailwind.config = {
     if(!json||!json.status||!json.data||!json.data.data_sp) return '<div class="rounded border border-error/20 bg-error/10 px-2 py-1.5 text-xs text-error">'+esc((json&&(json.message||json.error))||"Gagal ambil data")+'</div>';
     var d=json.data.data_sp, h='';
     var ms=(json.data&&json.data.msisdn)||msisdn;
-    h+='<div class="rounded border border-border/40 bg-base/20 p-1.5 space-y-0.5">';
+    h+='<div class="flex flex-col gap-1 lg:flex-row lg:items-start">';
+    h+='<div class="rounded border border-border/40 bg-base/20 p-1 space-y-0.5 w-full lg:w-60 lg:shrink-0">';
     h+=row("MSISDN",ms)+row("Tipe Kartu",(d.prefix&&d.prefix.value)||"-")+row("Jaringan",(d.status_4g&&d.status_4g.value)||"-")+row("Verifikasi ID",(d.dukcapil&&d.dukcapil.value)||"-");
     h+=row("Umur Kartu",pick(d,["card_age.value","umur_kartu.value","active_card.value","masa_pakai.value","card_age","umur_kartu"])||scanAge(d)||"-");
     h+=row("Masa Aktif",dateOnly(d.active_period&&d.active_period.value)||"-")+row("Masa Tenggang",dateOnly((d.grace_period&&d.grace_period.value)||(d.masa_tenggang&&d.masa_tenggang.value))||"-");
     h+='</div>';
+    h+='<div class="flex-1 min-w-0 w-full space-y-0.5">';
     var groups=(d.quotas&&d.quotas.value)||[], pkgs=[];
     if(Object.prototype.toString.call(groups)==="[object Array]") groups.forEach(function(g){ (g||[]).forEach(function(p){ pkgs.push(p); }); });
     if(!pkgs.length){ h+='<div class="rounded border border-border/40 bg-base/20 px-2.5 py-2 text-xs text-muted">Tidak ada data paket.</div>'; }
     else {
-      h+='<div class="space-y-1">';
+      h+='<div class="grid grid-cols-1 xl:grid-cols-2 gap-1 content-start">';
       pkgs.forEach(function(pkg,i){
         var nm=(pkg.packages&&pkg.packages.name)||"Paket", ex=dateOnly(pkg.packages&&pkg.packages.expDate);
         var hdr=esc(ex?ex+" | "+nm:nm);
         if(i>0 && pkgs[i-1] && ((pkgs[i-1].packages&&pkgs[i-1].packages.name)||"Paket")===nm && dateOnly(pkgs[i-1].packages&&pkgs[i-1].packages.expDate)===ex) hdr='';
-        h+='<div class="rounded border border-border/40 bg-base/20 overflow-hidden">'+(hdr?'<div class="px-2.5 py-1.5 bg-surface/30 border-b border-border/30 text-[11px] font-semibold text-muted leading-tight">'+hdr+'</div>':'')+'<div data-kq-body="'+i+'" class="px-2 py-1.5 space-y-1.5">';
+        h+='<div class="rounded border border-border/40 bg-base/20 overflow-hidden">'+(hdr?'<div class="px-2 py-1 bg-surface/30 border-b border-border/30 text-[11px] font-semibold text-muted leading-tight">'+hdr+'</div>':'')+'<div data-kq-body="'+i+'" class="px-1.5 py-1 grid grid-cols-1 sm:grid-cols-2 gap-1 content-start">';
         var bens=pkg.benefits||[];
         if(!bens.length) h+='<p class="text-[11px] text-muted">Tidak ada detail kuota.</p>';
         bens.forEach(function(b,bi){
@@ -724,13 +741,14 @@ tailwind.config = {
           var col=xlColorByIdx(bi);
           var isZero=String(b.remaining||'0').trim()==='0' || String(b.remaining||'0').trim().toLowerCase()==='0 gb' || String(b.remaining||'0').trim().toLowerCase()==='0 mb';
           var _pct=t>0?Math.max(0,Math.min(100,(r/t)*100)):(r>0?100:0);
-          h+='<div class="rounded border p-1.5 space-y-0.5" style="border-color:'+col+'22;background:linear-gradient(135deg,'+col+'12,transparent 65%)">';
+          h+='<div class="rounded border p-1 space-y-0.5" style="border-color:'+col+'22;background:linear-gradient(135deg,'+col+'12,transparent 65%)">';
           h+='<div class="flex justify-between gap-1.5 text-[11px] mb-0.5"><span class="flex items-center gap-1.5 font-medium truncate"><span class="h-2 w-2 rounded-full shrink-0" style="background:'+col+'"></span>'+esc(b.bname||"Kuota")+'</span><span class="font-mono '+(isZero?'text-muted':'text-text')+' shrink-0 text-[11px]">'+esc(b.remaining||"0")+" / "+esc(b.quota||"0")+'</span></div>'+xlBar(_pct,col)+'</div>';
         });
         h+='</div></div>';
       });
       h+='</div>';
     }
+    h+='</div></div>';
     return h;
   }
   function wireAcc(box){
@@ -755,7 +773,7 @@ tailwind.config = {
     return card;
   }
   function fmtTs(iso){ if(!iso) return ''; try{ var d=new Date(iso); if(isNaN(d.getTime())) return String(iso); var p=function(n){ return (n<10?'0':'')+n; }; return p(d.getDate())+'-'+p(d.getMonth()+1)+'-'+d.getFullYear()+' '+p(d.getHours())+':'+p(d.getMinutes()); }catch(e){ return String(iso||''); } }
-  function tsLine(ts,fresh){ var t=fmtTs(ts||new Date().toISOString()); return '<p class="text-[10px] text-muted pt-0.5">'+(fresh?'Diperbarui ':'Data tersimpan ')+esc(t)+(fresh?'':' &middot; klik Refresh untuk data baru')+'</p>'; }
+  function tsLine(ts,fresh){ return ''; }
   function paintUpstream(box,body,msisdn,fresh,ts){ box.innerHTML=cardInner(body,msisdn)+tsLine(ts,fresh); wireAcc(box); }
   function showCache(msisdn){
     ensureCard(msisdn);
@@ -817,63 +835,81 @@ tailwind.config = {
 </script>
 
 <script>
-// Telkomsel Halo: buka tab tampil cache, Refresh fetch baru via /api/telkomsel/* (proxy, secret di server).
+// Telkomsel native: CIAM OTP + TDW api, tanpa telbot — pola sama kayak Tri.
 (function(){
   var box=document.getElementById('tsel-body');
   if(!box) return;
   var st=document.getElementById('tsel-status');
   var btn=document.getElementById('tsel-refresh');
-  function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
   function setSt(t,show){ if(!st) return; st.textContent=t; st.classList.toggle('hidden',!show); }
-  function fmtRp(n){ try{ n=Number(n); if(isNaN(n)) return "-"; return "Rp"+n.toLocaleString('id-ID'); }catch(e){ return String(n); } }
-  function fmtDate(v){ if(!v) return "-"; var s=String(v).trim(),m=s.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) return m[3]+"-"+m[2]+"-"+m[1]; return s; }
+  function fmtRp(n){ try{ n=Number(n); if(isNaN(n)) return '-'; return 'Rp'+n.toLocaleString('id-ID'); }catch(e){ return String(n); } }
+  function fmtDate(v){ if(!v) return '-'; var s2=String(v).trim(),m=s2.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) return m[3]+'-'+m[2]+'-'+m[1]; return s2; }
   var tselColors={internet:'#ef4444',application:'#3b82f6',voice:'#22c55e',sms:'#d97706'};
-  var tselLabels={internet:'Internet',application:'Aplikasi',voice:'Telepon',sms:'SMS'};
   function bar(p,color){ p=Math.max(0,Math.min(100,Number(p)||0)); var c=color||'#14b8a6'; return '<div class="h-1 rounded bg-base border border-border/40 overflow-hidden"><div class="h-full" style="width:'+p+'%;background:'+c+'"></div></div>'; }
-  function tselDonut(bon){
-    function pctOf(k){ var v=bon&&bon[k]; if(!v) return 0; var n=Number(String(v.percentage).replace(/[^0-9.]/g,'')); return isNaN(n)?0:Math.max(0,Math.min(100,n)); }
-    var items=[{k:'internet',pct:pctOf('internet'),r:36},{k:'application',pct:pctOf('application'),r:27},{k:'voice',pct:pctOf('voice'),r:18},{k:'sms',pct:pctOf('sms'),r:11}];
-    var svg='<svg viewBox="0 0 100 100" class="w-[110px] h-[110px] -rotate-90"><circle cx="50" cy="50" r="36" fill="none" stroke="#27272a" stroke-width="4"/><circle cx="50" cy="50" r="27" fill="none" stroke="#27272a" stroke-width="4"/><circle cx="50" cy="50" r="18" fill="none" stroke="#27272a" stroke-width="4"/><circle cx="50" cy="50" r="11" fill="none" stroke="#27272a" stroke-width="4"/>';
-    items.forEach(function(it){
-      var circ=2*Math.PI*it.r;
-      var len=circ*(it.pct/100);
-      var col=tselColors[it.k]||'#14b8a6';
-      var op=it.pct>0?'1':'0.35';
-      svg+='<circle cx="50" cy="50" r="'+it.r+'" fill="none" stroke="'+col+'" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="'+len.toFixed(2)+' '+(circ-len).toFixed(2)+'" opacity="'+op+'"/>';
-    });
-    svg+='</svg>';
-    return '<div class="flex flex-col items-center gap-1.5">'+svg+'</div>';
-  }
   function row(k,v){ return '<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">'+esc(k)+'</span><span class="text-text font-mono text-right break-all">'+esc(v)+'</span></div>'; }
-  function tsLine(ts,fresh){ var t=""; try{ var d=new Date(ts); if(!isNaN(d.getTime())){ var p=function(n){ return (n<10?'0':'')+n; }; t=p(d.getDate())+'-'+p(d.getMonth()+1)+'-'+d.getFullYear()+' '+p(d.getHours())+':'+p(d.getMinutes()); } else t=String(ts||''); }catch(e){ t=String(ts||''); } return '<p class="text-[10px] text-muted pt-0.5">'+(fresh?'Diperbarui ':'Data tersimpan ')+esc(t)+(fresh?'':' &middot; klik Refresh untuk data baru')+'</p>'; }
+  function tsLine(ts,fresh){ return ''; }
+  function tselCat(it){
+    var n=String((it&&(it.name||''))||'').toLowerCase();
+    if(n.indexOf('sms')>=0) return 'sms';
+    if(n.indexOf('voice')>=0||n.indexOf('telepon')>=0||n.indexOf('telp')>=0||n.indexOf('menit')>=0||n.indexOf('min -')>=0) return 'voice';
+    if(n.indexOf('aplikasi')>=0||n.indexOf('apps')>=0||n.indexOf('youtube')>=0||n.indexOf('tiktok')>=0||n.indexOf('sosmed')>=0) return 'application';
+    return 'internet';
+  }
   function render(out,fresh){
     if(!out) return '<div class="rounded border border-error/20 bg-error/10 px-2 py-1.5 text-xs text-error">Belum ada data.</div>';
-    var h='';
-    var prof=(out.profile&&out.profile.data)||null;
-    var bon=(out.bonuses&&out.bonuses.data&&out.bonuses.data.activeBonuses)||null;
-    h+='<div class="rounded border border-border/40 bg-base/20 p-1.5 space-y-0.5">';
+    var af=out.authFail||null;
+    var isWAUB=(out.profile&&out.profile.code==='WAUB02008')||(out.bonuses&&out.bonuses.code==='WAUB02008')||(out.profileStatus===401&&out.bonusesStatus===401);
+    if(af||isWAUB){
+      var msg=(af&&af.message)||'Session habis (UNAUTHORIZED).';
+      var h=''; h+='<div class="rounded border border-amber-500/20 bg-amber-500/10 px-2 py-2 text-xs text-amber-300">Token Telkomsel kadaluarsa: '+esc(msg)+'<br/>Login ulang via form OTP di atas, masukkan nomor Telkomsel &gt; Kirim OTP &gt; Verifikasi.</div>';
+      return h;
+    }
+    if(out.items&&Array.isArray(out.items)&&out.items.length){
+      var prof2=(out.profile&&out.profile.data)||null;
+      var hh=''; hh+='<div class="flex flex-col gap-1 lg:flex-row lg:items-start">';
+      hh+='<div class="rounded border border-border/40 bg-base/20 p-1 space-y-0.5 w-full lg:w-60 lg:shrink-0">';
+      hh+='<p class="text-[11px] font-semibold uppercase tracking-wider text-muted">Profil</p>';
+      hh+=row("MSISDN", out.msisdn||out.phone||(prof2&&prof2.identifier)||"-");
+      if(prof2){ if(prof2.serviceType) hh+=row("Layanan", prof2.serviceType); if(prof2.billCycle) hh+=row("Periode", fmtDate(prof2.billCycle.startDate)+" s/d "+fmtDate(prof2.billCycle.endDate)); if(prof2.bill){ hh+=row("Tagihan", fmtRp(prof2.bill.amount)); hh+=row("Jatuh tempo", fmtDate(prof2.bill.dueDate)); } }
+      try{ var loy=(out.loyalty&&out.loyalty.data&&out.loyalty.data.profiles)||null; if(loy&&(loy.loyalty_points||loy.loyalty_points_category)) hh+=row("Poin", String(loy.loyalty_points||0)+" · "+(loy.loyalty_points_category||"")); }catch(e){}
+      try{ var bal=(out.balance&&out.balance.data)||null; if(bal&&(bal.balance||bal.expiry_date)){ hh+=row("Pulsa", fmtRp(String(bal.balance||"0").replace(/[^0-9]/g,""))); hh+=row("Masa aktif", fmtDate(bal.expiry_date)); } }catch(e2){}
+      hh+='</div>';
+      hh+='<div class="flex-1 min-w-0 w-full space-y-1">';
+      hh+='<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-1 content-start">';
+      out.items.forEach(function(it){
+        var cat=tselCat(it); var col=tselColors[cat]||'#14b8a6';
+        var txt=it.remainingFormatted||'-';
+        hh+='<div class="rounded border bg-base/20 p-1 space-y-0.5" style="border-color:'+col+'30;background:linear-gradient(135deg,'+col+'14,transparent 62%)">';
+        hh+='<div class="flex items-center gap-1.5 text-xs"><span class="h-2 w-2 rounded-full shrink-0" style="background:'+col+'"></span><span class="font-semibold truncate" style="color:'+col+'">'+esc(it.name||'Paket')+'</span><span class="ml-auto font-mono text-[11px] text-text shrink-0">'+esc(txt)+'</span></div>';
+        hh+='<p class="text-[10px] font-mono text-muted">Berlaku s/d '+esc(it.validUntil||'-')+'</p>';
+        hh+='</div>';
+      });
+      hh+='</div>'; hh+='</div>'; hh+='</div>';
+      return hh;
+    }
+    var h=''; var prof=(out.profile&&out.profile.data)||null; var bon=(out.bonuses&&out.bonuses.data&&out.bonuses.data.activeBonuses)||null;
+    h+='<div class="flex flex-col gap-1 lg:flex-row lg:items-start">';
+    h+='<div class="rounded border border-border/40 bg-base/20 p-1 space-y-0.5 w-full lg:w-60 lg:shrink-0">';
     h+='<p class="text-[11px] font-semibold uppercase tracking-wider text-muted">Profil</p>';
     h+=row("MSISDN", prof?(prof.identifier||out.msisdn||"-"):(out.msisdn||"-"));
     h+=row("Layanan", prof?(prof.serviceType||"-"):"-");
     if(prof&&prof.billCycle) h+=row("Periode", fmtDate(prof.billCycle.startDate)+" s/d "+fmtDate(prof.billCycle.endDate));
     if(prof&&prof.bill){ h+=row("Tagihan", fmtRp(prof.bill.amount)); h+=row("Jatuh tempo", fmtDate(prof.bill.dueDate)); }
-    if(prof&&prof.usage&&prof.usage.domestic) h+=row("Pemakaian domestik", fmtRp(prof.usage.domestic.amount));
     h+='</div>';
+    h+='<div class="flex-1 min-w-0 w-full space-y-1">';
     if(bon){
-      h+='<div class="grid grid-cols-1 sm:grid-cols-2 gap-1 content-start">';
+      h+='<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-1 content-start">';
       [["internet","Internet"],["application","Aplikasi"],["voice","Telepon"],["sms","SMS"]].forEach(function(k){
-        var b=bon[k[0]]; if(!b) return;
-        var col=tselColors[k[0]]||'#14b8a6';
-        var isZero=String(b.remaining||'0').trim()==='0' || String(b.remaining||'0').trim()==='0 min' || String(b.remaining||'0').trim()==='0 SMS';
-        var pct=Number(String(b.percentage||'').replace(/[^0-9.]/g,'')); if(!(pct>0)){ var _r=Number(String(b.remaining||'').replace(/[^0-9.]/g,'')); var _t=Number(String(b.total||'').replace(/[^0-9.]/g,'')); pct=_t>0?Math.max(0,Math.min(100,(_r/_t)*100)):(_r>0?100:0); }
-        h+='<div class="rounded border bg-base/20 p-1.5 space-y-0.5" style="border-color:'+col+'30;background:linear-gradient(135deg, '+col+'14, transparent 62%)">';
-        h+='<div class="flex items-center gap-1.5 text-xs"><span class="h-2 w-2 rounded-full shrink-0" style="background:'+col+'"></span><span class="font-semibold" style="color:'+col+'">'+esc(k[1])+'</span><span class="ml-auto font-mono text-[11px] '+(isZero?'text-muted':'text-text')+'">'+esc(b.remaining||"0")+" / "+esc(b.total||"0")+'</span></div>'+bar(pct,col)+'</div>';
+        var b=bon[k[0]]; if(!b) return; var col=tselColors[k[0]]||'#14b8a6';
+        h+='<div class="rounded border bg-base/20 p-1 space-y-0.5" style="border-color:'+col+'30;background:linear-gradient(135deg, '+col+'14, transparent 62%)">';
+        h+='<div class="flex items-center gap-1.5 text-xs"><span class="h-2 w-2 rounded-full shrink-0" style="background:'+col+'"></span><span class="font-semibold" style="color:'+col+'">'+esc(k[1])+'</span><span class="ml-auto font-mono text-[11px] text-text">'+esc(b.remaining||"0")+" / "+esc(b.total||"0")+'</span></div></div>';
       });
       h+='</div>';
     } else {
       h+='<div class="rounded border border-border/40 bg-base/20 px-2 py-1.5 text-xs text-muted">Tidak ada data kuota.</div>';
     }
-    h+=tsLine(out.fetchedAt,fresh);
+    h+='</div>'; h+='</div>';
     return h;
   }
   function showCache(){
@@ -882,7 +918,7 @@ tailwind.config = {
       .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,st:r.status,body:j}; }); })
       .then(function(res){
         if(res.ok){ var d=res.body.data||res.body; box.innerHTML=render(d,false); }
-        else if(res.st===404) box.innerHTML='<div class="rounded border border-border/40 bg-base/20 px-2 py-1.5 text-xs text-muted">Belum ada data tersimpan, klik Refresh.</div>';
+        else if(res.st===404) box.innerHTML='<div class="rounded border border-border/40 bg-base/20 px-2 py-1.5 text-xs text-muted">Belum ada data tersimpan, login lalu klik Refresh.</div>';
         else box.innerHTML='<div class="rounded border border-error/20 bg-error/10 px-2 py-1.5 text-xs text-error">'+esc((res.body&&(res.body.error||res.body.message))||('HTTP '+res.st))+'</div>';
       })
       .catch(function(err){ box.innerHTML='<div class="rounded border border-error/20 bg-error/10 px-2 py-1.5 text-xs text-error">Koneksi gagal: '+esc((err&&err.message)||err)+'</div>'; })
@@ -890,20 +926,92 @@ tailwind.config = {
   }
   function refresh(){
     setSt('loading...',true);
-    box.innerHTML='<p class="text-xs text-muted">Memproses...</p>';
+    box.innerHTML='<p class="text-xs text-muted">Memproses Telkomsel...</p>';
     return fetch('/api/telkomsel/cek',{cache:'no-store'})
       .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,st:r.status,body:j}; }); })
       .then(function(res){
-        if(res.ok){ var d=res.body.data||res.body; box.innerHTML=render(d,true); }
+        if(res.ok||(res.body&&res.body.authFail)){ var d=res.body.data||res.body; box.innerHTML=render(d,true); }
         else box.innerHTML='<div class="rounded border border-error/20 bg-error/10 px-2 py-1.5 text-xs text-error">'+esc((res.body&&(res.body.error||res.body.message))||('HTTP '+res.st))+'</div>';
       })
       .catch(function(err){ box.innerHTML='<div class="rounded border border-error/20 bg-error/10 px-2 py-1.5 text-xs text-error">Koneksi gagal: '+esc((err&&err.message)||err)+'</div>'; })
       .then(function(){ setSt('',false); });
   }
+  var phoneEl=document.getElementById('tsel-phone');
+  var sendBtn=document.getElementById('tsel-send-otp');
+  var verifyRow=document.getElementById('tsel-verify-row');
+  var otpEl=document.getElementById('tsel-otp');
+  var verifyBtn=document.getElementById('tsel-verify-otp');
+  var cancelBtn=document.getElementById('tsel-cancel-otp');
+  var loginSt=document.getElementById('tsel-login-status');
+  var sessInfo=document.getElementById('tsel-session-info');
+  var logoutBtn=document.getElementById('tsel-logout');
+  function setLogin(t,err){ if(!loginSt) return; loginSt.textContent=t||''; loginSt.classList.toggle('text-error',!!err); loginSt.classList.toggle('text-muted',!err); }
+  function loadStatus(){
+    fetch('/api/telkomsel/status',{cache:'no-store'})
+      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,body:j}; }); })
+      .then(function(res){
+        if(!res.ok||!res.body) return;
+        var b=res.body;
+        if(b.session&&(b.session.phone||b.session.msisdn)){
+          var label='Login: '+esc(b.session.phone||b.session.msisdn)+(b.session.userType?' ('+esc(b.session.userType)+')':'');
+          if(sessInfo){ sessInfo.textContent=label; sessInfo.classList.remove('hidden'); }
+          if(logoutBtn) logoutBtn.classList.remove('hidden');
+        } else {
+          if(sessInfo) sessInfo.classList.add('hidden');
+          if(logoutBtn) logoutBtn.classList.add('hidden');
+        }
+        if(phoneEl&&b.session&&b.session.phone&&!phoneEl.value) phoneEl.value=b.session.phone;
+        if(b.pending&&b.pending.msisdn){
+          if(verifyRow) verifyRow.classList.remove('hidden');
+          setLogin('OTP dikirim ke '+b.pending.msisdn+'. Masukkan kode SMS.');
+        }
+      }).catch(function(){});
+  }
+  function sendOtp(){
+    var phone=(phoneEl&&phoneEl.value||'').trim();
+    if(!phone){ setLogin('Isi nomor Telkomsel dulu (0811xxxxxxx).',true); if(phoneEl) phoneEl.focus(); return; }
+    setLogin('Mengirim OTP...'); if(sendBtn) sendBtn.disabled=true;
+    fetch('/api/telkomsel/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:phone})})
+      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,st:r.status,body:j}; }); })
+      .then(function(res){
+        if(res.ok){ if(verifyRow) verifyRow.classList.remove('hidden'); setLogin('OTP terkirim ke '+(phoneEl.value||'')+'. Cek SMS dan masukkan kode.'); if(otpEl) otpEl.focus(); }
+        else setLogin((res.body&&(res.body.error||res.body.message))||('Gagal kirim OTP (HTTP '+res.st+')'),true);
+      })
+      .catch(function(err){ setLogin('Koneksi gagal: '+((err&&err.message)||err),true); })
+      .then(function(){ if(sendBtn) sendBtn.disabled=false; loadStatus(); });
+  }
+  function verifyOtp(){
+    var otp=(otpEl&&otpEl.value||'').trim();
+    if(!/^[0-9]{4,8}$/.test(otp)){ setLogin('OTP harus 4-8 digit angka.',true); if(otpEl) otpEl.focus(); return; }
+    setLogin('Memverifikasi...'); if(verifyBtn) verifyBtn.disabled=true;
+    fetch('/api/telkomsel/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({otp:otp,phone:(phoneEl&&phoneEl.value||''),transId:''})})
+      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,st:r.status,body:j}; }); })
+      .then(function(res){
+        if(res.ok){ if(verifyRow) verifyRow.classList.add('hidden'); if(otpEl) otpEl.value=''; setLogin('Login OK, memuat kuota...'); loadStatus(); refresh(); }
+        else setLogin((res.body&&(res.body.error||res.body.message))||('OTP salah (HTTP '+res.st+')'),true);
+      })
+      .catch(function(err){ setLogin('Koneksi gagal: '+((err&&err.message)||err),true); })
+      .then(function(){ if(verifyBtn) verifyBtn.disabled=false; });
+  }
+  function doLogout(){
+    fetch('/api/telkomsel/logout',{method:'POST'}).then(function(){ return; }).catch(function(){}).then(function(){
+      if(sessInfo) sessInfo.classList.add('hidden');
+      if(logoutBtn) logoutBtn.classList.add('hidden');
+      if(verifyRow) verifyRow.classList.add('hidden');
+      setLogin('Logout OK, login lagi untuk kuota baru.');
+      showCache();
+    });
+  }
+  if(sendBtn) sendBtn.addEventListener('click',sendOtp);
+  if(verifyBtn) verifyBtn.addEventListener('click',verifyOtp);
+  if(cancelBtn) cancelBtn.addEventListener('click',function(){ if(verifyRow) verifyRow.classList.add('hidden'); setLogin(''); });
+  if(logoutBtn) logoutBtn.addEventListener('click',doLogout);
+  if(phoneEl) phoneEl.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); sendOtp(); } });
+  if(otpEl) otpEl.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); verifyOtp(); } });
   if(btn) btn.addEventListener('click',refresh);
-  window.tselAuto=function(){ showCache(); };
+  window.tselAuto=function(){ showCache(); loadStatus(); };
 })();
-</script>
+</script></script>
 <script>
 // Tri bimatri: buka tab tampil cache, Refresh fetch baru via /api/tri/* (proxy, secret di server).
 (function(){
@@ -913,7 +1021,7 @@ tailwind.config = {
   var btn=document.getElementById('tri-refresh');
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
   function setSt(t,show){ if(!st) return; st.textContent=t; st.classList.toggle('hidden',!show); }
-  function tsLine(ts,fresh){ var t=''; try{ var d=new Date(ts); if(!isNaN(d.getTime())){ var p=function(n){return (n<10?'0':'')+n;}; t=p(d.getDate())+'-'+p(d.getMonth()+1)+'-'+d.getFullYear()+' '+p(d.getHours())+':'+p(d.getMinutes()); } else t=String(ts||''); }catch(e){ t=String(ts||''); } return '<p class="text-[10px] text-muted pt-0.5">'+(fresh?'Diperbarui ':'Data tersimpan ')+esc(t)+(fresh?'':' &middot; klik Refresh untuk data baru')+'</p>'; }
+  function tsLine(ts,fresh){ return ''; }
   var triColors={internet:'#ef4444',aplikasi:'#3b82f6',telepon:'#22c55e',sms:'#d97706'};
   var triLabels={internet:'Internet',aplikasi:'Aplikasi',telepon:'Telepon',sms:'SMS'};
   function triBar(p,color){ p=Math.max(0,Math.min(100,Number(p)||0)); var cc=color||'#14b8a6'; return '<div class="h-1 rounded bg-base border border-border/40 overflow-hidden"><div class="h-full" style="width:'+p+'%;background:'+cc+'"></div></div>'; }
@@ -999,21 +1107,23 @@ tailwind.config = {
       return h;
     }
     if(out.items&&Array.isArray(out.items)&&out.items.length){
-      var dash2=(out.raw&&out.raw.data)||(out.raw)||(data&&data.data)||data||{};
+      var _cand2=(out.raw&&out.raw.data)||out.raw||data||{}; var dash2=(function triUnwrap2(c){var cur=c; for(var k=0;k<4;k++){ if(!cur||typeof cur!=='object') break; if(cur.prepaidinfo||cur.packdata||cur.msisdn) return cur; if(cur.data&&typeof cur.data==='object') cur=cur.data; else break; } return c||{}; })(_cand2);
       var prepaid2=(dash2&&dash2.prepaidinfo)||null;
       var pack2=(dash2&&dash2.packdata)||null;
       var nameDash2=(dash2&&dash2.bonstriDetails)||null;
       var balNum2=(prepaid2&&prepaid2.balance!=null)?Number(prepaid2.balance):(pack2&&pack2.lastbalance!=null?Number(pack2.lastbalance):0);
       var activeUntil2=(prepaid2&&prepaid2.cardactiveuntil)||(pack2&&pack2.expireddate)||'-';
       var msisdn2=(dash2&&dash2.msisdn)||out.phone||'-';
-      h+='<div class="rounded border border-border/40 bg-base/20 p-1.5 space-y-0.5">';
+      h+='<div class="flex flex-col gap-1 lg:flex-row lg:items-start">';
+      h+='<div class="rounded border border-border/40 bg-base/20 p-1 space-y-0.5 w-full lg:w-60 lg:shrink-0">';
       h+='<p class="text-[10px] font-semibold uppercase tracking-wider text-muted">Profil</p>';
       h+='<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">Nomor</span><span class="text-text font-mono text-right break-all">'+esc(msisdn2)+'</span></div>';
       h+='<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">Pulsa</span><span class="text-text font-mono text-right break-all">Rp '+(isNaN(balNum2)?'-':balNum2.toLocaleString('id-ID'))+'</span></div>';
       h+='<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">Masa aktif</span><span class="text-text font-mono text-right break-all">'+esc(activeUntil2)+'</span></div>';
       if(nameDash2) h+='<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">BonsTri</span><span class="text-text font-mono text-right break-all">'+esc(String(nameDash2.totalPoints!=null?nameDash2.totalPoints:(nameDash2.value||'')))+' &middot; '+esc(nameDash2.tierName||'')+'</span></div>';
       h+='</div>';
-      h+='<div class="grid grid-cols-1 sm:grid-cols-2 gap-1 content-start">';
+      h+='<div class="flex-1 min-w-0 w-full space-y-1">';
+      h+='<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-1 content-start">';
       out.items.forEach(function(it){
         var cat=triEnqCat(it);
         var col=triColors[cat]||'#14b8a6';
@@ -1029,25 +1139,29 @@ tailwind.config = {
         h+='</div>';
       });
       h+='</div>';
+      h+='</div>';
       h+=tsLine(out.fetchedAt,fresh);
+      h+='</div>';
       return h;
     }
     if(data && typeof data==='object'){
-      var dash=(data&&data.data)||data;
+      var _cand=(data&&data.data)||data; var dash=(function triUnwrap(c){var cur=c; for(var k=0;k<4;k++){ if(!cur||typeof cur!=='object') break; if(cur.prepaidinfo||cur.packdata||cur.msisdn) return cur; if(cur.data&&typeof cur.data==='object') cur=cur.data; else break; } return c||{}; })(_cand);
       var prepaid=(dash&&dash.prepaidinfo)||null;
       var pack=(dash&&dash.packdata)||null;
       var nameDash=(dash&&dash.bonstriDetails)||null;
       var accDash=triParseDashboard(dash);
       var balNum=(prepaid&&prepaid.balance!=null)?Number(prepaid.balance):(pack&&pack.lastbalance!=null?Number(pack.lastbalance):0);
       var activeUntil=(prepaid&&prepaid.cardactiveuntil)||(pack&&pack.expireddate)||'-';
-      h+='<div class="rounded border border-border/40 bg-base/20 p-1.5 space-y-0.5">';
+      h+='<div class="flex flex-col gap-1 lg:flex-row lg:items-start">';
+      h+='<div class="rounded border border-border/40 bg-base/20 p-1 space-y-0.5 w-full lg:w-60 lg:shrink-0">';
       h+='<p class="text-[10px] font-semibold uppercase tracking-wider text-muted">Profil</p>';
       h+='<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">Nomor</span><span class="text-text font-mono text-right break-all">'+esc((dash&&dash.msisdn)||(data&&data.msisdn)||'-')+'</span></div>';
       h+='<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">Pulsa</span><span class="text-text font-mono text-right break-all">Rp '+(isNaN(balNum)?'-':balNum.toLocaleString('id-ID'))+'</span></div>';
       h+='<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">Masa aktif</span><span class="text-text font-mono text-right break-all">'+esc(activeUntil)+'</span></div>';
       if(nameDash) h+='<div class="flex justify-between gap-2 text-xs"><span class="text-muted shrink-0">BonsTri</span><span class="text-text font-mono text-right break-all">'+esc(String(nameDash.totalPoints!=null?nameDash.totalPoints:(nameDash.value||'')))+' &middot; '+esc(nameDash.tierName||'')+'</span></div>';
       h+='</div>';
-      h+='<div class="grid grid-cols-1 sm:grid-cols-2 gap-1 content-start">';
+      h+='<div class="flex-1 min-w-0 w-full space-y-1">';
+      h+='<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-1 content-start">';
       [{k:'internet',label:'Internet'},{k:'aplikasi',label:'Aplikasi'},{k:'telepon',label:'Telepon'},{k:'sms',label:'SMS'}].forEach(function(it){
         var cat=accDash[it.k]; if(!cat) return;
         var col=triColors[it.k];
@@ -1056,14 +1170,14 @@ tailwind.config = {
         var txt=(it.k==='internet'||it.k==='aplikasi')?triFmtMB(rem):(it.k==='telepon'?Math.round(rem)+' min':Math.round(rem)+' SMS');
         var totTxt=(it.k==='internet'||it.k==='aplikasi')?triFmtMB(tot):txt;
         var isZero=!(rem>0);
-        h+='<div class="rounded border bg-base/20 p-1.5 space-y-0.5" style="border-color:'+col+'30;background:linear-gradient(135deg,'+col+'14,transparent 62%)">';
+        h+='<div class="rounded border bg-base/20 p-1 space-y-0.5" style="border-color:'+col+'30;background:linear-gradient(135deg,'+col+'14,transparent 62%)">';
         h+='<div class="flex items-center gap-1.5 text-xs"><span class="h-2 w-2 rounded-full shrink-0" style="background:'+col+'"></span><span class="font-semibold" style="color:'+col+'">'+esc(it.label)+'</span><span class="ml-auto font-mono text-[11px] '+(isZero?'text-muted':'text-text')+'">'+esc(txt)+' / '+esc(totTxt)+'</span></div>'+triBar(_pct,col)+'</div>';
       });
       h+='</div>';
       var packList=(dash&&dash.packdata&&dash.packdata.packageslist)||[];
       if(Array.isArray(packList)&&packList.length){
-        h+='<p class="text-[11px] font-semibold uppercase tracking-wider text-muted pt-1">Paket info</p>';
-        h+='<div class="grid grid-cols-1 sm:grid-cols-2 gap-1 content-start">';
+        h+='<p class="text-[11px] font-semibold uppercase tracking-wider text-muted">Paket info</p>';
+        h+='<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-1 content-start">';
         packList.forEach(function(pkg,pi){
           var qn=pkg.PackageName||pkg.ServiceName||'Paket';
           var ed=pkg.EndDate||pkg.expMsg||'-';
@@ -1071,13 +1185,14 @@ tailwind.config = {
           var qs=pkg.Quotas||[]; var qtxt='';
           if(Array.isArray(qs)&&qs.length){ var _q=qs[0]; var _r=Number(_q.remainingQuota!=null?_q.remainingQuota:_q.rawRemainingQuota)||0; var _u=String(_q.quotaUnit||''); var _b=String(_q.benefitType||'');
             if(_u.toUpperCase()==='SMS'||_b.toUpperCase()==='SMS') qtxt=Math.round(_r)+' SMS'; else if(_u.toUpperCase()==='MIN'||_b.toUpperCase()==='VOICE') qtxt=Math.round(_r)+' min'; else qtxt=triFmtMB(_r); }
-          h+='<div class="rounded border bg-base/20 p-1.5 space-y-0.5" style="border-color:'+col+'30;background:linear-gradient(135deg,'+col+'14,transparent 62%)">';
+          h+='<div class="rounded border bg-base/20 p-1 space-y-0.5" style="border-color:'+col+'30;background:linear-gradient(135deg,'+col+'14,transparent 62%)">';
           h+='<div class="flex items-center gap-1.5 text-xs"><span class="h-2 w-2 rounded-full shrink-0" style="background:'+col+'"></span><span class="font-semibold truncate" style="color:'+col+'">'+esc(qn)+'</span><span class="ml-auto font-mono text-[11px] text-text shrink-0">'+esc(qtxt)+'</span></div>';
           h+='<p class="text-[10px] font-mono text-muted">Berlaku s/d '+esc(ed)+'</p>';
           h+='</div>';
         });
         h+='</div>';
       }
+      h+='</div>';
       // JSON lengkap disembunyikan
     } else if(raw){
       // raw JSON disembunyikan
@@ -1092,7 +1207,7 @@ tailwind.config = {
     return fetch('/api/tri/cache',{cache:'no-store'})
       .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,st:r.status,body:j}; }); })
       .then(function(res){
-        if(res.ok){ var b=res.body||{}; var d=(b.items&&b.items.length)?b:(b.data||b); box.innerHTML=renderTri(d,false); }
+        if(res.ok){ var b=res.body||{}; box.innerHTML=renderTri(b,false); }
         else if(res.st===404) box.innerHTML='<div class="rounded border border-border/40 bg-base/20 px-2 py-1.5 text-xs text-muted">Belum ada data Tri tersimpan, klik Refresh.</div>';
         else box.innerHTML='<div class="rounded border border-error/20 bg-error/10 px-2 py-1.5 text-xs text-error">'+esc((res.body&&(res.body.error||res.body.message))||('HTTP '+res.st))+'</div>';
       })

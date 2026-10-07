@@ -176,7 +176,7 @@ const SERVICES = [
   { unit: 'iskan-drama.service',       name: 'Iskan Drama',        kind: 'app',   port: 3003,  desc: 'Streaming SPA (Express, native http)', path: '/root/iskan-drama', tech: 'Node.js', externalUrl: 'https://drama.nendi.web.id', dashboardPath: '/' },
   { unit: 'iskan-portfolio.service',   name: 'Iskan Portfolio',    kind: 'app',   port: 3004,  desc: 'Spotlight portfolio · nendi.web.id (apex via tunnel)', path: '/root/iskan-portfolio', tech: 'React / Next.js', externalUrl: 'https://nendi.web.id', dashboardPath: '/' },
   { unit: 'autoclipper-webjs.service', name: 'Auto-Clipper WebJS', kind: 'app',   port: 3000,  desc: 'Auto-Clipper v2 web panel', path: '/root/auto-clipper-v2', tech: 'Node.js / Python', externalUrl: 'https://clipper.nendi.web.id', dashboardPath: '/' },
-  { unit: 'autoclipper-v3.service',      name: 'Auto-Clipper v3',       kind: 'app',   port: 3006,  desc: 'Auto-Clipper v3 5 tabs pipeline · AI opencos 20127 · webjs/server.v3.js', path: '/root/auto-clipper-v3', tech: 'Node.js / Python · AI', externalUrl: null, dashboardPath: '/' },
+  { unit: 'autoclipper-v3.service',      name: 'Auto-Clipper v3',       kind: 'app',   port: 3006,  desc: 'Auto-Clipper v3 5 tabs pipeline · AI opencos 20127 · webjs/server.v3.js', path: '/root/auto-clipper-v3', tech: 'Node.js / Python · AI', externalUrl: 'https://clip.nendi.web.id', dashboardPath: '/' },
   { unit: 'iskan-portal.service',      name: 'Iskan Portal',       kind: 'app',   port: 3005,  desc: 'Portal status (halaman ini)', path: '/root/iskan-portal', tech: 'Node.js / Express', externalUrl: 'https://portal.nendi.web.id', dashboardPath: '/' },
   { unit: 'auto-clipper-v2-bot.service', name: 'Auto-Clipper Bot', kind: 'bot', port: null, desc: 'Telegram bot pipeline', tech: 'Python', externalUrl: null },
   { unit: 'hermes-gateway.service',      name: 'Hermes Gateway',   kind: 'bot', port: null, desc: 'Hermes Agent messaging gateway', user: true, tech: 'Node.js', externalUrl: null },
@@ -187,7 +187,7 @@ const SERVICES = [
   { unit: 'owrt.nendi.web.id',                 name: 'OpenWrt - iskanWRT', kind: 'infra', port: null,  desc: 'Router LuCI via tunnel → 192.168.1.1:80 (MetaCubeXD di metacubex.nendi.web.id)', path: null, tech: 'OpenWrt / LuCI', externalUrl: 'https://owrt.nendi.web.id', dashboardPath: '/', target: 'http://192.168.1.1:80', noCheck: true },
   { unit: 'metacubex.nendi.web.id',            name: 'MetaCubeXD',         kind: 'infra', port: 9090,  desc: 'MetaCubeXD via tunnel → 192.168.1.1:9090/ui/metacubexd', path: null, tech: 'MetaCubeXD / Mihomo', externalUrl: 'https://metacubex.nendi.web.id/ui/metacubexd/#/setup?hostname=metacubex.nendi.web.id&secret=rzx', dashboardPath: '/ui/metacubexd/#/setup?hostname=metacubex.nendi.web.id&secret=rzx', target: 'http://192.168.1.1:9090', noCheck: true },
   { unit: 'ttyd.service',                       name: 'Web Terminal',     kind: 'infra', port: 7681, desc: 'Web terminal (ttyd 1.7.7) → https://ssh.nendi.web.id', path: null, tech: 'ttyd / login', externalUrl: 'https://ssh.nendi.web.id', dashboardPath: '/' },
-  { unit: 'cloudflared.service',                 name: 'Cloudflared Tunnel', kind: 'infra', port: null, desc: 'Named tunnel 204640e4 → 9 hostnames (nendi.web.id + 9r/drama/portal/clipper/cf/omni/llm/owrt/ssh)', tech: 'Cloudflare Tunnel', externalUrl: null },
+  { unit: 'cloudflared.service',                 name: 'Cloudflared Tunnel', kind: 'infra', port: null, desc: 'Named tunnel 204640e4 → 13 hostnames (nendi.web.id + 9r/drama/portal/clipper/clip/cf/omni/llm/owrt/ssh)', tech: 'Cloudflare Tunnel', externalUrl: null },
 ];
 
 const USER_ENV = { ...process.env, XDG_RUNTIME_DIR: process.env.XDG_RUNTIME_DIR || '/run/user/0' };
@@ -843,12 +843,276 @@ app.get('/api/sidompul/cek', async (req, res) => {
   }
 });
 
-// ---- telkomsel halo proxy (cookie + device-id + accesstoken di server, browser hanya panggil proxy) ----
+// ---- telkomsel native (CIAM OTP + TDW api, pola sama kayak TRI, tanpa telbot binary) ----
 const TSEL_DIR = path.join(__dirname, 'data', 'telkomsel');
 try { fs.mkdirSync(TSEL_DIR, { recursive: true }); } catch(e) {}
 const TSEL_AUTH_FILE = path.join(TSEL_DIR, 'auth.json');
 const TSEL_CACHE_FILE = path.join(TSEL_DIR, 'cache.json');
+const TSEL_SESSION_FILE = path.join(TSEL_DIR, 'session.json');
+const TSEL_PENDING_FILE = path.join(TSEL_DIR, 'otp_pending.json');
+const TSEL_CIAM = 'https://ciam.telkomsel.com';
+const TSEL_REALM = 'tsel';
+const TSEL_CLIENT_ID = 'e7126474617aa39eb9e484233c9b0649';
+const TSEL_CLIENT_SECRET = 'P@ssw0rd';
+const TSEL_REDIRECT_URI = 'https://my.telkomsel.com/web/callback';
+const TSEL_LOGIN_ORIGIN = 'https://my.telkomsel.com';
+const TSEL_AUTH_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36';
+const TSEL_TDW = 'https://tdw.telkomsel.com';
+const TSEL_WEBAPP_VER = '2.0.0';
+const TSEL_ENC_PASS = 'production';
 function tselAuth() { try { return JSON.parse(fs.readFileSync(TSEL_AUTH_FILE, 'utf8')); } catch(e) { return null; } }
+function tselLoadSession(){ try{ return JSON.parse(fs.readFileSync(TSEL_SESSION_FILE,'utf8')); }catch(e){ return null; } }
+function tselSaveSession(obj){ try{ fs.writeFileSync(TSEL_SESSION_FILE, JSON.stringify(obj,null,2), {mode:0o600}); try{fs.chmodSync(TSEL_SESSION_FILE,0o600);}catch(e){} }catch(e){} }
+function tselLoadPending(){ try{ return JSON.parse(fs.readFileSync(TSEL_PENDING_FILE,'utf8')); }catch(e){ return null; } }
+function tselSavePending(obj){ try{ fs.writeFileSync(TSEL_PENDING_FILE, JSON.stringify(obj,null,2), {mode:0o600}); try{fs.chmodSync(TSEL_PENDING_FILE,0o600);}catch(e){} }catch(e){} }
+function tselClearPending(){ try{ fs.unlinkSync(TSEL_PENDING_FILE);}catch(e){} }
+function tselNormalizePhone(input){
+  let clean=String(input||'').replace(/[^0-9]/g,'');
+  if(clean.startsWith('62')) clean=clean.substring(2);
+  else if(clean.startsWith('0')) clean=clean.substring(1);
+  const isValid = clean.startsWith('8') && clean.length>=9 && clean.length<=13;
+  return { clean, national:'0'+clean, international:'62'+clean, isValid };
+}
+function tselRandomHex(n){ return crypto.randomBytes(n).toString('hex'); }
+function tselXDevice(){ return tselRandomHex(4)+'-'+tselRandomHex(2)+'-'+tselRandomHex(2)+'-'+tselRandomHex(2)+'-'+tselRandomHex(6); }
+function tselTxId(){ const d=new Date(); const p=(n,l)=>String(n).padStart(l||2,'0'); return 'A'+p(d.getFullYear()%100)+p(d.getMonth()+1)+p(d.getDate())+p(d.getHours())+p(d.getMinutes())+p(d.getSeconds())+'000000148700'; }
+function tselEvp(password, keyLen, ivLen){
+  const pass=Buffer.from(password); let hb=Buffer.alloc(0); let res=Buffer.alloc(0);
+  while(res.length<keyLen+ivLen){ const m=crypto.createHash('md5').update(Buffer.concat([hb,pass])).digest(); hb=m; res=Buffer.concat([res,m]); }
+  return { key:res.slice(0,keyLen), iv:res.slice(keyLen,keyLen+ivLen) };
+}
+function tselEnc(payload){
+  const {key,iv}=tselEvp(TSEL_ENC_PASS,16,16);
+  const c=crypto.createCipheriv('aes-128-ofb',key,iv);
+  return Buffer.concat([c.update(payload,'utf8'),c.final()]).toString('base64');
+}
+function tselAuthHeaders(accessToken,idToken){
+  const ts=new Date().toISOString().slice(0,19)+'Z';
+  return {
+    accessAuth:'Bearer '+tselEnc(JSON.stringify({accessToken,timestamp:ts})),
+    authorization:'Bearer '+tselEnc(JSON.stringify({token:idToken,timestamp:ts}))
+  };
+}
+function tselAuthUrl(){ return TSEL_CIAM+'/iam/v1/realms/'+TSEL_REALM+'/authenticate?authIndexType=service&authIndexValue=phoneLogin'; }
+function tselGetSetCookies(headers){
+  try{ if(headers && typeof headers.getSetCookie==='function') return headers.getSetCookie()||[]; }catch(e){}
+  try{ const sc=headers.get('set-cookie'); return sc?[sc]:[]; }catch(e){ return []; }
+}
+function tselCookie(arr,name){
+  for(const c of (arr||[])){ const main=String(c).split(';')[0].trim(); if(main.startsWith(name+'=')) return main; }
+  return '';
+}
+async function tselCiam(url, method, headers, body, ms){
+  const ctrl=new AbortController(); const t=setTimeout(()=>{try{ctrl.abort();}catch(e){}}, ms||20000);
+  try{
+    const r=await fetch(url,{method,headers,body:body===undefined?undefined:body,redirect:'manual',signal:ctrl.signal});
+    const text=await r.text(); let j=null; try{ j=JSON.parse(text); }catch(e){}
+    return { status:r.status, headers:r.headers, text, json:j };
+  } finally { clearTimeout(t); }
+}
+function tselTdwHeaders(sess){
+  return {
+    'accept':'application/json',
+    'accept-language':'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
+    'accessauthorization':'Bearer '+sess.accessAuth,
+    'authorization':'Bearer '+sess.authorization,
+    'authserver':'2',
+    'channelid':'WEB',
+    'content-type':'application/json',
+    'dnt':'1',
+    'hash':sess.hash||tselRandomHex(28),
+    'language':'id',
+    'mytelkomsel-web-app-version':sess.webAppVersion||TSEL_WEBAPP_VER,
+    'origin':'https://my.telkomsel.com',
+    'priority':'u=1, i',
+    'referer':'https://my.telkomsel.com/',
+    'sec-ch-ua':'"Not:A-Brand";v="99", "Google Chrome";v="145", "Chromium";v="145"',
+    'sec-ch-ua-mobile':'?0',
+    'sec-ch-ua-platform':'"Windows"',
+    'sec-fetch-dest':'empty',
+    'sec-fetch-mode':'cors',
+    'sec-fetch-site':'same-site',
+    'transactionid':tselTxId(),
+    'user-agent':tselRandomHex(2) ? TSEL_AUTH_UA : TSEL_AUTH_UA,
+    'web-msisdn':sess.fullPhone||sess.msisdn||'',
+    'x-device':sess.xDevice||''
+  };
+}
+async function tselTdw(sess, method, endpoint, body){
+  const url=TSEL_TDW+endpoint;
+  for(let attempt=0; attempt<3; attempt++){
+    const H=tselTdwHeaders(sess);
+    const ctrl=new AbortController(); const t=setTimeout(()=>{try{ctrl.abort();}catch(e){}},20000);
+    try{
+      const r=await fetch(url,{method,headers:H,body:body?JSON.stringify(body):undefined,signal:ctrl.signal});
+      const txt=await r.text();
+      if(r.status===401){ const e=new Error('unauthorized: token expired'); e.code=401; throw e; }
+      if(r.status===429){
+        if(attempt<2){ await new Promise(rs=>setTimeout(rs,5000*(attempt+1))); continue; }
+        throw new Error('rate limited (429) on '+endpoint);
+      }
+      if(r.status!==200){
+        if(attempt<2){ await new Promise(rs=>setTimeout(rs,3000*(attempt+1))); continue; }
+        throw new Error('HTTP '+r.status+' from '+endpoint+': '+String(txt).slice(0,300));
+      }
+      let j=null; try{ j=JSON.parse(txt); }catch(e){
+        if(attempt<2){ await new Promise(rs=>setTimeout(rs,3000)); continue; }
+        throw new Error('invalid JSON from '+endpoint);
+      }
+      return j;
+    } finally { clearTimeout(t); }
+  }
+  throw new Error('max retries exceeded for '+method+' '+endpoint);
+}
+function tselQuotaItems(groups){
+  const items=[];
+  (groups||[]).forEach(function(g){
+    const cls=String(g.class||g.Class||'Kuota');
+    const list=g.items||g.bonusList||g.BonusList||[];
+    (list||[]).forEach(function(it){
+      const nm=it.name||it.Name||it.bucketdescription||cls;
+      items.push({name:cls+' - '+nm, type:'MAIN', category:'internet', remainingQuota:null, quota:null, remainingFormatted:String(it.remaining||it.Remaining||it.remainingquota||'-'), exhausted:false, validUntil:it.expiry||it.Expiry||it.expirydate||'-'});
+    });
+  });
+  return items;
+}
+// Cache hasil GET terakhir: buka tab tampil ini, Refresh baru fetch upstream
+app.get('/api/telkomsel/cache', (req, res) => {
+  if (!isAuthenticated(req)) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    if (!fs.existsSync(TSEL_CACHE_FILE)) return res.status(404).json({ ok: false, cached: false, error: 'Belum ada data tersimpan, klik Refresh' });
+    const raw = JSON.parse(fs.readFileSync(TSEL_CACHE_FILE, 'utf8'));
+    return res.json({ ok: true, cached: true, fetchedAt: raw.fetchedAt || null, data: raw });
+  } catch(e) {
+    return res.status(500).json({ ok: false, error: 'Gagal baca cache: ' + String((e && e.message) || e) });
+  }
+});
+app.get('/api/telkomsel/status', (req,res)=>{
+  if(!isAuthenticated(req)) return res.status(401).json({error:'Unauthorized'});
+  const sess=tselLoadSession();
+  const hasCache=fs.existsSync(TSEL_CACHE_FILE);
+  const pending=tselLoadPending();
+  return res.json({ok:true, session: sess?{phone:sess.phone,msisdn:sess.msisdn,userType:sess.userType,updatedAt:sess.updatedAt}:null, hasToken:!!(sess&&sess.accessAuth&&sess.authorization), hasCache, pending: pending?{msisdn:pending.msisdn,transId:pending.transId,createdAt:pending.createdAt}:null});
+});
+app.post('/api/telkomsel/login', async (req,res)=>{
+  if(!isAuthenticated(req)) return res.status(401).json({error:'Unauthorized'});
+  const phoneRaw=String((req.body&&req.body.phone)||'').trim();
+  const norm=tselNormalizePhone(phoneRaw);
+  if(!norm.isValid) return res.status(400).json({ok:false,error:'Nomor Telkomsel tidak valid (contoh 0812xxxxxxx)'});
+  try{
+    const headers={
+      'User-Agent':TSEL_AUTH_UA,'Accept':'application/json','Dnt':'1','Sec-Ch-Ua-Mobile':'?0',
+      'Origin':TSEL_LOGIN_ORIGIN,'Referer':TSEL_LOGIN_ORIGIN+'/','Sec-Fetch-Site':'same-site','Sec-Fetch-Mode':'cors','Sec-Fetch-Dest':'empty',
+      'Am-Phonenumber':'+'+norm.international,'Am-Clientid':TSEL_CLIENT_ID,'Am-Send':'otp','Content-Type':'application/json',
+      'Sec-Ch-Ua':'"Not:A-Brand";v="99", "Google Chrome";v="145", "Chromium";v="145"','Sec-Ch-Ua-Platform':'"Windows"',
+      'Accept-Language':'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7','Priority':'u=1, i'
+    };
+    const r1=await tselCiam(tselAuthUrl(),'POST',headers,'',20000);
+    if(r1.status!==200) return res.status(400).json({ok:false,error:'Request OTP status '+r1.status+': '+String(r1.text).slice(0,300)});
+    const authId=(r1.json&&r1.json.authId)||'';
+    if(!authId) return res.status(400).json({ok:false,error:'Gagal request OTP: authId kosong'});
+    const amlb=tselCookie(tselGetSetCookies(r1.headers),'amlbcookie');
+    tselSavePending({msisdn:norm.international,phone:norm.national,transId:authId,amlb,createdAt:new Date().toISOString()});
+    const sess=tselLoadSession()||{};
+    sess.phone=norm.national; sess.msisdn=norm.international; sess.fullPhone=norm.international;
+    sess.userType='PENDING'; sess.updatedAt=new Date().toISOString();
+    sess.pendingAuthId=authId; sess.pendingAmlb=amlb;
+    if(!sess.xDevice) sess.xDevice=tselXDevice();
+    if(!sess.hash) sess.hash=tselRandomHex(28);
+    tselSaveSession(sess);
+    return res.json({ok:true,message:'OTP terkirim ke '+norm.national+' via SMS',transId:authId,msisdn:norm.international});
+  }catch(e){
+    return res.status(502).json({ok:false,error:String((e&&e.message)||e)});
+  }
+});
+app.post('/api/telkomsel/verify', async (req,res)=>{
+  if(!isAuthenticated(req)) return res.status(401).json({error:'Unauthorized'});
+  const otp=String((req.body&&req.body.otp)||'').trim();
+  let transId=String((req.body&&req.body.transId)||'').trim();
+  let phone=String((req.body&&req.body.phone)||'').trim();
+  if(!/^[0-9]{4,8}$/.test(otp)) return res.status(400).json({ok:false,error:'OTP harus 4-8 digit angka'});
+  const pending=tselLoadPending();
+  if(!transId) transId=(pending&&pending.transId)||((tselLoadSession()||{}).pendingAuthId)||'';
+  if(!phone) phone=(pending&&pending.phone)||(pending&&pending.msisdn)||'';
+  let amlb=(pending&&pending.amlb)||((tselLoadSession()||{}).pendingAmlb)||'';
+  if(!transId) return res.status(400).json({ok:false,error:'Session OTP tidak ditemukan, kirim OTP dulu'});
+  try{
+    const norm=tselNormalizePhone(phone);
+    const body2={authId:transId,callbacks:[
+      {type:'PasswordCallback',output:[{name:'prompt',value:'One Time Password'}],input:[{name:'IDToken1',value:otp}]},
+      {type:'ConfirmationCallback',output:[{name:'prompt',value:''},{name:'messageType',value:0},{name:'options',value:['Submit OTP','Request OTP']},{name:'optionType',value:-1},{name:'defaultOption',value:0}],input:[{name:'IDToken2',value:0}]}
+    ]};
+    const h2={'User-Agent':TSEL_AUTH_UA,'Accept':'application/json','Dnt':'1','Sec-Ch-Ua-Mobile':'?0','Origin':TSEL_LOGIN_ORIGIN,'Referer':TSEL_LOGIN_ORIGIN+'/','Am-Clientid':TSEL_CLIENT_ID,'Content-Type':'application/json','Sec-Fetch-Site':'same-site','Sec-Fetch-Mode':'cors','Sec-Fetch-Dest':'empty','Sec-Ch-Ua':'"Not:A-Brand";v="99", "Google Chrome";v="145", "Chromium";v="145"','Sec-Ch-Ua-Platform':'"Windows"','Accept-Language':'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7','Priority':'u=1, i'};
+    if(amlb) h2['Cookie']=amlb;
+    const r2=await tselCiam(tselAuthUrl(),'POST',h2,JSON.stringify(body2),20000);
+    if(r2.status!==200) return res.status(400).json({ok:false,error:'Submit OTP status '+r2.status+': '+String(r2.text).slice(0,300)});
+    const tokenId=(r2.json&&r2.json.tokenId)||'';
+    if(!tokenId) return res.status(400).json({ok:false,error:'OTP salah / kadaluarsa (tokenId kosong)',raw:r2.json});
+    let iPlanet=tselCookie(tselGetSetCookies(r2.headers),'iPlanetDirectoryPro');
+    if(!iPlanet) iPlanet='iPlanetDirectoryPro='+tokenId;
+    const params=new URLSearchParams({client_id:TSEL_CLIENT_ID,nonce:'true',redirect_uri:TSEL_REDIRECT_URI,response_type:'code',scope:'profile openid phone identifier'});
+    const authzUrl=TSEL_CIAM+'/iam/v1/oauth2/realms/'+TSEL_REALM+'/authorize?'+params.toString();
+    const h3={'User-Agent':TSEL_AUTH_UA,'Accept':'application/json','Referer':TSEL_LOGIN_ORIGIN+'/','Dnt':'1','Sec-Ch-Ua-Mobile':'?0','Sec-Ch-Ua':'"Not:A-Brand";v="99", "Google Chrome";v="145", "Chromium";v="145"','Sec-Ch-Ua-Platform':'"Windows"','Accept-Language':'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7','Priority':'u=1, i','Sec-Fetch-Site':'same-site','Sec-Fetch-Mode':'cors','Sec-Fetch-Dest':'empty'};
+    const ck3=[amlb,iPlanet].filter(Boolean).join('; ');
+    if(ck3) h3['Cookie']=ck3;
+    const r3=await tselCiam(authzUrl,'GET',h3,undefined,20000);
+    const loc=(r3.headers.get('location')||'');
+    let code='';
+    if(loc){ try{ const u=new URL(loc); code=u.searchParams.get('code')||''; }catch(e){} }
+    if(!code){ const m=String(r3.text||'').match(/[?&]code=([^&"'\s]+)/); if(m) code=decodeURIComponent(m[1]); }
+    if(!code) return res.status(400).json({ok:false,error:'Gagal authorize (code kosong). Location: '+String(loc).slice(0,200)});
+    const tp=new URLSearchParams({client_id:TSEL_CLIENT_ID,client_secret:TSEL_CLIENT_SECRET,code,grant_type:'authorization_code',redirect_uri:TSEL_REDIRECT_URI,response_type:'code'});
+    const tokenUrl=TSEL_CIAM+'/iam/v1/oauth2/realms/'+TSEL_REALM+'/access_token?'+tp.toString();
+    const h4={'User-Agent':TSEL_AUTH_UA,'Accept':'application/json','Origin':TSEL_LOGIN_ORIGIN,'Referer':TSEL_LOGIN_ORIGIN+'/','Content-Type':'application/x-www-form-urlencoded','Content-Length':'0','Dnt':'1','Sec-Ch-Ua-Mobile':'?0','Sec-Ch-Ua':'"Not:A-Brand";v="99", "Google Chrome";v="145", "Chromium";v="145"','Sec-Ch-Ua-Platform':'"Windows"','Accept-Language':'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7','Priority':'u=1, i','Sec-Fetch-Site':'same-site','Sec-Fetch-Mode':'cors','Sec-Fetch-Dest':'empty'};
+    const r4=await tselCiam(tokenUrl,'POST',h4,'',20000);
+    if(r4.status!==200) return res.status(400).json({ok:false,error:'Access token status '+r4.status+': '+String(r4.text).slice(0,300)});
+    const accessToken=(r4.json&&r4.json.access_token)||'';
+    const idToken=(r4.json&&r4.json.id_token)||'';
+    if(!accessToken) return res.status(400).json({ok:false,error:'Access token kosong'});
+    const ah=tselAuthHeaders(accessToken,idToken);
+    const prev=tselLoadSession()||{};
+    const newSess={phone:norm.national||prev.phone||phone, msisdn:norm.international||prev.msisdn||phone, fullPhone:norm.international||prev.fullPhone||phone,
+      provider:'TELKOMSEL', brand:'MyTelkomsel', userType:'SUBSCRIBER',
+      accessAuth:ah.accessAuth.replace(/^Bearer /,''), authorization:ah.authorization.replace(/^Bearer /,''),
+      accessToken, idToken, xDevice:prev.xDevice||tselXDevice(), hash:prev.hash||tselRandomHex(28), webAppVersion:TSEL_WEBAPP_VER,
+      cookies:ck3, pendingAuthId:'', pendingAmlb:'', updatedAt:new Date().toISOString()};
+    tselSaveSession(newSess);
+    try{
+      const a=tselAuth()||{};
+      a.msisdn=newSess.msisdn; a.fullPhone=newSess.fullPhone; a.xDevice=newSess.xDevice; a.hash=newSess.hash;
+      a.accessAuth=newSess.accessAuth; a.authorization=newSess.authorization; a.accessToken=accessToken; a.idToken=idToken;
+      fs.writeFileSync(TSEL_AUTH_FILE, JSON.stringify(a,null,2)); try{fs.chmodSync(TSEL_AUTH_FILE,0o600);}catch(e){}
+    }catch(e){}
+    tselClearPending();
+    // auto prime cache: profile + loyalty + balance + bonuses
+    try{
+      const s2=Object.assign({},newSess);
+      const [pR,lR,bR,qR]=await Promise.all([
+        tselTdw(s2,'GET','/api/attributes/getprofile').catch(e=>({__err:String((e&&e.message)||e)})),
+        tselTdw(s2,'GET','/api/subscriber/loyalty-info').catch(e=>({__err:String((e&&e.message)||e)})),
+        tselTdw(s2,'GET','/api/subscriber/profile-balance').catch(e=>({__err:String((e&&e.message)||e)})),
+        tselTdw(s2,'POST','/api/subscriber/v5/bonuses',{isPrepaid:true,location:'',roaming:false}).catch(e=>({__err:String((e&&e.message)||e)}))
+      ]);
+      const groups=[]; try{
+        const ub=(qR&&qR.data&&qR.data.userBonuses)||[];
+        ub.forEach(function(b){ groups.push({class:b.class||'Kuota', total:b.totalText||'', items:(b.bonusList||[]).map(function(it){ return {name:it.name||it.bucketdescription||'', remaining:it.remainingquota||'', expiry:it.expirydate||'', orderId:it.order_id||''}; })}); });
+      }catch(e){}
+      const out={fetchedAt:new Date().toISOString(), phone:newSess.phone, msisdn:newSess.msisdn,
+        profile:pR, loyalty:lR, balance:bR, quota:{groups}, items:tselQuotaItems(groups),
+        totalRemainingFormatted:tselQuotaItems(groups).map(function(i){return i.name+': '+i.remainingFormatted;}).join(', ')||'Active Quota'};
+      try{ fs.writeFileSync(TSEL_CACHE_FILE, JSON.stringify(out)); }catch(e){}
+    }catch(e){}
+    return res.json({ok:true,message:'Login Telkomsel berhasil ('+(norm.national||phone)+')',session:{phone:newSess.phone,msisdn:newSess.msisdn,userType:newSess.userType,updatedAt:newSess.updatedAt}});
+  }catch(e){
+    return res.status(502).json({ok:false,error:String((e&&e.message)||e)});
+  }
+});
+app.post('/api/telkomsel/logout', (req,res)=>{
+  if(!isAuthenticated(req)) return res.status(401).json({error:'Unauthorized'});
+  try{ tselClearPending(); }catch(e){}
+  try{ if(fs.existsSync(TSEL_SESSION_FILE)) fs.unlinkSync(TSEL_SESSION_FILE); }catch(e){}
+  return res.json({ok:true,message:'Session Telkomsel dihapus, silakan login lagi'});
+});
 function tselHeaders(auth) {
   return {
     'Accept': 'application/json, text/plain, */*',
@@ -871,21 +1135,41 @@ async function tselFetchJson(url, opts, ms) {
     return { ok: r.ok, status: r.status, json, raw: json ? null : String(text).slice(0, 300) };
   } finally { clearTimeout(t); }
 }
-// Cache hasil GET terakhir: buka tab tampil ini, Refresh baru fetch upstream
-app.get('/api/telkomsel/cache', (req, res) => {
-  if (!isAuthenticated(req)) return res.status(401).json({ error: 'Unauthorized' });
-  try {
-    if (!fs.existsSync(TSEL_CACHE_FILE)) return res.status(404).json({ ok: false, cached: false, error: 'Belum ada data tersimpan, klik Refresh' });
-    const raw = JSON.parse(fs.readFileSync(TSEL_CACHE_FILE, 'utf8'));
-    return res.json({ ok: true, cached: true, fetchedAt: raw.fetchedAt || null, data: raw });
-  } catch(e) {
-    return res.status(500).json({ ok: false, error: 'Gagal baca cache: ' + String((e && e.message) || e) });
-  }
-});
 app.get('/api/telkomsel/cek', async (req, res) => {
   if (!isAuthenticated(req)) return res.status(401).json({ error: 'Unauthorized' });
+  const sess = tselLoadSession();
+  const hasNative = sess && sess.accessAuth && sess.authorization;
+  if (hasNative) {
+    try {
+      const s2=Object.assign({},sess);
+      const [pR,lR,bR,qR]=await Promise.all([
+        tselTdw(s2,'GET','/api/attributes/getprofile'),
+        tselTdw(s2,'GET','/api/subscriber/loyalty-info').catch(e=>({__err:String((e&&e.message)||e)})),
+        tselTdw(s2,'GET','/api/subscriber/profile-balance').catch(e=>({__err:String((e&&e.message)||e)})),
+        tselTdw(s2,'POST','/api/subscriber/v5/bonuses',{isPrepaid:true,location:'',roaming:false})
+      ]);
+      if(pR&&pR.status&&pR.status!=='00000') return res.json({ok:false,provider:'TELKOMSEL',cached:false,fetchedAt:new Date().toISOString(),authFail:{code:pR.status,message:pR.message},raw:pR});
+      if(qR&&qR.status&&qR.status!=='00000') return res.json({ok:false,provider:'TELKOMSEL',cached:false,fetchedAt:new Date().toISOString(),error:qR.message||('TDW status '+qR.status),raw:qR});
+      const groups=[];
+      try{
+        const ub=(qR&&qR.data&&qR.data.userBonuses)||[];
+        ub.forEach(function(b){ groups.push({class:b.class||'Kuota', total:b.totalText||'', items:(b.bonusList||[]).map(function(it){ return {name:it.name||it.bucketdescription||'', remaining:it.remainingquota||'', expiry:it.expirydate||'', orderId:it.order_id||''}; })}); });
+      }catch(e){}
+      const items=tselQuotaItems(groups);
+      const out={fetchedAt:new Date().toISOString(), phone:sess.phone, msisdn:sess.msisdn||sess.fullPhone,
+        profile:pR, loyalty:lR, balance:bR, quota:{groups}, items,
+        totalRemainingFormatted:items.map(function(i){return i.name+': '+i.remainingFormatted;}).join(', ')||'Active Quota'};
+      try { fs.writeFileSync(TSEL_CACHE_FILE, JSON.stringify(out)); } catch(e) {}
+      return res.json({ ok:true, provider:'TELKOMSEL', phone:out.phone, totalRemainingFormatted:out.totalRemainingFormatted, items, cached:false, fetchedAt:out.fetchedAt, data:out });
+    } catch(e) {
+      const em=String((e&&e.message)||e);
+      if(e&&e.code===401||/unauthorized|token expired/i.test(em)) return res.json({ok:false,provider:'TELKOMSEL',cached:false,fetchedAt:new Date().toISOString(),authFail:{code:'401',message:'Token Telkomsel kadaluarsa, login ulang via OTP'}});
+      const msg=(e&&e.name==='AbortError')?'Upstream timeout (20s)':em;
+      return res.status(502).json({ok:false,provider:'TELKOMSEL',error:msg});
+    }
+  }
   const auth = tselAuth();
-  if (!auth || !auth.cookie || !auth.deviceId) return res.status(500).json({ ok: false, error: 'auth telkomsel belum ada (data/telkomsel/auth.json)' });
+  if (!auth || !auth.cookie || !auth.deviceId) return res.status(500).json({ ok: false, error: 'auth telkomsel belum ada — login dulu via OTP' });
   try {
     const H = tselHeaders(auth);
     const [prof, bon] = await Promise.all([
