@@ -750,7 +750,7 @@ tailwind.config = {
     if(Object.prototype.toString.call(groups)==="[object Array]") groups.forEach(function(g){ (g||[]).forEach(function(p){ pkgs.push(p); }); });
     if(!pkgs.length){ h+='<div class="rounded border border-border/40 bg-base/20 px-2.5 py-2 text-xs text-muted">Tidak ada data paket.</div>'; }
     else {
-      h+='<div class="grid grid-cols-1 md:grid-cols-2 gap-1 content-start">';
+      h+='<div class="grid grid-cols-1 md:grid-cols-1 gap-1 content-start">';
       pkgs.forEach(function(pkg,i){
         var nm=(pkg.packages&&pkg.packages.name)||"Paket", exRaw=(pkg.packages&&pkg.packages.expDate)||"", ex=dateOnly(exRaw), exS=fmtSisa(exRaw);
         var hdr=esc(ex?((exS?ex+" · "+exS:ex)+" | "+nm):nm);
