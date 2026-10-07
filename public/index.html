@@ -717,8 +717,8 @@ tailwind.config = {
     if(!json||!json.status||!json.data||!json.data.data_sp) return '<div class="rounded border border-error/20 bg-error/10 px-2 py-1.5 text-xs text-error">'+esc((json&&(json.message||json.error))||"Gagal ambil data")+'</div>';
     var d=json.data.data_sp, h='';
     var ms=(json.data&&json.data.msisdn)||msisdn;
-    h+='<div class="flex flex-col gap-1 lg:flex-row lg:items-start">';
-    h+='<div class="rounded border border-border/40 bg-base/20 p-1 space-y-0.5 w-full lg:w-60 lg:shrink-0">';
+    h+='<div class="flex flex-col gap-1 sm:flex-row sm:items-start">';
+    h+='<div class="rounded border border-border/40 bg-base/20 p-1 space-y-0.5 w-full sm:w-52 lg:w-60 sm:shrink-0">';
     h+=row("MSISDN",ms)+row("Tipe Kartu",(d.prefix&&d.prefix.value)||"-")+row("Jaringan",(d.status_4g&&d.status_4g.value)||"-")+row("Verifikasi ID",(d.dukcapil&&d.dukcapil.value)||"-");
     h+=row("Umur Kartu",pick(d,["card_age.value","umur_kartu.value","active_card.value","masa_pakai.value","card_age","umur_kartu"])||scanAge(d)||"-");
     h+=row("Masa Aktif",dateOnly(d.active_period&&d.active_period.value)||"-")+row("Masa Tenggang",dateOnly((d.grace_period&&d.grace_period.value)||(d.masa_tenggang&&d.masa_tenggang.value))||"-");
@@ -853,7 +853,7 @@ tailwind.config = {
     var n=String((it&&(it.name||''))||'').toLowerCase();
     if(n.indexOf('sms')>=0) return 'sms';
     if(n.indexOf('voice')>=0||n.indexOf('telepon')>=0||n.indexOf('telp')>=0||n.indexOf('menit')>=0||n.indexOf('min -')>=0) return 'voice';
-    if(n.indexOf('aplikasi')>=0||n.indexOf('apps')>=0||n.indexOf('youtube')>=0||n.indexOf('tiktok')>=0||n.indexOf('sosmed')>=0) return 'application';
+    if(n.indexOf('aplikasi')>=0||n.indexOf('apps')>=0||n.indexOf('youtube')>=0||n.indexOf('tiktok')>=0||n.indexOf('sosmed')>=0||n.indexOf('zoom')>=0||n.indexOf('entertain')>=0||n.indexOf('music')>=0||n.indexOf('game')>=0) return 'application';
     return 'internet';
   }
   function render(out,fresh){
@@ -877,12 +877,31 @@ tailwind.config = {
       hh+='</div>';
       hh+='<div class="flex-1 min-w-0 w-full space-y-1">';
       hh+='<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-1 content-start">';
+      var tselGroups=(out.quota&&out.quota.groups)||[];
+      var tselGByCls={}; tselGroups.forEach(function(g){ tselGByCls[String(g.class||'').toUpperCase()]=g; });
+      var tselShown={};
+      function tselNum(v){ var n=parseFloat(String(v==null?'':v).replace(/,/g,'.').replace(/[^0-9.]/g,'')); return isNaN(n)?0:n; }
+      function tselGB(v){ var t=String(v==null?'':v).toUpperCase(), n=tselNum(v); if(t.indexOf('MB')>=0) return n/1024; return n; }
       out.items.forEach(function(it){
         var cat=tselCat(it); var col=tselColors[cat]||'#14b8a6';
         var txt=it.remainingFormatted||'-';
+        var cls=String(it.name||'').split(' - ')[0].toUpperCase();
+        var g=tselGByCls[cls]||null; if(g) tselShown[cls]=true;
+        var tot=g?tselGB(g.total):0, rem=tselGB(txt);
+        var pct=tot>0?Math.max(0,Math.min(100,(rem/tot)*100)):(rem>0?100:0);
+        var xp=it.validUntil||(g&&g.items&&g.items[0]&&g.items[0].expiry)||'-';
         hh+='<div class="rounded border bg-base/20 p-1 space-y-0.5" style="border-color:'+col+'30;background:linear-gradient(135deg,'+col+'14,transparent 62%)">';
         hh+='<div class="flex items-center gap-1.5 text-xs"><span class="h-2 w-2 rounded-full shrink-0" style="background:'+col+'"></span><span class="font-semibold truncate" style="color:'+col+'">'+esc(it.name||'Paket')+'</span><span class="ml-auto font-mono text-[11px] text-text shrink-0">'+esc(txt)+'</span></div>';
-        hh+='<p class="text-[10px] font-mono text-muted">Berlaku s/d '+esc(it.validUntil||'-')+'</p>';
+        hh+=bar(pct,col);
+        hh+='<p class="text-[10px] font-mono text-muted">Berlaku s/d '+esc(xp)+'</p>';
+        hh+='</div>';
+      });
+      tselGroups.forEach(function(g){
+        var cls=String(g.class||'').toUpperCase(); if(tselShown[cls]||!cls) return;
+        var col=tselColors[tselCat({name:cls})]||'#14b8a6';
+        hh+='<div class="rounded border bg-base/20 p-1 space-y-0.5 opacity-60" style="border-color:'+col+'18;background:linear-gradient(135deg,'+col+'08,transparent 62%)">';
+        hh+='<div class="flex items-center gap-1.5 text-xs"><span class="h-2 w-2 rounded-full shrink-0" style="background:'+col+'"></span><span class="font-semibold truncate" style="color:'+col+'">'+esc(cls)+'</span><span class="ml-auto font-mono text-[11px] text-muted shrink-0">'+esc(String(g.total||'0'))+'</span></div>';
+        hh+=bar(0,col);
         hh+='</div>';
       });
       hh+='</div>'; hh+='</div>'; hh+='</div>';
@@ -946,6 +965,23 @@ tailwind.config = {
   var sessInfo=document.getElementById('tsel-session-info');
   var logoutBtn=document.getElementById('tsel-logout');
   function setLogin(t,err){ if(!loginSt) return; loginSt.textContent=t||''; loginSt.classList.toggle('text-error',!!err); loginSt.classList.toggle('text-muted',!err); }
+  var tselSessPhone='', tselSessType='', tselSessExp=null, tselSessTtl=null, tselSessTimer=null;
+  function paintTselSess(){
+    if(!sessInfo) return;
+    if(!tselSessPhone){ sessInfo.classList.add('hidden'); return; }
+    var extra='';
+    if(tselSessExp){
+      var d=new Date(tselSessExp), p2=function(n){ return (n<10?'0':'')+n; };
+      var ds=p2(d.getDate())+'-'+p2(d.getMonth()+1)+' '+p2(d.getHours())+':'+p2(d.getMinutes());
+      var r=Math.max(0,Math.floor((d.getTime()-Date.now())/1000));
+      var dd=Math.floor(r/86400), hh2=Math.floor(r%86400/3600), mm=Math.floor(r%3600/60);
+      var left=dd>0?(dd+'h '+hh2+'j'):(hh2>0?(hh2+'j '+mm+'m'):(mm+'m'));
+      extra=' - aktif s/d '+ds+' - sisa '+left+(tselSessTtl?' (dari '+tselSessTtl+' hari)':'');
+    }
+    sessInfo.textContent='Login: '+tselSessPhone+(tselSessType?' ('+tselSessType+')':'')+extra;
+    sessInfo.classList.remove('hidden');
+    if(!tselSessTimer) tselSessTimer=setInterval(paintTselSess,60000);
+  }
   function loadStatus(){
     fetch('/api/telkomsel/status',{cache:'no-store'})
       .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,body:j}; }); })
@@ -953,8 +989,10 @@ tailwind.config = {
         if(!res.ok||!res.body) return;
         var b=res.body;
         if(b.session&&(b.session.phone||b.session.msisdn)){
-          var label='Login: '+esc(b.session.phone||b.session.msisdn)+(b.session.userType?' ('+esc(b.session.userType)+')':'');
-          if(sessInfo){ sessInfo.textContent=label; sessInfo.classList.remove('hidden'); }
+          tselSessPhone=b.session.phone||b.session.msisdn; tselSessType=b.session.userType||'';
+          tselSessExp=b.session.expiresAt||(b.expiry&&b.expiry.expIso)||null;
+          tselSessTtl=(b.session.ttlDays!=null?b.session.ttlDays:(b.expiry&&b.expiry.ttlSec?Math.round(b.expiry.ttlSec/86400):null));
+          paintTselSess();
           if(logoutBtn) logoutBtn.classList.remove('hidden');
         } else {
           if(sessInfo) sessInfo.classList.add('hidden');
@@ -995,6 +1033,7 @@ tailwind.config = {
   }
   function doLogout(){
     fetch('/api/telkomsel/logout',{method:'POST'}).then(function(){ return; }).catch(function(){}).then(function(){
+      tselSessPhone=''; tselSessExp=null; tselSessTtl=null;
       if(sessInfo) sessInfo.classList.add('hidden');
       if(logoutBtn) logoutBtn.classList.add('hidden');
       if(verifyRow) verifyRow.classList.add('hidden');
@@ -1237,6 +1276,23 @@ tailwind.config = {
   var sessInfo=document.getElementById('tri-session-info');
   var logoutBtn=document.getElementById('tri-logout');
   var pendingMsisdn='';
+  var triSessPhone='', triSessType='', triSessExp=null, triSessTtl=null, triSessTimer=null;
+  function paintTriSess(){
+    if(!sessInfo) return;
+    if(!triSessPhone){ sessInfo.classList.add('hidden'); return; }
+    var extra='';
+    if(triSessExp){
+      var d=new Date(triSessExp), p2=function(n){ return (n<10?'0':'')+n; };
+      var ds=p2(d.getDate())+'-'+p2(d.getMonth()+1)+' '+p2(d.getHours())+':'+p2(d.getMinutes());
+      var r=Math.max(0,Math.floor((d.getTime()-Date.now())/1000));
+      var dd=Math.floor(r/86400), hh2=Math.floor(r%86400/3600), mm=Math.floor(r%3600/60);
+      var left=dd>0?(dd+'h '+hh2+'j'):(hh2>0?(hh2+'j '+mm+'m'):(mm+'m'));
+      extra=' - aktif s/d '+ds+' - sisa '+left+(triSessTtl?' (dari '+triSessTtl+' hari)':'');
+    }
+    sessInfo.textContent='Login: '+triSessPhone+(triSessType?' ('+triSessType+')':'')+extra;
+    sessInfo.classList.remove('hidden');
+    if(!triSessTimer) triSessTimer=setInterval(paintTriSess,60000);
+  }
   function setLogin(t,err){ if(!loginSt) return; loginSt.textContent=t||''; loginSt.classList.toggle('text-error',!!err); loginSt.classList.toggle('text-muted',!err); }
   function loadStatus(){
     fetch('/api/tri/status',{cache:'no-store'})
@@ -1245,8 +1301,10 @@ tailwind.config = {
         if(!res.ok || !res.body) return;
         var b=res.body;
         if(b.session && (b.session.phone||b.session.msisdn)){
-          var label='Login: '+esc(b.session.phone||b.session.msisdn)+(b.session.userType?' ('+esc(b.session.userType)+')':'');
-          if(sessInfo){ sessInfo.textContent=label; sessInfo.classList.remove('hidden'); }
+          triSessPhone=b.session.phone||b.session.msisdn; triSessType=b.session.userType||'';
+          triSessExp=b.session.expiresAt||(b.expiry&&b.expiry.expIso)||null;
+          triSessTtl=(b.session.ttlDays!=null?b.session.ttlDays:(b.expiry&&b.expiry.ttlSec?Math.round(b.expiry.ttlSec/86400):null));
+          paintTriSess();
           if(logoutBtn) logoutBtn.classList.remove('hidden');
         } else {
           if(sessInfo) sessInfo.classList.add('hidden');

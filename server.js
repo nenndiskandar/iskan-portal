@@ -910,6 +910,22 @@ async function tselCiam(url, method, headers, body, ms){
     return { status:r.status, headers:r.headers, text, json:j };
   } finally { clearTimeout(t); }
 }
+function tselJwtExp(token){
+  try{
+    var part=String(token||'').split('.')[1];
+    if(!part) return null;
+    var b=part.replace(/-/g,'+').replace(/_/g,'/');
+    while(b.length%4) b+='=';
+    var js=Buffer.from(b,'base64').toString('utf8');
+    var pl=JSON.parse(js);
+    var exp=Number(pl.exp)||0; var iat=Number(pl.iat)||0;
+    if(!exp) return null;
+    var now=Math.floor(Date.now()/1000);
+    var rem=Math.max(0, exp-now);
+    var ttl=iat? (exp-iat):0;
+    return {exp:exp, iat:iat||null, expIso:new Date(exp*1000).toISOString(), iatIso:iat?new Date(iat*1000).toISOString():null, ttlSec:ttl, remainingSec:rem};
+  }catch(e){ return null; }
+}
 function tselTdwHeaders(sess){
   return {
     'accept':'application/json',
@@ -992,7 +1008,11 @@ app.get('/api/telkomsel/status', (req,res)=>{
   const sess=tselLoadSession();
   const hasCache=fs.existsSync(TSEL_CACHE_FILE);
   const pending=tselLoadPending();
-  return res.json({ok:true, session: sess?{phone:sess.phone,msisdn:sess.msisdn,userType:sess.userType,updatedAt:sess.updatedAt}:null, hasToken:!!(sess&&sess.accessAuth&&sess.authorization), hasCache, pending: pending?{msisdn:pending.msisdn,transId:pending.transId,createdAt:pending.createdAt}:null});
+  var expiry=null;
+  try{ if(sess&&sess.accessToken) expiry=tselJwtExp(sess.accessToken); else if(sess&&sess.idToken) expiry=tselJwtExp(sess.idToken); }catch(e){}
+  var sessOut=null;
+  if(sess) sessOut={phone:sess.phone,msisdn:sess.msisdn,userType:sess.userType,updatedAt:sess.updatedAt,expiry:expiry,expiresAt:expiry?expiry.expIso:null,remainingSec:expiry?expiry.remainingSec:null,ttlDays:expiry&&expiry.ttlSec?Math.round(expiry.ttlSec/86400):null};
+  return res.json({ok:true, session: sessOut, expiry:expiry, hasToken:!!(sess&&sess.accessAuth&&sess.authorization), hasCache, pending: pending?{msisdn:pending.msisdn,transId:pending.transId,createdAt:pending.createdAt}:null});
 });
 app.post('/api/telkomsel/login', async (req,res)=>{
   if(!isAuthenticated(req)) return res.status(401).json({error:'Unauthorized'});
@@ -1440,7 +1460,10 @@ app.get('/api/tri/status', (req,res)=>{
   const auth=triAuth();
   const hasCache = fs.existsSync(TRI_CACHE_FILE);
   const pending=triLoadPending();
-  return res.json({ok:true, session: sess ? {phone:sess.phone, msisdn:sess.msisdn, userType:sess.userType, updatedAt:sess.updatedAt} : null, hasToken: !!(sess?.authToken||auth?.imiTokenId), hasCache, pending: pending ? {msisdn:pending.msisdn, transId:pending.transId, createdAt:pending.createdAt} : null});
+  var expiry=null;
+  try{ var tok=(sess&&sess.authToken)||(auth&&auth.imiTokenId)||''; if(tok&&String(tok).split('.').length>=3) expiry=tselJwtExp(tok); }catch(e){}
+  var sessOut=sess?{phone:sess.phone,msisdn:sess.msisdn,userType:sess.userType,updatedAt:sess.updatedAt,expiry:expiry,expiresAt:expiry?expiry.expIso:null,remainingSec:expiry?expiry.remainingSec:null,ttlDays:expiry&&expiry.ttlSec?Math.round(expiry.ttlSec/86400):null}:null;
+  return res.json({ok:true, session: sessOut, expiry:expiry, hasToken: !!(sess?.authToken||auth?.imiTokenId), hasCache, pending: pending ? {msisdn:pending.msisdn, transId:pending.transId, createdAt:pending.createdAt} : null});
 });
 app.post('/api/tri/login', async (req,res)=>{
   if(!isAuthenticated(req)) return res.status(401).json({error:'Unauthorized'});
