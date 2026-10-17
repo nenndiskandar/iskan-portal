@@ -798,6 +798,47 @@ app.get('/api/status', async (req, res) => {
 });
 
 
+// ---- service control: start / stop / restart (auth-gated) ----
+const CTRL_OPS = ['start', 'stop', 'restart'];
+const SELF_UNIT = 'iskan-portal.service';
+
+function runCtl(bin, args, timeout, env) {
+  return new Promise((resolve) => {
+    execFile(bin, args, { timeout: timeout || 25000, env: env || process.env }, (err, stdout, stderr) => {
+      resolve({ code: err ? (typeof err.code === 'number' ? err.code : -1) : 0, stdout: String(stdout || ''), stderr: String(stderr || '') });
+    });
+  });
+}
+
+app.post('/api/service/:unit/:op', async (req, res) => {
+  const unit = String(req.params.unit || '');
+  const op = String(req.params.op || '');
+  const svc = SERVICES.find((x) => x.unit === unit);
+  if (!svc) return res.status(404).json({ error: 'Service tidak dikenal' });
+  if (CTRL_OPS.indexOf(op) === -1) return res.status(400).json({ error: 'Aksi tidak valid (start/stop/restart)' });
+  if (svc.noCheck) return res.status(400).json({ error: 'Target tunnel LAN, tidak bisa dikontrol dari portal' });
+  if (unit === SELF_UNIT && op === 'stop') return res.status(400).json({ error: 'Portal tidak boleh distop, cuma bisa restart' });
+
+  // restart diri sendiri: balas dulu, job systemd di-queue setelah response flush (--no-block)
+  if (unit === SELF_UNIT && op === 'restart') {
+    res.json({ ok: true, unit, op, self: true, message: 'Portal restart, tunggu ~4 detik lalu halaman reload' });
+    return setTimeout(() => {
+      execFile('systemctl', ['restart', '--no-block', SELF_UNIT], { timeout: 8000 }, () => {});
+    }, 600);
+  }
+
+  let out;
+  if (svc.docker) out = await runCtl('docker', [op, unit], 90000);
+  else if (svc.user) out = await runCtl('systemctl', ['--user', op, unit], 25000, USER_ENV);
+  else out = await runCtl('systemctl', [op, unit], 25000);
+
+  if (out.code !== 0) {
+    const msg = String(out.stderr || out.stdout || '').trim().split(/\r?\n/).slice(0, 3).join(' · ').slice(0, 300);
+    return res.status(500).json({ error: 'Gagal ' + op + ' ' + unit + (msg ? ': ' + msg : ''), exit: out.code });
+  }
+  return res.json({ ok: true, unit, op, kind: svc.docker ? 'docker' : 'systemd', message: op + ' ' + unit + ' sukses' });
+});
+
 // ---- sidompul proxy (XL/Axis cek kuota via apigw; key di server, hindari CORS + bocor key) ----
 const SIDOMPUL_AUTH = 'Basic c2lkb21wdWxhcGk6YXBpZ3drbXNw';
 const SIDOMPUL_KEY = '60ef29aa-a648-4668-90ae-20951ef90c55';

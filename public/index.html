@@ -1605,6 +1605,10 @@ tailwind.config = {
     </div>
     <!-- dashboard / external links · tepat di bawah badge Running/Dead -->
     <div data-links class="hidden flex flex-wrap gap-1" data-links-wrap>
+      <button data-ctrl="start" type="button" class="hidden inline-flex items-center gap-1 h-6 px-2 rounded text-[11px] font-medium disabled:opacity-40 disabled:cursor-not-allowed bg-accent/10 border border-accent/30 font-semibold text-accent hover:bg-accent/20">Start</button>
+      <button data-ctrl="stop" type="button" class="hidden inline-flex items-center gap-1 h-6 px-2 rounded text-[11px] font-medium disabled:opacity-40 disabled:cursor-not-allowed bg-error/10 border border-error/25 text-error hover:bg-error/20">Stop</button>
+      <button data-ctrl="restart" type="button" class="hidden inline-flex items-center gap-1 h-6 px-2 rounded text-[11px] font-medium disabled:opacity-40 disabled:cursor-not-allowed bg-base border border-border text-muted hover:text-text hover:bg-border">Restart</button>
+      <span data-ctrl-msg class="hidden text-[10px] font-mono text-muted"></span>
       <a data-dashboard-link href="#" target="_blank" rel="noopener" class="hidden inline-flex items-center gap-1 h-6 px-2 rounded bg-accent/10 border border-accent/20 text-[11px] font-medium text-accent hover:bg-accent/20">Dashboard ↗</a>
       <a data-external-link href="#" target="_blank" rel="noopener" class="hidden inline-flex items-center gap-1 h-6 px-2 rounded bg-surface border border-border text-[11px] font-medium text-muted hover:text-text hover:bg-border">Public ↗</a>
       <span data-local-badge class="hidden inline-flex items-center gap-1 h-6 px-2 rounded bg-zinc-800 border border-zinc-700 text-[11px] font-mono text-muted">LAN only</span>
@@ -1696,6 +1700,52 @@ tailwind.config = {
       } else {
         ab.hidden = true;
       }
+    })();
+    // kontrol service: start / stop / restart
+    (function(){
+      var wrapC = node.querySelector('[data-links-wrap]');
+      var bStart = node.querySelector('[data-ctrl="start"]');
+      var bStop = node.querySelector('[data-ctrl="stop"]');
+      var bRestart = node.querySelector('[data-ctrl="restart"]');
+      var msg = node.querySelector('[data-ctrl-msg]');
+      if (!bStart || !bStop || !bRestart) return;
+      if (svc.noCheck) return; // target LAN via tunnel: tidak bisa dikontrol dari portal
+      var btns = [bStart, bStop, bRestart];
+      var isSelf = svc.unit === 'iskan-portal.service';
+      if (svc.healthy) {
+        bRestart.classList.remove('hidden');
+        if (!isSelf) bStop.classList.remove('hidden');
+      } else {
+        bStart.classList.remove('hidden');
+      }
+      if (wrapC) wrapC.classList.remove('hidden');
+      function setMsg(t, cls){
+        if (!msg) return;
+        msg.textContent = t || '';
+        msg.classList.toggle('hidden', !t);
+        msg.className = 'text-[10px] font-mono ' + (cls || 'text-muted');
+        if (!t) msg.classList.add('hidden');
+      }
+      function busy(on, label){
+        btns.forEach(function(b){ if (!b.classList.contains('hidden')) b.disabled = on; });
+        if (on) setMsg(label || 'memproses...', 'text-muted');
+      }
+      function act(op, btn){
+        if (op === 'stop' && !confirm('Stop ' + svc.name + '?\n\nKalau ini cloudflared, akses portal dari luar ikut mati.')) return;
+        busy(true, op + '...');
+        fetch('/api/service/' + encodeURIComponent(svc.unit) + '/' + op, { method: 'POST', cache: 'no-store' })
+          .then(function(r){ return r.json().then(function(j){ return { status: r.status, j: j }; }); })
+          .then(function(o){
+            if (!o.j || !o.j.ok) { busy(false); setMsg((o.j && o.j.error) || ('gagal (HTTP ' + o.status + ')'), 'text-error'); return; }
+            if (o.j.self) { setMsg('restart... halaman reload otomatis', 'text-accent'); setTimeout(function(){ location.reload(); }, 4200); return; }
+            setMsg(op + ' ok', 'text-accent');
+            setTimeout(function(){ try { load(); } catch(e) {} }, 1400);
+          })
+          .catch(function(e){ busy(false); setMsg('gagal: ' + ((e && e.message) || 'network'), 'text-error'); });
+      }
+      bStart.addEventListener('click', function(){ act('start', bStart); });
+      bStop.addEventListener('click', function(){ act('stop', bStop); });
+      bRestart.addEventListener('click', function(){ act('restart', bRestart); });
     })();
     // external / dashboard links
     (function(){
