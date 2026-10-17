@@ -47,6 +47,7 @@ tailwind.config = {
   /* view modes: Simple hides detail grids/charts, Detail hides simple */
   #tm-detail-grid.hidden, #tm-simple-grid.hidden { display: none !important; }
   [data-view="simple"] .svc-detail { display: none !important; }
+  #overview-section[data-view="simple"] .ov-detail { display: none !important; }
   /* compact service card in simple: tighten gap */
   [data-view="simple"] [id="groups"] li { gap: 0.5rem; }
 
@@ -280,7 +281,15 @@ tailwind.config = {
       </h2>
       <span class="ml-auto text-[11px] font-mono text-muted flex items-center gap-1.5"><span id="overview-localtime" class="tabular-nums">-</span></span>
     </div>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1 text-xs">
+    <div id="overview-simple-bar" class="ov-simple-only flex flex-wrap gap-1.5 text-xs font-mono">
+      <span class="rounded bg-surface border border-border px-2 py-1">CPU <b id="ov-s-cpu" class="text-text">-</b></span>
+      <span class="rounded bg-surface border border-border px-2 py-1">RAM <b id="ov-s-mem" class="text-text">-</b></span>
+      <span class="rounded bg-surface border border-border px-2 py-1">Disk <b id="ov-s-disk" class="text-text">-</b></span>
+      <span class="rounded bg-surface border border-border px-2 py-1">Uptime <b id="ov-s-uptime" class="text-text">-</b></span>
+      <span class="rounded bg-surface border border-border px-2 py-1">Temp <b id="ov-s-temp" class="text-text">-</b></span>
+      <span class="rounded bg-surface border border-border px-2 py-1">Load <b id="ov-s-load" class="text-text">-</b></span>
+    </div>
+    <div class="ov-detail grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1 text-xs">
       <!-- Basic System Info -->
       <div class="rounded border border-border bg-surface/40 p-1.5 flex flex-col gap-0.5 min-w-0">
         <div class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted border-b border-border/40 pb-1 mb-0.5">
@@ -2063,7 +2072,20 @@ tailwind.config = {
       if(window.latestData && window.latestData.services){ var ups=window.latestData.services.filter(function(s){return s.healthy;}).length; set('overview-services-up', ups+' / '+window.latestData.services.length); }
     }catch(e){}
   }
-  function refreshOverview(){
+  function syncOverviewSimple(){
+      try{
+        var cpu=document.getElementById("overview-cpu-pct"), mem=document.getElementById("overview-mem-used"), memT=document.getElementById("overview-mem-total"), disk=document.getElementById("overview-disk"), up=document.getElementById("overview-uptime"), temp=document.getElementById("overview-cpu-temp"), load=document.getElementById("overview-load");
+        var sCpu=document.getElementById("ov-s-cpu"), sMem=document.getElementById("ov-s-mem"), sDisk=document.getElementById("ov-s-disk"), sUp=document.getElementById("ov-s-uptime"), sTemp=document.getElementById("ov-s-temp"), sLoad=document.getElementById("ov-s-load");
+        if(sCpu && cpu) sCpu.textContent=cpu.textContent.trim()||"-";
+        if(sMem) sMem.textContent=((mem&&mem.textContent.trim())||"-")+" / "+((memT&&memT.textContent.trim())||"-");
+        if(sDisk && disk) sDisk.textContent=disk.textContent.trim()||"-";
+        if(sUp && up) sUp.textContent=up.textContent.trim()||"-";
+        if(sTemp && temp) sTemp.textContent=temp.textContent.trim()||"-";
+        if(sLoad && load) sLoad.textContent=load.textContent.trim()||"-";
+      }catch(e){}
+    }
+    setInterval(function(){ try{ syncOverviewSimple(); }catch(e){} },1500);
+    function refreshOverview(){
     fetch('/api/metrics',{cache:'no-store'}).then(function(r){ return r.json(); }).then(function(m){ try{ updateOverview(m); updateCharts(m); }catch(e){} }).catch(function(){});
     if(!window.latestData){
       fetch('/api/status',{cache:'no-store'}).then(function(r){ return r.json(); }).then(function(d){ window.latestData=d; window.latestRenderTime=Date.now(); try{ var u=d.services.filter(function(x){return x.healthy;}).length; var e=document.getElementById('overview-services-up'); if(e) e.textContent=u+' / '+d.services.length; }catch(e){} }).catch(function(){});
@@ -2080,6 +2102,7 @@ tailwind.config = {
       var m = (mode === 'simple') ? 'simple' : 'detail';
       if(tmSection) tmSection.setAttribute('data-view', m);
       document.body.setAttribute('data-view', m);
+      var ovSec=document.getElementById('overview-section'); if(ovSec) ovSec.setAttribute('data-view', m);
       // keep top bar interval in sync with tm-interval
       try{ var ti=document.getElementById('tm-interval'); var tt=document.getElementById('tm-interval-top'); if(ti&&tt) tt.textContent = ti.textContent; }catch(e){}
       var detailGrid = document.getElementById('tm-detail-grid');
@@ -2338,7 +2361,7 @@ tailwind.config = {
       if (typeof window.tselAuto === 'function' && isKuota) { try { window.tselAuto(); } catch (e) {} }
       if (typeof window.triAuto === 'function' && isKuota) { try { window.triAuto(); } catch (e) {} }
       if (isTerminal) loadTerminal();
-      if (isOverview) { try{ refreshOverview(); }catch(e){} }
+      if (isOverview) { try{ refreshOverview(); setTimeout(syncOverviewSimple,300); }catch(e){} }
       if (is9r) load9r();
       if (isCf) loadCf();
       if (isMetacubex) loadMetacubex();
