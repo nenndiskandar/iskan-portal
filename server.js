@@ -189,6 +189,7 @@ const SERVICES = [
   { unit: 'sshowrt.nendi.web.id',               name: 'OpenWRT Terminal', kind: 'remote', port: 7681,  desc: 'OpenWRT shell (sshowrt) via tunnel → 192.168.1.1:7681', path: null, tech: 'ttyd / sshowrt', externalUrl: 'https://sshowrt.nendi.web.id', dashboardPath: '/', target: 'http://192.168.1.1:7681', noCheck: true },
   { unit: 'ttyd.service',                       name: 'Web Terminal',     kind: 'infra', port: 7681, desc: 'Web terminal (ttyd 1.7.7) → https://ssh.nendi.web.id', path: null, tech: 'ttyd / login', externalUrl: 'https://ssh.nendi.web.id', dashboardPath: '/' },
   { unit: 'hermes-dashboard.service',           name: 'Hermes Dashboard', kind: 'dashboard', port: 9119, desc: 'Hermes Agent web dashboard + mcp · hermes.nendi.web.id (basic auth)', tech: 'Hermes / React', externalUrl: 'https://hermes.nendi.web.id', dashboardPath: '/', target: 'http://127.0.0.1:9119', noCheck: false },
+  { unit: 'alist.service',                       name: 'Alist File Manager', kind: 'dashboard', port: 5244,  desc: 'Web file manager (Alist) + Local storage → https://alist.nendi.web.id', path: '/opt/alist', tech: 'Alist V3 / Go', externalUrl: 'https://alist.nendi.web.id', dashboardPath: '/' },
   { unit: 'cloudflared.service',                 name: 'Cloudflared Tunnel', kind: 'infra', port: null, desc: 'Named tunnel 204640e4 → 14 hostnames (nendi.web.id + 9r/drama/portal/clipper/clip/cf/omni/llm/owrt/ssh)', tech: 'Cloudflare Tunnel', externalUrl: null },
 ];
 
