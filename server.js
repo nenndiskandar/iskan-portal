@@ -191,6 +191,7 @@ const SERVICES = [
   { unit: 'hermes-dashboard.service',           name: 'Hermes Dashboard', kind: 'dashboard', port: 9119, desc: 'Hermes Agent web dashboard + mcp · hermes.nendi.web.id (basic auth)', tech: 'Hermes / React', externalUrl: 'https://hermes.nendi.web.id', dashboardPath: '/', target: 'http://127.0.0.1:9119', noCheck: false },
   { unit: 'alist.service',                       name: 'Alist File Manager', kind: 'dashboard', port: 5244,  desc: 'Web file manager (Alist) + Local storage → https://alist.nendi.web.id', path: '/opt/alist', tech: 'Alist V3 / Go', externalUrl: 'https://alist.nendi.web.id', dashboardPath: '/' },
   { unit: 'cloudflared.service',                 name: 'Cloudflared Tunnel', kind: 'infra', port: null, desc: 'Named tunnel 204640e4 → 14 hostnames (nendi.web.id + 9r/drama/portal/clipper/clip/cf/omni/llm/owrt/ssh)', tech: 'Cloudflare Tunnel', externalUrl: null },
+  { unit: 'tailscaled.service',                  name: 'Tailscale', kind: 'infra', port: null, desc: 'VPN mesh tailnet · iskan-server 100.119.162.58 (SSH dari HP tanpa port forward)', tech: 'Tailscale 1.104.2', externalUrl: null },
 ];
 
 const USER_ENV = { ...process.env, XDG_RUNTIME_DIR: process.env.XDG_RUNTIME_DIR || '/run/user/0' };
